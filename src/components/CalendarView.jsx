@@ -1,70 +1,44 @@
-import { useEffect, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
-import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { getStylists, getAppointments } from "../api";
+import { useApp } from "../context/UseApp";
 
-/**
- * Muestra agenda por peluquero (resourceTimeGridDay/Week).
- * Lee turnos de /api/appointments y los pinta por stylist_id.
- */
+
 export default function CalendarView() {
-  const [stylists, setStylists] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [range, setRange] = useState({ from: null, to: null });
+    const { events, eventsLoading, eventsError, setRange, loadEvents } = useApp();
 
-  // Cargar peluqueros
-  useEffect(() => {
-    getStylists().then(setStylists);
-  }, []);
 
-  // Cargar turnos al cambiar el rango visible
-  useEffect(() => {
-    if (!range.from || !range.to) return;
-    getAppointments({
-      from: range.from.toISOString(),
-      to: range.to.toISOString()
-    }).then((rows) => {
-      const evs = rows.map(a => ({
-        id: String(a.id),
-        resourceId: String(a.stylist_id),
-        start: a.starts_at, // viene ISO UTC de la API
-        end: a.ends_at,
-        title: `${a.service_name} – ${a.customer_name ?? a.phone_e164}`,
-        backgroundColor: a.color_hex ?? undefined
-      }));
-      setEvents(evs);
-    });
-  }, [range]);
-
-  const resources = useMemo(
-    () => stylists.map(s => ({ id: String(s.id), title: s.name })),
-    [stylists]
-  );
-
-  return (
-    <div className="p-4">
-      <FullCalendar
-        height="80vh"
-        plugins={[resourceTimeGridPlugin, interactionPlugin]}
-        initialView="resourceTimeGridDay"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "resourceTimeGridDay,resourceTimeGridWeek"
-        }}
-        resources={resources}
-        events={events}
-        slotMinTime="09:00:00"
-        slotMaxTime="21:00:00"
-        allDaySlot={false}
-        nowIndicator={true}
-        eventOverlap={false}
-        datesSet={(arg) => {
-          // FullCalendar da start/end como Date (UTC). Guardamos para fetch.
-          setRange({ from: arg.start, to: arg.end });
-        }}
-      />
-    </div>
-  );
+    return (
+        <div className="rounded-2xl shadow p-4 md:p-6">
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg md:text-xl font-semibold tracking-tight">Calendario</h2>
+                <div className="flex items-center gap-2 text-sm">
+                    {eventsLoading && <span className="text-gray-500">actualizando...</span>}
+                    <button onClick={loadEvents} className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">Refrescar</button>
+                </div>
+            </div>
+            {eventsError && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 text-red-700 p-3 text-sm">{eventsError}</div>}
+            <FullCalendar
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="timeGridWeek"
+                headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
+                slotMinTime="09:00:00"
+                slotMaxTime="21:00:00"
+                locale="es"
+                events={events}
+                datesSet={(arg) => setRange({ fromIso: new Date(arg.start).toISOString(), toIso: new Date(arg.end).toISOString() })}
+                eventClick={(info) => {
+                    const a = info?.event?.extendedProps;
+                    if (!a) return;
+                      alert(`Turno #${a.id}
+                      Cliente: ${a.customer_name}
+                      Servicio: ${a.service_name}
+                      Peluquero: ${a.stylist_name}
+                      Estado: ${a.status}`);
+                }}
+                height="auto"
+            />
+        </div>
+    );
 }
