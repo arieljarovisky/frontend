@@ -16,15 +16,18 @@ export default function SlotGrid({
 }) {
   const busySlotsSet = useMemo(() => {
     const set = new Set(busySlots);
-    console.log("🔴 [SlotGrid] BusySlots Set:", Array.from(set)); // ✅ Debug
+    console.log("🔴 [SlotGrid] BusySlots creados:", {
+      total: set.size,
+      list: Array.from(set)
+    });
     return set;
   }, [busySlots]);
 
-  console.log("📋 [SlotGrid] Props:", { // ✅ Debug
+  console.log("📋 [SlotGrid] Render con:", {
     slotsCount: slots.length,
     busySlotsCount: busySlots.length,
-    sampleSlot: slots[0],
-    sampleBusy: busySlots[0],
+    slotsPreview: slots.slice(0, 3),
+    busySlotsPreview: busySlots.slice(0, 3),
   });
 
   if (loading) {
@@ -44,7 +47,7 @@ export default function SlotGrid({
     );
   }
 
-  const freeCount = slots.length - busySlots.length;
+  const freeCount = slots.filter(slot => !busySlotsSet.has(slot)).length;
 
   return (
     <div className="space-y-3">
@@ -66,13 +69,16 @@ export default function SlotGrid({
           const isBusy = busySlotsSet.has(iso);
           const isSelected = selected === iso;
 
-          console.log(`  🔍 ${formatTime(iso)}: busy=${isBusy}, iso="${iso}"`); // ✅ Debug
+          // Debug detallado por cada slot
+          if (isBusy) {
+            console.log(`  🔴 OCUPADO: ${formatTime(iso)} | iso="${iso}"`);
+          }
 
           return (
             <button
               key={iso}
               onClick={() => {
-                console.log(`🖱️ Click: ${iso}, busy=${isBusy}`); // ✅ Debug
+                console.log(`🖱️ Click: ${formatTime(iso)}, busy=${isBusy}, iso="${iso}"`);
                 !isBusy && onSelect?.(iso);
               }}
               disabled={isBusy}

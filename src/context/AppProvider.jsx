@@ -21,7 +21,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // --- Availability ---
   const [availability, setAvailability] = useState({
     slots: [],
-    busySlots: [], // ✅ Agregar slots ocupados
+    busySlots: [],
     loading: false,
     error: "",
   });
@@ -153,8 +153,6 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // ============================================
   // 🔍 Cargar disponibilidad
   // ============================================
-  // src/context/AppProvider.jsx
-
   const loadAvailability = useCallback(async () => {
     const { serviceId, stylistId, date } = booking;
     if (!serviceId || !stylistId || !date) return;
@@ -183,14 +181,14 @@ export function AppProvider({ children, pollMs = 15000 }) {
         stepMin: 20,
       });
 
-      console.log("📥 [Frontend] Respuesta availability:", resp); // ✅ Debug
+      console.log("📥 [Frontend] Respuesta availability:", resp);
 
       if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
 
       const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
       const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
 
-      console.log("📊 [Frontend] Raw data:", { // ✅ Debug
+      console.log("📊 [Frontend] Raw data:", {
         rawSlots: rawSlots.length,
         rawBusySlots: rawBusySlots.length,
         sampleSlot: rawSlots[0],
@@ -200,29 +198,28 @@ export function AppProvider({ children, pollMs = 15000 }) {
       let slots = [];
       let busySlots = [];
 
-      // ✅ Procesar slots
+      // ✅ FUNCIÓN HELPER para normalizar el formato
+      const normalizeSlot = (slot) => {
+        if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
+          const [h, m] = slot.split(":");
+          const hh = h.padStart(2, "0");
+          const mm = m.padStart(2, "0");
+          return `${date} ${hh}:${mm}:00`;
+        }
+        return toLocalMySQL(slot);
+      };
+
+      // ✅ Procesar slots con formato consistente
       if (Array.isArray(rawSlots) && rawSlots.length) {
-        slots = rawSlots.map((slot) => {
-          if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
-            // ✅ IMPORTANTE: Mismo formato que busySlots
-            return `${date} ${slot.padStart(5, "0")}:00`;
-          }
-          return toLocalMySQL(slot);
-        }).filter(Boolean);
+        slots = rawSlots.map(normalizeSlot).filter(Boolean);
       }
 
       // ✅ Procesar busySlots CON EL MISMO FORMATO
       if (Array.isArray(rawBusySlots) && rawBusySlots.length) {
-        busySlots = rawBusySlots.map((slot) => {
-          if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
-            // ✅ IMPORTANTE: Mismo formato que slots
-            return `${date} ${slot.padStart(5, "0")}:00`;
-          }
-          return toLocalMySQL(slot);
-        }).filter(Boolean);
+        busySlots = rawBusySlots.map(normalizeSlot).filter(Boolean);
       }
 
-      console.log("✅ [Frontend] Procesado:", { // ✅ Debug
+      console.log("✅ [Frontend] Procesado:", {
         slots: slots.length,
         busySlots: busySlots.length,
         sample: slots[0],
@@ -241,7 +238,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
         return slotTime > now;
       });
 
-      console.log("🎯 [Frontend] Final:", { // ✅ Debug
+      console.log("🎯 [Frontend] Final:", {
         validSlots: validSlots.length,
         validBusySlots: validBusySlots.length,
       });
@@ -271,14 +268,14 @@ export function AppProvider({ children, pollMs = 15000 }) {
     const customerName = overrideData.customerName !== undefined
       ? overrideData.customerName
       : booking.customerName;
-    const { selectedSlot, serviceId, stylistId } = booking; // ✅ Extraer ambos
+    const { selectedSlot, serviceId, stylistId } = booking;
 
     console.log("📤 [createAppointment] Datos recibidos:", {
       customerPhone,
       customerName,
       selectedSlot,
       serviceId,
-      stylistId, // ✅ Verificar que no sea undefined
+      stylistId,
     });
 
     if (!customerPhone) {
@@ -319,8 +316,8 @@ export function AppProvider({ children, pollMs = 15000 }) {
       const payload = {
         customerPhone: customerPhone.trim(),
         customerName: customerName ? customerName.trim() : undefined,
-        stylistId: Number(stylistId),  // ✅ CORREGIDO: usar stylistId
-        serviceId: Number(serviceId),   // ✅ Correcto
+        stylistId: Number(stylistId),
+        serviceId: Number(serviceId),
         startsAt,
         durationMin,
         status: "scheduled",
