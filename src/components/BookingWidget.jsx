@@ -1,6 +1,6 @@
 // src/components/BookingWidget.jsx
-import { useMemo } from "react";
-import { useApp } from "../context/UseApp"; // ojo con el casing en Windows
+import { useMemo, useEffect, useRef } from "react";
+import { useApp } from "../context/UseApp";
 import ServiceSelect from "./ServiceSelect";
 import StylistSelect from "./StylistSelect";
 import DatePicker from "./DatePicker";
@@ -33,24 +33,32 @@ const schema = z.object({
 
 export default function BookingWidget() {
   const {
-    // meta
-    services = [], stylists = [], metaLoading, metaError,
-    // booking + availability
-    booking, updateBooking, availability, loadAvailability,
-    bookingSave, createAppointment,
+    services = [],
+    stylists = [],
+    metaLoading,
+    metaError,
+    booking,
+    updateBooking,
+    availability,
+    loadAvailability,
+    bookingSave,
+    createAppointment,
   } = useApp();
 
   const selectedService = useMemo(
-    () => (Array.isArray(services) ? services : []).find(s => String(s.id) === String(booking.serviceId)),
+    () => (Array.isArray(services) ? services : []).find((s) => String(s.id) === String(booking.serviceId)),
     [services, booking.serviceId]
   );
   const selectedStylist = useMemo(
-    () => (Array.isArray(stylists) ? stylists : []).find(s => String(s.id) === String(booking.stylistId)),
+    () => (Array.isArray(stylists) ? stylists : []).find((s) => String(s.id) === String(booking.stylistId)),
     [stylists, booking.stylistId]
   );
 
-  // React Hook Form para “Tus datos”
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  // ✅ Ref para controlar que el toast se muestre solo una vez
+  const lastSuccessRef = useRef(false);
+  const lastErrorRef = useRef("");
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       customerName: booking.customerName || "",
@@ -58,14 +66,62 @@ export default function BookingWidget() {
     },
   });
 
+  // ✅ Resetear formulario cuando se confirma exitosamente
+  useEffect(() => {
+    if (bookingSave.ok && !lastSuccessRef.current) {
+      lastSuccessRef.current = true; // ✅ Marcar como mostrado
+
+      toast.success("¡Turno confirmado! 🎉", {
+        description: "Te va a llegar la confirmación por WhatsApp",
+      });
+
+      reset({
+        customerName: "",
+        customerPhone: "",
+      });
+
+      updateBooking({
+        selectedSlot: "",
+        customerName: "",
+        customerPhone: "",
+      });
+    }
+
+    // ✅ Resetear el flag cuando vuelve a false
+    if (!bookingSave.ok && lastSuccessRef.current) {
+      lastSuccessRef.current = false;
+    }
+  }, [bookingSave.ok, reset, updateBooking]);
+
+  // ✅ Mostrar errores con toast (solo una vez por error único)
+  useEffect(() => {
+    if (bookingSave.error && bookingSave.error !== lastErrorRef.current) {
+      lastErrorRef.current = bookingSave.error;
+      toast.error(bookingSave.error);
+    }
+
+    // ✅ Resetear cuando el error desaparece
+    if (!bookingSave.error) {
+      lastErrorRef.current = "";
+    }
+  }, [bookingSave.error]);
+
   const onSubmit = async (data) => {
-    // guardamos en el contexto para que createAppointment use esos valores
-    updateBooking(data);
+    console.log("🔵 [1] Submit iniciado", { data, booking });
+
+    updateBooking({
+      customerName: data.customerName || "",
+      customerPhone: data.customerPhone,
+    });
+
     try {
-      await createAppointment();
-      toast.success("¡Turno confirmado!");
-    } catch {
-      toast.error("No pudimos confirmar el turno");
+      await createAppointment({
+        customerName: data.customerName || "",
+        customerPhone: data.customerPhone,
+      });
+      console.log("✅ [2] Turno creado exitosamente");
+    } catch (error) {
+      console.error("❌ [3] Error:", error);
     }
   };
 
@@ -77,17 +133,23 @@ export default function BookingWidget() {
           Elegí servicio, peluquero, fecha y horario disponible. Luego confirmás con tu nombre y teléfono.
         </p>
         <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="px-2 py-1 rounded-lg bg-gray-100">1 Servicio</span>
-          <span className="px-2 py-1 rounded-lg bg-gray-100">2 Fecha</span>
-          <span className="px-2 py-1 rounded-lg bg-gray-100">3 Horario</span>
+          <span className={`px-2 py-1 rounded-lg ${booking.serviceId ? "bg-green-100 text-green-700" : "bg-gray-100"}`}>
+            1 Servicio {booking.serviceId && "✓"}
+          </span>
+          <span className={`px-2 py-1 rounded-lg ${booking.date ? "bg-green-100 text-green-700" : "bg-gray-100"}`}>
+            2 Fecha {booking.date && "✓"}
+          </span>
+          <span className={`px-2 py-1 rounded-lg ${booking.selectedSlot ? "bg-green-100 text-green-700" : "bg-gray-100"}`}>
+            3 Horario {booking.selectedSlot && "✓"}
+          </span>
           <span className="px-2 py-1 rounded-lg bg-gray-100">4 Datos</span>
         </div>
       </header>
 
       <div aria-live="polite">
-        {(metaError || bookingSave.error || availability.error) && (
+        {(metaError || availability.error) && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-            {metaError || bookingSave.error || availability.error}
+            {metaError || availability.error}
           </div>
         )}
       </div>
@@ -95,16 +157,8 @@ export default function BookingWidget() {
       {/* 1) Servicio */}
       <Section title="1) Servicio" right={metaLoading ? <span className="text-xs text-gray-500">cargando...</span> : null}>
         <div className="grid md:grid-cols-2 gap-3">
-          <ServiceSelect
-            services={services}
-            value={booking.serviceId}
-            onChange={(v) => updateBooking({ serviceId: v })}
-          />
-          <StylistSelect
-            stylists={stylists}
-            value={booking.stylistId}
-            onChange={(v) => updateBooking({ stylistId: v })}
-          />
+          <ServiceSelect services={services} value={booking.serviceId} onChange={(v) => updateBooking({ serviceId: v })} />
+          <StylistSelect stylists={stylists} value={booking.stylistId} onChange={(v) => updateBooking({ stylistId: v })} />
         </div>
       </Section>
 
@@ -114,10 +168,10 @@ export default function BookingWidget() {
           <DatePicker value={booking.date} onChange={(v) => updateBooking({ date: v })} />
           <Button
             onClick={loadAvailability}
-            disabled={!booking.serviceId || !booking.stylistId || !booking.date}
+            disabled={!booking.serviceId || !booking.stylistId || !booking.date || availability.loading}
             className="bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
           >
-            Buscar horarios
+            {availability.loading ? "Buscando..." : "Buscar horarios"}
           </Button>
         </div>
         <div className="mt-3 text-sm text-gray-500">
@@ -132,6 +186,7 @@ export default function BookingWidget() {
       >
         <SlotGrid
           slots={availability.slots}
+          busySlots={availability.busySlots} // ✅ Pasar slots ocupados
           loading={availability.loading}
           selected={booking.selectedSlot}
           onSelect={(iso) => updateBooking({ selectedSlot: iso })}
@@ -144,6 +199,7 @@ export default function BookingWidget() {
           <Field label="Nombre (opcional)" error={errors.customerName?.message}>
             <input
               {...register("customerName")}
+              placeholder="Juan Pérez"
               className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10"
             />
           </Field>
@@ -159,18 +215,10 @@ export default function BookingWidget() {
           <div className="flex items-center gap-3">
             <Button
               type="submit"
-              disabled={
-                bookingSave.saving ||
-                !booking.selectedSlot ||
-                !booking.serviceId ||
-                !booking.stylistId
-              }
+              disabled={bookingSave.saving || !booking.selectedSlot || !booking.serviceId || !booking.stylistId}
             >
               {bookingSave.saving ? "Reservando..." : "Confirmar turno"}
             </Button>
-            {bookingSave.ok && (
-              <span className="text-green-700 text-sm">¡Listo! Te va a llegar confirmación por WhatsApp 📲</span>
-            )}
           </div>
         </form>
       </Section>
@@ -182,9 +230,7 @@ export default function BookingWidget() {
               Servicio: <b>{selectedService.name}</b> ({selectedService.duration_min}min)
             </span>
           )}
-          {selectedStylist && (
-            <span>• Peluquero/a: <b>{selectedStylist.name}</b></span>
-          )}
+          {selectedStylist && <span>• Peluquero/a: <b>{selectedStylist.name}</b></span>}
         </div>
       )}
     </div>

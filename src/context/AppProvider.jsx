@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { api } from "../api/client"; // axios helpers
+import { api } from "../api/client";
 
 export const AppContext = createContext(null);
 
@@ -21,16 +21,16 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // --- Availability ---
   const [availability, setAvailability] = useState({
     slots: [],
+    busySlots: [], // ✅ Agregar slots ocupados
     loading: false,
     error: "",
   });
-
   // --- Booking form ---
   const [booking, setBooking] = useState({
     serviceId: "",
     stylistId: "",
-    date: "",           // "YYYY-MM-DD"
-    selectedSlot: "",   // "YYYY-MM-DD HH:MM:SS" (local)
+    date: "",
+    selectedSlot: "",
     customerName: "",
     customerPhone: "",
   });
@@ -49,56 +49,63 @@ export function AppProvider({ children, pollMs = 15000 }) {
   const [eventsError, setEventsError] = useState("");
   const timer = useRef(null);
 
-  // ✅ helper: convierte Date/ISO/“YYYY-MM-DDTHH:MM(:SS)” a "YYYY-MM-DD HH:MM:SS" local (sin Z)
- function toLocalMySQL(val) {
-  if (!val) return "";
+  // --- Booking save state ---
+  const [bookingSave, setBookingSave] = useState({ saving: false, ok: false, error: "" });
 
-  const fmt = (d) => {
-    const pad = (n) => String(n).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    const mm = pad(d.getMonth() + 1);
-    const dd = pad(d.getDate());
-    const hh = pad(d.getHours());
-    const mi = pad(d.getMinutes());
-    const ss = pad(d.getSeconds());
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-  };
+  // ============================================
+  // 📅 Helper: Convertir a MySQL local
+  // ============================================
+  function toLocalMySQL(val) {
+    if (!val) return "";
 
-  // 1) Si es string SIN zona (local): NO usar Date, solo normalizar
-  if (typeof val === "string") {
-    let s = val.trim();
+    const fmt = (d) => {
+      const pad = (n) => String(n).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mi = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    };
 
-    // "YYYY-MM-DDTHH:MM(:SS)?"  -> local (reemplazo T por espacio)
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(s)) {
-      s = s.replace("T", " ");
-      return s.length === 16 ? s + ":00" : s.slice(0, 19);
+    // 1) Si es string SIN zona (local): NO usar Date, solo normalizar
+    if (typeof val === "string") {
+      let s = val.trim();
+
+      // "YYYY-MM-DDTHH:MM(:SS)?" -> local (reemplazo T por espacio)
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(s)) {
+        s = s.replace("T", " ");
+        return s.length === 16 ? s + ":00" : s.slice(0, 19);
+      }
+
+      // "YYYY-MM-DD HH:MM(:SS)?" -> local (ya está)
+      if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(:\d{2})?$/.test(s)) {
+        return s.length === 16 ? s + ":00" : s.slice(0, 19);
+      }
+
+      // 2) Si trae zona (Z o +hh:mm), AHÍ sí usamos Date para convertir a local
+      if (/[Zz]$/.test(s) || /[+\-]\d{2}:\d{2}$/.test(s)) {
+        const d = new Date(s);
+        if (!Number.isNaN(d.getTime())) return fmt(d);
+        return "";
+      }
     }
 
-    // "YYYY-MM-DD HH:MM(:SS)?"  -> local (ya está)
-    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(:\d{2})?$/.test(s)) {
-      return s.length === 16 ? s + ":00" : s.slice(0, 19);
-    }
-
-    // 2) Si trae zona (Z o +hh:mm), AHÍ sí usamos Date para convertir a local
-    if (/[Zz]$/.test(s) || /[+\-]\d{2}:\d{2}$/.test(s)) {
-      const d = new Date(s);
+    // 3) Date o epoch -> formateo local
+    if (val instanceof Date) return fmt(val);
+    if (typeof val === "number") {
+      const ms = val > 1e12 ? val : val * 1000;
+      const d = new Date(ms);
       if (!Number.isNaN(d.getTime())) return fmt(d);
-      return "";
     }
+
+    return "";
   }
 
-  // 3) Date o epoch -> formateo local
-  if (val instanceof Date) return fmt(val);
-  if (typeof val === "number") {
-    const ms = val > 1e12 ? val : val * 1000;
-    const d = new Date(ms);
-    if (!Number.isNaN(d.getTime())) return fmt(d);
-  }
-
-  return "";
-}
-
-  // --- Cargar meta ---
+  // ============================================
+  // 🔄 Cargar metadata (servicios + estilistas)
+  // ============================================
   useEffect(() => {
     (async () => {
       try {
@@ -115,101 +122,13 @@ export function AppProvider({ children, pollMs = 15000 }) {
     })();
   }, []);
 
-  // --- Disponibilidad ---
-  const loadAvailability = useCallback(async () => {
-    const { serviceId, stylistId, date } = booking; // date="YYYY-MM-DD"
-    if (!serviceId || !stylistId || !date) return;
-
-    try {
-      setAvailability((s) => ({ ...s, loading: true, error: "" }));
-
-      const resp = await api.getAvailability({
-        serviceId,
-        stylistId,
-        date,
-        stepMin: 10, // o 20 si querés
-      });
-
-      if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
-
-      const rawSlots = resp?.data?.slots ?? resp?.slots ?? resp?.data ?? [];
-      let slots = [];
-
-      if (Array.isArray(rawSlots) && rawSlots.length) {
-        // A) backend devuelve ["HH:mm", ...]
-        if (typeof rawSlots[0] === "string" && /^\d{1,2}:\d{2}$/.test(rawSlots[0])) {
-          slots = rawSlots.map((hhmm) => {
-            // 👉 guardamos en estado formateo local MySQL (sin Z) para enviar al back tal cual
-            return `${date} ${hhmm.length === 5 ? hhmm : hhmm.padStart(5, "0")}:00`;
-          });
-        } else {
-          // B) ya vienen ISO/epoch/objetos — los normalizamos a local MySQL
-          const toMySQL = (val) => {
-            if (typeof val === "string") {
-              // si es ISO tipo "...Z" o con T, convertirlo a local MySQL
-              return toLocalMySQL(val.replace("Z", ""));
-            }
-            if (typeof val === "number" || val instanceof Date) return toLocalMySQL(val);
-            if (val && typeof val === "object") {
-              const candidate = val.startsAt || val.start || val.iso || val.starts_at || val.start_at || val.time;
-              return toLocalMySQL(candidate);
-            }
-            return "";
-          };
-          slots = rawSlots.map(toMySQL).filter(Boolean);
-        }
-      }
-
-      setAvailability({
-        slots,
-        loading: false,
-        error: slots.length ? "" : "No hay horarios para esa combinación.",
-      });
-    } catch (e) {
-      console.error("[AVAIL][error]", e);
-      setAvailability({ slots: [], loading: false, error: String(e.message || e) });
-    }
-  }, [booking]);
-
-  // --- Crear turno ---
-  const [bookingSave, setBookingSave] = useState({ saving: false, ok: false, error: "" });
-
-  const createAppointment = useCallback(async () => {
-    const { customerPhone, selectedSlot, serviceId, stylistId, customerName } = booking;
-    if (!customerPhone || !selectedSlot || !serviceId || !stylistId) return;
-
-    try {
-      setBookingSave({ saving: true, ok: false, error: "" });
-
-      // duración del servicio (fallback para que el back calcule ends_at)
-      const srv = (services || []).find((s) => String(s.id) === String(serviceId));
-      const durationMin = srv?.duration_min ?? srv?.durationMin ?? undefined;
-
-      // normalizamos SIEMPRE a "YYYY-MM-DD HH:MM:SS" local
-      const startsAt = toLocalMySQL(selectedSlot);
-
-      const payload = {
-        customerPhone: customerPhone.trim(),
-        customerName: (customerName || "").trim() || undefined,
-        stylistId: Number(stylistId),
-        serviceId: Number(serviceId),
-        startsAt,            // <- local sin Z
-        durationMin,         // <- fallback para cálculo del fin
-        status: "scheduled",
-      };
-
-      const res = await api.createAppointment(payload);
-      setBookingSave({ saving: false, ok: Boolean(res?.ok), error: "" });
-      await loadEvents();
-    } catch (e) {
-      setBookingSave({ saving: false, ok: false, error: String(e.message || e) });
-    }
-  }, [booking, services]);
-
-  // --- Cargar eventos ---
+  // ============================================
+  // 📅 Cargar eventos del calendario
+  // ============================================
   const loadEvents = useCallback(async () => {
     const { fromIso, toIso } = range;
     if (!fromIso || !toIso) return;
+
     try {
       setEventsLoading(true);
       setEventsError("");
@@ -217,7 +136,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
       const evs = (data?.appointments ?? data ?? []).map((a) => ({
         id: String(a.id),
         title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,
-        start: a.starts_at, // backend ya devuelve "YYYY-MM-DDTHH:MM:SS" (local)
+        start: a.starts_at,
         end: a.ends_at,
         backgroundColor: a.color_hex || undefined,
         borderColor: a.color_hex || undefined,
@@ -231,11 +150,218 @@ export function AppProvider({ children, pollMs = 15000 }) {
     }
   }, [range]);
 
-  // --- Editar turno ---
+  // ============================================
+  // 🔍 Cargar disponibilidad
+  // ============================================
+  // src/context/AppProvider.jsx
+
+  const loadAvailability = useCallback(async () => {
+    const { serviceId, stylistId, date } = booking;
+    if (!serviceId || !stylistId || !date) return;
+
+    const selectedDate = new Date(date + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setAvailability({
+        slots: [],
+        busySlots: [],
+        loading: false,
+        error: "⚠️ No podés buscar horarios para fechas pasadas",
+      });
+      return;
+    }
+
+    try {
+      setAvailability((s) => ({ ...s, loading: true, error: "" }));
+
+      const resp = await api.getAvailability({
+        serviceId,
+        stylistId,
+        date,
+        stepMin: 20,
+      });
+
+      console.log("📥 [Frontend] Respuesta availability:", resp); // ✅ Debug
+
+      if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
+
+      const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
+      const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
+
+      console.log("📊 [Frontend] Raw data:", { // ✅ Debug
+        rawSlots: rawSlots.length,
+        rawBusySlots: rawBusySlots.length,
+        sampleSlot: rawSlots[0],
+        sampleBusy: rawBusySlots[0],
+      });
+
+      let slots = [];
+      let busySlots = [];
+
+      // ✅ Procesar slots
+      if (Array.isArray(rawSlots) && rawSlots.length) {
+        slots = rawSlots.map((slot) => {
+          if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
+            // ✅ IMPORTANTE: Mismo formato que busySlots
+            return `${date} ${slot.padStart(5, "0")}:00`;
+          }
+          return toLocalMySQL(slot);
+        }).filter(Boolean);
+      }
+
+      // ✅ Procesar busySlots CON EL MISMO FORMATO
+      if (Array.isArray(rawBusySlots) && rawBusySlots.length) {
+        busySlots = rawBusySlots.map((slot) => {
+          if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
+            // ✅ IMPORTANTE: Mismo formato que slots
+            return `${date} ${slot.padStart(5, "0")}:00`;
+          }
+          return toLocalMySQL(slot);
+        }).filter(Boolean);
+      }
+
+      console.log("✅ [Frontend] Procesado:", { // ✅ Debug
+        slots: slots.length,
+        busySlots: busySlots.length,
+        sample: slots[0],
+        busySample: busySlots[0],
+      });
+
+      // Filtrar horarios pasados
+      const now = new Date();
+      const validSlots = slots.filter((iso) => {
+        const slotTime = new Date(iso);
+        return slotTime > now;
+      });
+
+      const validBusySlots = busySlots.filter((iso) => {
+        const slotTime = new Date(iso);
+        return slotTime > now;
+      });
+
+      console.log("🎯 [Frontend] Final:", { // ✅ Debug
+        validSlots: validSlots.length,
+        validBusySlots: validBusySlots.length,
+      });
+
+      setAvailability({
+        slots: validSlots,
+        busySlots: validBusySlots,
+        loading: false,
+        error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
+      });
+    } catch (e) {
+      console.error("❌ [AVAIL][error]", e);
+      setAvailability({
+        slots: [],
+        busySlots: [],
+        loading: false,
+        error: String(e.message || e),
+      });
+    }
+  }, [booking]);
+
+  // ============================================
+  // ✅ Crear turno
+  // ============================================
+  const createAppointment = useCallback(async (overrideData = {}) => {
+    const customerPhone = overrideData.customerPhone || booking.customerPhone;
+    const customerName = overrideData.customerName !== undefined
+      ? overrideData.customerName
+      : booking.customerName;
+    const { selectedSlot, serviceId, stylistId } = booking; // ✅ Extraer ambos
+
+    console.log("📤 [createAppointment] Datos recibidos:", {
+      customerPhone,
+      customerName,
+      selectedSlot,
+      serviceId,
+      stylistId, // ✅ Verificar que no sea undefined
+    });
+
+    if (!customerPhone) {
+      setBookingSave({
+        saving: false,
+        ok: false,
+        error: "⚠️ Ingresá tu teléfono de WhatsApp",
+      });
+      return;
+    }
+
+    if (!selectedSlot || !serviceId || !stylistId) {
+      setBookingSave({
+        saving: false,
+        ok: false,
+        error: "⚠️ Completá todos los pasos antes de confirmar",
+      });
+      return;
+    }
+
+    const slotTime = new Date(selectedSlot);
+    if (slotTime <= new Date()) {
+      setBookingSave({
+        saving: false,
+        ok: false,
+        error: "⚠️ El horario seleccionado ya pasó. Refrescá la página.",
+      });
+      return;
+    }
+
+    try {
+      setBookingSave({ saving: true, ok: false, error: "" });
+
+      const srv = (services || []).find((s) => String(s.id) === String(serviceId));
+      const durationMin = srv?.duration_min ?? srv?.durationMin ?? undefined;
+      const startsAt = toLocalMySQL(selectedSlot);
+
+      const payload = {
+        customerPhone: customerPhone.trim(),
+        customerName: customerName ? customerName.trim() : undefined,
+        stylistId: Number(stylistId),  // ✅ CORREGIDO: usar stylistId
+        serviceId: Number(serviceId),   // ✅ Correcto
+        startsAt,
+        durationMin,
+        status: "scheduled",
+      };
+
+      console.log("📤 [API] Enviando payload:", payload);
+
+      const res = await api.createAppointment(payload);
+
+      console.log("📥 [API] Respuesta:", res);
+
+      if (!res?.ok && !res?.id) {
+        throw new Error(res?.error || "No se pudo crear el turno");
+      }
+
+      setBookingSave({
+        saving: false,
+        ok: true,
+        error: "",
+      });
+
+      await loadEvents();
+
+      setTimeout(() => {
+        setBookingSave({ saving: false, ok: false, error: "" });
+      }, 3000);
+    } catch (e) {
+      console.error("❌ [createAppointment] Error:", e);
+      setBookingSave({
+        saving: false,
+        ok: false,
+        error: String(e.message || e),
+      });
+    }
+  }, [booking, services, loadEvents]);
+  // ============================================
+  // ✏️ Editar turno
+  // ============================================
   const updateAppointment = useCallback(
     async (id, patch) => {
       try {
-        // si viene startsAt tipo ISO, lo normalizamos
         const body = {
           ...patch,
           startsAt: patch.startsAt ? toLocalMySQL(patch.startsAt) : undefined,
@@ -251,7 +377,9 @@ export function AppProvider({ children, pollMs = 15000 }) {
     [loadEvents]
   );
 
-  // --- Eliminar turno ---
+  // ============================================
+  // 🗑️ Eliminar turno
+  // ============================================
   const deleteAppointment = useCallback(
     async (id) => {
       try {
@@ -265,7 +393,9 @@ export function AppProvider({ children, pollMs = 15000 }) {
     [loadEvents]
   );
 
-  // Polling para reflejar reservas externas
+  // ============================================
+  // 🔄 Polling automático
+  // ============================================
   useEffect(() => {
     loadEvents();
     if (timer.current) clearInterval(timer.current);
@@ -273,21 +403,24 @@ export function AppProvider({ children, pollMs = 15000 }) {
     return () => timer.current && clearInterval(timer.current);
   }, [loadEvents, pollMs]);
 
+  // ============================================
+  // 📦 Valor del contexto
+  // ============================================
   const value = useMemo(
     () => ({
-      // meta
+      // Meta
       services,
       stylists,
       metaLoading,
       metaError,
-      // booking + availability
+      // Booking + availability
       booking,
       updateBooking,
       availability,
       loadAvailability,
       bookingSave,
       createAppointment,
-      // calendar
+      // Calendar
       events,
       eventsLoading,
       eventsError,
@@ -309,8 +442,11 @@ export function AppProvider({ children, pollMs = 15000 }) {
       eventsLoading,
       eventsError,
       range,
+      loadEvents,
+      createAppointment,
       updateAppointment,
       deleteAppointment,
+      loadAvailability,
     ]
   );
 
