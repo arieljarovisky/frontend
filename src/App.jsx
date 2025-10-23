@@ -1,30 +1,39 @@
 // src/App.jsx
-import { AppProvider } from "./context/AppProvider";
-import BookingWidget from "./components/BookingWidget";
-import CalendarView from "./components/CalendarView";
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import BookingPage from "./routes/BookingPage.jsx";
+// si tenés Dashboard, Customers, etc. importalos acá
+// import DashboardPage from "./routes/DashboardPage.jsx";
+
+function Shell({ children }) {
+  return (
+    <div className="min-h-screen">
+      {/* navbar simple opcional */}
+      <nav className="border-b bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex gap-4">
+          <Link to="/" className="font-semibold">Pelu de Barrio</Link>
+          <Link to="/appointments" className="text-sm text-zinc-600 hover:text-zinc-800">
+            Reservar turnos
+          </Link>
+          {/* <Link to="/admin" className="text-sm text-zinc-600 hover:text-zinc-800">Dashboard</Link> */}
+        </div>
+      </nav>
+      {children}
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <AppProvider>
-      <div className="min-h-screen">
-        <header className="px-4 pt-8 pb-4">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Reservá tu turno <span className="align-middle">✂️</span>
-          </h1>
-          <p className="text-zinc-600 mt-2">
-            Elegí servicio, peluquero, fecha y horario. Te confirmamos por WhatsApp.
-          </p>
-        </header>
-
-        <main className="max-w-12xl mx-auto p-4 md:p-6 grid gap-6 md:grid-cols-[1.1fr_1fr]">
-          <BookingWidget />
-          <CalendarView />
-        </main>
-
-        <footer className="text-center text-xs text-zinc-500 py-8">
-          Pelu de Barrio • {new Date().getFullYear()}
-        </footer>
-      </div>
-    </AppProvider>
+    <BrowserRouter>
+      <Shell>
+        <Routes>
+          {/* Home: redirige a reservas o poné otra landing si querés */}
+          <Route path="/" element={<Navigate to="/appointments" replace />} />
+          <Route path="/appointments" element={<BookingPage />} />
+          {/* <Route path="/admin" element={<DashboardPage />} /> */}
+          <Route path="*" element={<Navigate to="/appointments" replace />} />
+        </Routes>
+      </Shell>
+    </BrowserRouter>
   );
 }
