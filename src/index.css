@@ -7,3 +7,15 @@ body {
   @apply bg-gradient-to-b from-zinc-50 to-zinc-100 text-zinc-900 antialiased;
   font-family: system-ui, -apple-system, "Inter", "Helvetica Neue", Arial, sans-serif;
 }
+/* líneas horarias más sutiles */
+.fc .fc-timegrid-slot {
+  border-bottom-color: #eaeaea;
+}
+/* títulos un poquito más compactos */
+.fc .fc-timegrid-event {
+  padding: 0 !important;
+}
+/* gap visual entre eventos superpuestos */
+.fc .fc-timegrid-event-harness {
+  padding-right: 2px; /* deja un “aire” entre tarjetas */
+}

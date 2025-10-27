@@ -21,7 +21,7 @@ function toMySQLFromLocalInput(localValue) {
 }
 
 export default function AppointmentModal({ open, onClose, event }) {
-  const { services = [], stylists = [], updateAppointment, deleteAppointment } = useApp();
+  const { services = [], stylists = [], updateAppointment, deleteAppointment, createAppointment } = useApp();
   const a = event?.extendedProps || {};
 
   const [form, setForm] = useState({
@@ -176,7 +176,7 @@ export default function AppointmentModal({ open, onClose, event }) {
             <div style={label}>Estado</div>
             <select style={input} value={form.status} onChange={onChange("status")}>
               <option value="scheduled">Programado</option>
-              <option value="deposit_pending">Seña pendiente</option>
+              <option value="pending_deposit">Seña pendiente</option>
               <option value="confirmed">Confirmado</option>
               <option value="deposit_paid">Seña pagada</option>
               <option value="completed">Completado</option>
@@ -218,6 +218,37 @@ export default function AppointmentModal({ open, onClose, event }) {
           >
             📅 Reprogramar y liberar
           </button>
+          {event?.extendedProps?.status === "cancelled" && (
+            <button
+              onClick={async () => {
+                const ep = event.extendedProps || {};
+                try {
+                  // Datos base
+                  const payload = {
+                    customerName: ep.customer_name,
+                    customerPhone: ep.phone_e164,
+                    stylistId: ep.stylist_id ?? ep.stylistId,
+                    serviceId: ep.service_id ?? ep.serviceId,
+                    startsAt: event.startStr,                 // ISO → el back lo normaliza
+                    durationMin: ep.duration_min ?? null,     // si no viene, el back usa la del servicio
+                    status: ep.deposit_required ? "pending_deposit" : "confirmed",
+                    depositDecimal: ep.deposit_required ? Number(ep.deposit_amount ?? ep.deposit_decimal ?? 0) : 0,
+                  };
+
+                  const data = await createAppointment(payload);
+                  if (!data?.ok) throw new Error(data?.error || "No se pudo crear el nuevo turno");
+
+                  alert("✅ Turno re-agendado en el mismo horario");
+                  onClose?.(true); // refresca calendario
+                } catch (e) {
+                  alert("Error: " + e.message);
+                }
+              }}
+              className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm"
+            >
+              🔁 Reagendar en este horario
+            </button>
+          )}
           <button onClick={onDelete} disabled={saving} style={{ ...input, background: "#fff", borderColor: "#fca5a5", color: "#991b1b" }}>
             Eliminar
           </button>
