@@ -20,7 +20,44 @@ function buildStylistColorMap(stylists) {
   });
   return map;
 }
+// === Helper para detectar métodos de pago ===
+function getPaymentMethods(ep = {}) {
+  const out = new Set();
 
+  const push = (s) => {
+    if (!s) return;
+    const v = String(s).toLowerCase();
+
+    if (v.includes("efectivo") || v.includes("cash")) out.add("cash");
+    if (
+      v.includes("tarjeta") ||
+      v.includes("card") ||
+      v.includes("debito") ||
+      v.includes("débito") ||
+      v.includes("credito") ||
+      v.includes("crédito")
+    )
+      out.add("card");
+    if (v.includes("mercadopago") || v.includes("mp")) out.add("mp");
+  };
+
+  // 🔹 valores sueltos
+  [ep.last_payment_method, ep.payment_method, ep.deposit_method, ep.mp_payment_method].forEach(push);
+
+  // 🔹 flags booleanos
+  if (ep.paid_cash || ep.has_cash_payment) out.add("cash");
+  if (ep.paid_card || ep.has_card_payment) out.add("card");
+
+  // 🔹 arrays o CSV
+  const listLike = ep.payment_methods || ep.paid_methods || ep.methods;
+  if (Array.isArray(listLike)) listLike.forEach(push);
+  else if (typeof listLike === "string") listLike.split(/[,\s]+/).forEach(push);
+
+  // 🔹 si tiene mp_payment_id o status, también marcamos Mercado Pago
+  if (ep.mp_payment_id || ep.mp_payment_status) out.add("mp");
+
+  return Array.from(out); // ejemplo: ['cash','mp']
+}
 export default function CalendarView() {
   const { events, eventsLoading, eventsError, setRange, loadEvents, stylists } = useApp();
   const [stylistFilter, setStylistFilter] = useState("");
@@ -165,6 +202,10 @@ export default function CalendarView() {
           const style = ep.style || {};
           const stylistName = ep.stylist_name || "";
           const status = ep.status;
+          const methods = getPaymentMethods(ep);
+          const showCash = methods.includes("cash");
+          const showCard = methods.includes("card");
+          const showMP = methods.includes("mp");
 
           return (
             <div
@@ -197,6 +238,7 @@ export default function CalendarView() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+
                 {stylistName && (
                   <span
                     style={{
@@ -222,6 +264,7 @@ export default function CalendarView() {
                   >
                     seña pendiente
                   </span>
+
                 )}
                 {status === "deposit_paid" && (
                   <span
@@ -250,6 +293,65 @@ export default function CalendarView() {
                   </span>
                 )}
               </div>
+              <div>
+                {showCash && (
+                  <span
+                    title="Pago en efectivo"
+                    style={{
+                      fontSize: 10,
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      marginRight: 4,
+                      background: "#FFF7ED", 
+                      border: "1px solid #FED7AA",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    💵 efectivo
+                  </span>
+                )}
+
+                {showCard && (
+                  <span
+                    title="Pago con tarjeta"
+                    style={{
+                      fontSize: 10,
+                      marginRight: 4,
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#EFF6FF",           // suave azul
+                      border: "1px solid #BFDBFE",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    💳 tarjeta
+                  </span>
+                )}
+
+                {showMP && (
+                  <span
+                    title="Mercado Pago"
+                    style={{
+                      fontSize: 10,
+                      padding: "2px 6px",
+                      marginLeft: 4,
+                      borderRadius: 999,
+                      background: "#E0F2FE",           // celeste
+                      border: "1px solid #7DD3FC",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    🟦 MP
+                  </span>
+                )}
+              </div>
+
             </div>
           );
         }}
