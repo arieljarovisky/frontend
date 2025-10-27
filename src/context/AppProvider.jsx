@@ -153,112 +153,114 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // ============================================
   // 🔍 Cargar disponibilidad
   // ============================================
-  const loadAvailability = useCallback(async () => {
-    const { serviceId, stylistId, date } = booking;
-    if (!serviceId || !stylistId || !date) return;
+const loadAvailability = useCallback(async () => {
+  const { serviceId, stylistId, date } = booking;
+  if (!serviceId || !stylistId || !date) return;
 
-    const selectedDate = new Date(date + "T00:00:00");
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const selectedDate = new Date(date + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    if (selectedDate < today) {
-      setAvailability({
-        slots: [],
-        busySlots: [],
-        loading: false,
-        error: "⚠️ No podés buscar horarios para fechas pasadas",
-      });
-      return;
+  if (selectedDate < today) {
+    setAvailability({
+      slots: [],
+      busySlots: [],
+      loading: false,
+      error: "⚠️ No podés buscar horarios para fechas pasadas",
+    });
+    return;
+  }
+
+  try {
+    setAvailability((s) => ({ ...s, loading: true, error: "" }));
+
+    const resp = await api.getAvailability({
+      serviceId,
+      stylistId,
+      date,
+      stepMin: 20,
+    });
+
+    console.log("📥 [Frontend] Respuesta availability:", resp);
+
+    if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
+
+    const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
+    const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
+
+    console.log("📊 [Frontend] Raw data:", {
+      rawSlots: rawSlots.length,
+      rawBusySlots: rawBusySlots.length,
+      sampleSlot: rawSlots[0],
+      sampleBusy: rawBusySlots[0],
+    });
+
+    // ✅ FUNCIÓN HELPER para normalizar: "HH:MM" → "YYYY-MM-DD HH:MM:SS"
+    const normalizeSlot = (slot) => {
+      // Si viene como "09:00", "09:20", etc.
+      if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
+        const [h, m] = slot.split(":");
+        const hh = h.padStart(2, "0");
+        const mm = m.padStart(2, "0");
+        return `${date} ${hh}:${mm}:00`; // ← Formato completo
+      }
+      // Si ya viene completo, lo devolvemos normalizado
+      return toLocalMySQL(slot);
+    };
+
+    let slots = [];
+    let busySlots = [];
+
+    // ✅ Procesar slots
+    if (Array.isArray(rawSlots) && rawSlots.length) {
+      slots = rawSlots.map(normalizeSlot).filter(Boolean);
     }
 
-    try {
-      setAvailability((s) => ({ ...s, loading: true, error: "" }));
-
-      const resp = await api.getAvailability({
-        serviceId,
-        stylistId,
-        date,
-        stepMin: 20,
-      });
-
-      console.log("📥 [Frontend] Respuesta availability:", resp);
-
-      if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
-
-      const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
-      const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
-
-      console.log("📊 [Frontend] Raw data:", {
-        rawSlots: rawSlots.length,
-        rawBusySlots: rawBusySlots.length,
-        sampleSlot: rawSlots[0],
-        sampleBusy: rawBusySlots[0],
-      });
-
-      let slots = [];
-      let busySlots = [];
-
-      // ✅ FUNCIÓN HELPER para normalizar el formato
-      const normalizeSlot = (slot) => {
-        if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
-          const [h, m] = slot.split(":");
-          const hh = h.padStart(2, "0");
-          const mm = m.padStart(2, "0");
-          return `${date} ${hh}:${mm}:00`;
-        }
-        return toLocalMySQL(slot);
-      };
-
-      // ✅ Procesar slots con formato consistente
-      if (Array.isArray(rawSlots) && rawSlots.length) {
-        slots = rawSlots.map(normalizeSlot).filter(Boolean);
-      }
-
-      // ✅ Procesar busySlots CON EL MISMO FORMATO
-      if (Array.isArray(rawBusySlots) && rawBusySlots.length) {
-        busySlots = rawBusySlots.map(normalizeSlot).filter(Boolean);
-      }
-
-      console.log("✅ [Frontend] Procesado:", {
-        slots: slots.length,
-        busySlots: busySlots.length,
-        sample: slots[0],
-        busySample: busySlots[0],
-      });
-
-      // Filtrar horarios pasados
-      const now = new Date();
-      const validSlots = slots.filter((iso) => {
-        const slotTime = new Date(iso);
-        return slotTime > now;
-      });
-
-      const validBusySlots = busySlots.filter((iso) => {
-        const slotTime = new Date(iso);
-        return slotTime > now;
-      });
-
-      console.log("🎯 [Frontend] Final:", {
-        validSlots: validSlots.length,
-        validBusySlots: validBusySlots.length,
-      });
-
-      setAvailability({
-        slots: validSlots,
-        busySlots: validBusySlots,
-        loading: false,
-        error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
-      });
-    } catch (e) {
-      console.error("❌ [AVAIL][error]", e);
-      setAvailability({
-        slots: [],
-        busySlots: [],
-        loading: false,
-        error: String(e.message || e),
-      });
+    // ✅ Procesar busySlots CON EL MISMO FORMATO
+    if (Array.isArray(rawBusySlots) && rawBusySlots.length) {
+      busySlots = rawBusySlots.map(normalizeSlot).filter(Boolean);
     }
-  }, [booking]);
+
+    console.log("✅ [Frontend] Procesado:", {
+      slots: slots.length,
+      busySlots: busySlots.length,
+      sample: slots[0],
+      busySample: busySlots[0],
+    });
+
+    // Filtrar horarios pasados
+    const now = new Date();
+    const validSlots = slots.filter((iso) => {
+      const slotTime = new Date(iso.replace(" ", "T")); // ← Importante: convertir espacio a T
+      return slotTime > now;
+    });
+
+    const validBusySlots = busySlots.filter((iso) => {
+      const slotTime = new Date(iso.replace(" ", "T"));
+      return slotTime > now;
+    });
+
+    console.log("🎯 [Frontend] Final:", {
+      validSlots: validSlots.length,
+      validBusySlots: validBusySlots.length,
+    });
+
+    setAvailability({
+      slots: validSlots,
+      busySlots: validBusySlots,
+      loading: false,
+      error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
+    });
+  } catch (e) {
+    console.error("❌ [AVAIL][error]", e);
+    setAvailability({
+      slots: [],
+      busySlots: [],
+      loading: false,
+      error: String(e.message || e),
+    });
+  }
+}, [booking, toLocalMySQL]);
 
   // ============================================
   // ✅ Crear turno

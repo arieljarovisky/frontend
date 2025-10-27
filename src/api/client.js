@@ -84,8 +84,6 @@ export const api = {
 
   // Crear turno
   createAppointment: async (payload) => {
-    // Si ya calculaste endsAt en el front, lo respetamos.
-    // Si no, pasamos durationMin para que el back lo calcule.
     const body = {
       customerPhone: payload.customerPhone,
       customerName: payload.customerName,
@@ -95,7 +93,9 @@ export const api = {
       endsAt: ensureMySQLish(payload.endsAt) || undefined,
       durationMin: payload.durationMin ?? undefined,
       status: payload.status || "scheduled",
-      // snake compat
+      depositDecimal: payload.depositDecimal ?? 0,      
+      markDepositAsPaid: !!payload.markDepositAsPaid,   
+      // snake compat (dejalo igual)
       phone_e164: payload.customerPhone,
       customer_name: payload.customerName,
       stylist_id: Number(payload.stylistId),
@@ -104,8 +104,9 @@ export const api = {
       ends_at: ensureMySQLish(payload.endsAt) || undefined,
       duration_min: payload.durationMin ?? undefined,
     };
+
     const { data } = await apiClient.post("/api/appointments", body);
-    return data; // { ok: true, id }
+    return data;
   },
 
   // Editar turno

@@ -7,6 +7,7 @@ import CustomersPage from "./routes/CustomersPage.jsx";
 import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
 import "./index.css";
 import BookingPage from "./routes/BookingPage.jsx";
+import DepositsPage from "./routes/Depositspage.jsx";
 
 const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:id", element: <CustomerDetailPage /> },
       { path: "appointments", element: <BookingPage /> },
+      { path: "deposits", element: <DepositsPage /> },
     ],
   },
 ]);
