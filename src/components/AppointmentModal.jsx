@@ -119,10 +119,65 @@ function PayForm({ visible, defaultAmount, method, onConfirm, onCancel, disabled
     </div>
   );
 }
+function ConfirmDialog({ open, title, message, confirmText = "Confirmar", cancelText = "Cerrar", onConfirm, onCancel, loading }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 80,
+      display: "flex", alignItems: "center", justifyContent: "center"
+    }}>
+      <div style={{ background: "#fff", width: 420, maxWidth: "90vw", borderRadius: 14, padding: 16, boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>{title}</div>
+        <div style={{ color: "#374151", fontSize: 14, whiteSpace: "pre-wrap" }}>{message}</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+          <button onClick={onCancel} style={{ borderRadius: 10, padding: "10px 12px", border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer" }} disabled={loading}>{cancelText}</button>
+          <button onClick={onConfirm} style={{ borderRadius: 10, padding: "10px 12px", border: "1px solid #000", background: "#000", color: "#fff", fontWeight: 700, cursor: "pointer" }} disabled={loading}>
+            {loading ? "Procesando…" : confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AppointmentModal({ open, onClose, event }) {
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+
   const { services = [], stylists = [], updateAppointment, deleteAppointment } = useApp();
   const a = event?.extendedProps || {};
+  const [confirmUI, setConfirmUI] = useState({
+    open: false,
+    title: "",
+    message: "",
+    confirmText: "Confirmar",
+    cancelText: "Cancelar",
+    onConfirm: null,
+  });
+  const openConfirm = (cfg) => setConfirmUI({ open: true, cancelText: "Cancelar", confirmText: "Confirmar", ...cfg });
+  const closeConfirm = () => setConfirmUI((u) => ({ ...u, open: false, onConfirm: null }));
+  useEffect(() => {
+    if (!msg && !error) return;
+    const t = setTimeout(() => { setMsg(""); setError(""); }, 3000);
+    return () => clearTimeout(t);
+  }, [msg, error]);
+  const [reprogUI, setReprogUI] = useState({
+    visible: false,
+    customText: "",
+    autoCancel: true,
+  });
+  useEffect(() => {
+    if (!open) return;
+    const name = event?.extendedProps?.customer_name
+      ? ` ${event.extendedProps.customer_name}`
+      : "";
+    setReprogUI({
+      visible: false,
+      customText: `Hola${name} 💈
+      Necesitamos *reprogramar tu turno*. ¿Podemos coordinar una nueva fecha por acá? 🙏`,
+      autoCancel: true,
+    });
+  }, [open, event?.extendedProps?.customer_name]); // deps ESTABLES
 
   const [form, setForm] = useState({
     customerName: a.customer_name || "",
@@ -133,8 +188,7 @@ export default function AppointmentModal({ open, onClose, event }) {
     status: a.status || "scheduled",
   });
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [error, setError] = useState("");
+
 
   /* NUEVO: estado para formulario de pago */
   const [payUI, setPayUI] = useState({ visible: false, method: null });
@@ -196,7 +250,6 @@ export default function AppointmentModal({ open, onClose, event }) {
   };
 
   const onDelete = async () => {
-    if (!confirm("¿Eliminar este turno?")) return;
     setSaving(true); setError(""); setMsg("");
     try {
       await deleteAppointment(a.id);
@@ -208,6 +261,13 @@ export default function AppointmentModal({ open, onClose, event }) {
       setSaving(false);
     }
   };
+
+  const askDelete = () => openConfirm({
+    title: "Eliminar turno",
+    message: "¿Seguro que querés eliminar este turno? Esta acción no se puede deshacer.",
+    confirmText: "Eliminar",
+    onConfirm: async () => { closeConfirm(); await onDelete(); },
+  });
 
   /* ====== PAGO: helpers ====== */
   const mpPaymentId = a.mp_payment_id || a.mp_paymentId || a.payment_id || null;
@@ -242,6 +302,62 @@ export default function AppointmentModal({ open, onClose, event }) {
   /* NUEVO: abrir formularios en vez de prompt() */
   const onPayCash = () => setPayUI({ visible: true, method: "cash" });
   const onPayCard = () => setPayUI({ visible: true, method: "card" });
+  /* ====== Reprogramación por WhatsApp ====== */
+  const onReprogramOpen = () => {
+    setReprogUI(u => ({ ...u, visible: true })); // no generar texto acá
+  };
+  const onReprogramCancel = () => {
+    setReprogUI(u => ({ ...u, visible: false }));
+  }; const onReprogramSend = async () => {
+    setSaving(true); setError(""); setMsg("");
+    try {
+      const r = await fetch("/api/whatsapp/reprogram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: a.id,
+          customText: reprogUI.customText || null,
+          autoCancel: Boolean(reprogUI.autoCancel),
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo enviar el mensaje.");
+      setMsg(
+        `Mensaje enviado por WhatsApp. ${j.cancelled ? "El turno fue cancelado para liberar el hueco." : ""}`
+      );
+      setReprogUI({ visible: false, customText: "", autoCancel: true });
+      if (j.cancelled) {
+        // reflejar cancelación localmente
+        await updateAppointment(a.id, { status: "cancelled" });
+        onClose?.(); // cerramos el modal
+      }
+    } catch (e) {
+      setError(e?.message || "Error al reprogramar por WhatsApp.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ====== Cancelar turno (sin eliminar) ====== */
+  const onCancelAppointment = async () => {
+    setSaving(true); setError(""); setMsg("");
+    try {
+      await updateAppointment(a.id, { status: "cancelled" });
+      setMsg("Turno cancelado.");
+      onClose?.();
+    } catch (e) {
+      setError(e?.message || "Error al cancelar el turno.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const askCancel = () => openConfirm({
+    title: "Cancelar turno",
+    message: "El turno quedará marcado como cancelado y se liberará el horario.",
+    confirmText: "Cancelar turno",
+    onConfirm: async () => { closeConfirm(); await onCancelAppointment(); },
+  });
 
   if (!open) return null;
 
@@ -320,37 +436,43 @@ export default function AppointmentModal({ open, onClose, event }) {
 
         {/* Pagos */}
         <div style={{ marginTop: 14 }}>
-          <div style={{ ...row, justifyContent: "space-between" }}>
-            <div style={{ fontWeight: 700 }}>Pagos</div>
-            {depositDecimal != null && (
-              <div style={{ fontSize: 13, color: "#374151" }}>
-                Seña esperada: <b>${Number(depositDecimal).toFixed(2)}</b>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontWeight: 700 }}>Reprogramar</div>
+            <button style={button("outline")} onClick={onReprogramOpen}>Reprogramar por WhatsApp</button>
+          </div>
+          {reprogUI.visible && (
+            <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "#fafafa" }}>
+              <div style={{ ...label, marginBottom: 6 }}>Mensaje</div>
+              <textarea
+                rows={5}
+                style={{ ...input, resize: "vertical", lineHeight: 1.35, whiteSpace: "pre-wrap" }}
+                value={reprogUI.customText}
+                onChange={(e) => setReprogUI(u => ({ ...u, customText: e.target.value }))}
+                placeholder="Escribí el mensaje que se enviará por WhatsApp…"
+                disabled={saving}
+              />
+
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  id="autoCancel"
+                  type="checkbox"
+                  checked={reprogUI.autoCancel}
+                  onChange={(e) => setReprogUI(u => ({ ...u, autoCancel: e.target.checked }))}
+                  disabled={saving}
+                />
+                <label htmlFor="autoCancel" style={{ fontSize: 13 }}>
+                  Cancelar automáticamente este turno para liberar el hueco
+                </label>
               </div>
-            )}
-          </div>
 
-          <div style={{ ...row, marginTop: 8 }}>
-            <button style={button("solid")} onClick={onPayCash}>Registrar EFECTIVO</button>
-            <button style={button("outline")} onClick={onPayCard}>Registrar DÉBITO/TARJETA</button>
-            {mpPaymentId && (
-              <a
-                style={{ ...button("outline"), textDecoration: "none" }}
-                href={`https://www.mercadopago.com.ar/activities/${mpPaymentId}`} target="_blank" rel="noreferrer"
-              >
-                Ver en Mercado Pago
-              </a>
-            )}
-          </div>
-
-          {/* NUEVO: Formulario inline para confirmar el pago */}
-          <PayForm
-            visible={payUI.visible}
-            method={payUI.method}
-            defaultAmount={depositDecimal != null ? Number(depositDecimal).toFixed(2) : ""}
-            onCancel={() => setPayUI({ visible: false, method: null })}
-            onConfirm={postPayment}
-            disabled={saving}
-          />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+                <button style={button("outline")} onClick={onReprogramCancel} disabled={saving}>Cerrar</button>
+                <button style={button("solid")} onClick={onReprogramSend} disabled={saving}>
+                  {saving ? "Enviando…" : "Enviar por WhatsApp"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Mensajes */}
@@ -359,9 +481,17 @@ export default function AppointmentModal({ open, onClose, event }) {
 
         {/* Footer */}
         <div style={footer}>
-          <button onClick={onDelete} disabled={saving} style={button("outline")}>
+          <button onClick={askDelete} disabled={saving} style={button("outline")}>
             Eliminar
           </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={askCancel} disabled={saving} style={button("outline")}>
+              Cancelar turno
+            </button>
+            <button onClick={onDelete} disabled={saving} style={button("outline")}>
+              Eliminar (borrar)
+            </button>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => onClose?.()} disabled={saving} style={button("outline")}>
               Cancelar
@@ -372,6 +502,16 @@ export default function AppointmentModal({ open, onClose, event }) {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmUI.open}
+        title={confirmUI.title}
+        message={confirmUI.message}
+        confirmText={confirmUI.confirmText}
+        cancelText={confirmUI.cancelText}
+        loading={saving}
+        onCancel={closeConfirm}
+        onConfirm={confirmUI.onConfirm}
+      />
     </div>
   );
 }
