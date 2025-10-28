@@ -16,7 +16,7 @@ import PrivateRoute from "./components/PrivateRoute.jsx";
 function Shell({ children }) {
   return (
     <div className="min-h-screen">
-      <nav className="border-b bg-white">
+      <nav className="border-b bg-white ">
         <div className="max-w-6xl mx-auto px-4 py-3 flex gap-4">
           <Link to="/" className="font-semibold">Pelu de Barrio</Link>
           <Link to="/appointments" className="text-sm text-zinc-600 hover:text-zinc-800">

@@ -2,13 +2,13 @@
 import React, { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  DollarSign, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  DollarSign,
+  LogOut,
+  Menu,
   X,
   Settings,
   Bell
@@ -33,7 +33,7 @@ export default function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
       <header className="sticky top-0 z-50 glass-strong border-b border-dark-200/50">
         <div className="max-w-[1600px] mx-auto px-4 lg:px-6">
@@ -121,20 +121,15 @@ export default function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
+      <main className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
         <div className="animate-fade-in">
           <Outlet />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-dark-200/50 bg-dark-100/30 backdrop-blur">
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-6 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-dark-600">
-            <p>© {new Date().getFullYear()} Pelu de Barrio • Sistema de Gestión v2.0</p>
-            <p>Desarrollado con 💙</p>
-          </div>
-        </div>
+      <footer className="mt-auto py-4 text-center text-sm text-zinc-400">
+        © 2025 — Mi sistema
       </footer>
     </div>
   );
@@ -146,10 +141,9 @@ function NavButton({ to, label, icon: Icon, active }) {
       to={to}
       className={`
         flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-        ${
-          active
-            ? "bg-gradient-primary text-white shadow-glow"
-            : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
+        ${active
+          ? "bg-gradient-primary text-white shadow-glow"
+          : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
         }
       `}
     >
@@ -166,10 +160,9 @@ function MobileNavButton({ to, label, icon: Icon, active, onClick }) {
       onClick={onClick}
       className={`
         flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-        ${
-          active
-            ? "bg-gradient-primary text-white shadow-glow"
-            : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
+        ${active
+          ? "bg-gradient-primary text-white shadow-glow"
+          : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
         }
       `}
     >

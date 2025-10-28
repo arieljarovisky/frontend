@@ -217,3 +217,18 @@
 .recharts-tooltip-wrapper {
   @apply shadow-dark;
 }
+
+.rbc-calendar,
+.rbc-time-view,
+.rbc-time-content,
+.rbc-time-header,
+.rbc-time-gutter,
+.rbc-time-column,
+.rbc-time-header-content { background-color: transparent !important; }
+
+.rbc-time-view .rbc-time-slot,
+.rbc-time-header,
+.rbc-time-content,
+.rbc-time-gutter,
+.rbc-day-bg,
+.rbc-time-header.rbc-overflowing { border-color: rgba(255,255,255,.06) !important; }
