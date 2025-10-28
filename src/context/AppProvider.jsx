@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { api } from "../api/client";
+import { apiClient } from "../api/client";
 
 export const AppContext = createContext(null);
 
@@ -110,7 +110,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     (async () => {
       try {
         setMetaLoading(true);
-        const [srv, sty] = await Promise.all([api.getServices(), api.getStylists()]);
+        const [srv, sty] = await Promise.all([apiClient.getServices(), apiClient.getStylists()]);
         setServices(srv);
         setStylists(sty);
       } catch (e) {
@@ -132,7 +132,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     try {
       setEventsLoading(true);
       setEventsError("");
-      const data = await api.getAppointmentsBetween(fromIso, toIso);
+      const data = await apiClient.getAppointmentsBetween(fromIso, toIso);
       const evs = (data?.appointments ?? data ?? []).map((a) => ({
         id: String(a.id),
         title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,
@@ -174,7 +174,7 @@ const loadAvailability = useCallback(async () => {
   try {
     setAvailability((s) => ({ ...s, loading: true, error: "" }));
 
-    const resp = await api.getAvailability({
+    const resp = await  apiClient.getAvailability({
       serviceId,
       stylistId,
       date,
@@ -327,7 +327,7 @@ const loadAvailability = useCallback(async () => {
 
       console.log("📤 [API] Enviando payload:", payload);
 
-      const res = await api.createAppointment(payload);
+      const res = await apiClient.createAppointment(payload);
 
       console.log("📥 [API] Respuesta:", res);
 
@@ -366,7 +366,7 @@ const loadAvailability = useCallback(async () => {
           startsAt: patch.startsAt ? toLocalMySQL(patch.startsAt) : undefined,
           endsAt: patch.endsAt ? toLocalMySQL(patch.endsAt) : undefined,
         };
-        await api.updateAppointment(id, body);
+        await apiClient.updateAppointment(id, body);
         await loadEvents();
         return { ok: true };
       } catch (e) {
@@ -382,7 +382,7 @@ const loadAvailability = useCallback(async () => {
   const deleteAppointment = useCallback(
     async (id) => {
       try {
-        await api.deleteAppointment(id);
+        await apiClient.deleteAppointment(id);
         await loadEvents();
         return { ok: true };
       } catch (e) {

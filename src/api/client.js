@@ -1,142 +1,257 @@
 // src/api/client.js
 import axios from "axios";
 
-// ─────────────────────────────────────────────────────────────
-// Base URL
-// Usa VITE_API_BASE_URL si está presente (ngrok/prod).
-// Si no, asume dev con proxy de Vite y deja baseURL = "" (mismo origen).
-// ─────────────────────────────────────────────────────────────
-const RAW_BASE =
-  (import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_BASE || "").trim();
-const API_BASE = RAW_BASE ? RAW_BASE.replace(/\/$/, "") : "";
+/** Base URL (usa VITE_API_BASE_URL si hace falta apuntar a ngrok) */
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE = RAW_BASE.replace(/\/$/, "");
 
-// Cliente axios
+/** Claves de localStorage */
+const LS_ACCESS = "auth:accessToken";
+const LS_EMAIL  = "auth:email";
+
+/** Set/Get/Remove token */
+export function setAccessToken(token) {
+  if (token) localStorage.setItem(LS_ACCESS, token);
+  else localStorage.removeItem(LS_ACCESS);
+}
+export function getAccessToken() {
+  return localStorage.getItem(LS_ACCESS) || "";
+}
+export function setAuthEmail(email) {
+  if (email) localStorage.setItem(LS_EMAIL, email);
+  else localStorage.removeItem(LS_EMAIL);
+}
+export function getAuthEmail() {
+  return localStorage.getItem(LS_EMAIL) || "";
+}
+
+/** Cliente axios */
 export const apiClient = axios.create({
-  baseURL: API_BASE,         // "" si usás proxy de Vite
+  baseURL: API_BASE,
   timeout: 15000,
-  withCredentials: false,
+  withCredentials: true, // manda cookies (refresh)
 });
 
-// Interceptor de errores → arroja Error con mensaje utilizable
+/** Inyecta Authorization si hay token */
+apiClient.interceptors.request.use((cfg) => {
+  const t = getAccessToken();
+  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  return cfg;
+});
+
+/* =========================
+   REFRESH LOCK + RETRY 401
+   ========================= */
+let isRefreshing = false;
+let refreshPromise = null;
+const requestQueue = [];
+
+function enqueue(cb) {
+  return new Promise((resolve, reject) => {
+    requestQueue.push({ cb, resolve, reject });
+  });
+}
+function flushQueue(error, token) {
+  while (requestQueue.length) {
+    const { cb, resolve, reject } = requestQueue.shift();
+    if (error) reject(error);
+    else resolve(cb(token));
+  }
+}
+
+/** Interceptor de respuesta con manejo 401 */
 apiClient.interceptors.response.use(
   (r) => r,
-  (err) => {
+  async (err) => {
+    const original = err?.config;
     const status = err?.response?.status;
     const data = err?.response?.data;
     const msg =
       typeof data === "string"
         ? data
         : data?.error || data?.message || err.message || "Error de red";
-    console.error("[API ERROR]", status || "?", data || msg);
-    throw new Error(msg);
+
+    // Si no es 401 o el request ya fue reintentado, propaga
+    if (status !== 401 || original?._retry) {
+      console.error("[API ERROR]", status || "?", data || msg);
+      return Promise.reject(err);
+    }
+
+    // Marcamos que se va a reintentar (para evitar loops)
+    original._retry = true;
+
+    // Si ya hay un refresh en curso: encolamos y, al terminar, reintentamos
+    if (isRefreshing) {
+      try {
+        return await enqueue((newToken) => {
+          if (newToken) original.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient(original);
+        });
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    }
+
+    // Disparamos refresh único con lock
+    isRefreshing = true;
+    refreshPromise = (async () => {
+      try {
+        const ok = await authApi.refresh();
+        if (!ok) throw new Error("No se pudo refrescar sesión");
+        const newToken = getAccessToken();
+        flushQueue(null, newToken);
+        return newToken;
+      } catch (e) {
+        // Si el refresh falla, limpiamos sesión y rechazamos toda la cola
+        setAccessToken(null);
+        setAuthEmail(null);
+        flushQueue(e, null);
+        throw e;
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    })();
+
+    try {
+      const newToken = await refreshPromise;
+      if (newToken) original.headers.Authorization = `Bearer ${newToken}`;
+      return apiClient(original);
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 );
 
-// Normaliza array vs {ok:true,data:[...]}
-const asArray = (data) => (Array.isArray(data) ? data : data?.data ?? data ?? []);
-
-// Asegura que fechas tengan segundos y no terminen en 'Z' si ya vienen locales
-const ensureMySQLish = (s) => {
-  if (!s) return s;
-  let v = String(s).trim().replace("T", " ");
-  if (v.endsWith("Z")) v = v.slice(0, -1);
-  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(v)) v += ":00";
-  return v.slice(0, 19);
+/** ========================
+ *  Auth de alto nivel
+ * ======================== */
+export const authApi = {
+  async login(email, password) {
+    const { data } = await apiClient.post("/auth/login", { email, password });
+    // Espera { ok, accessToken, user }
+    if (data?.ok && data?.accessToken) {
+      setAccessToken(data.accessToken);
+      setAuthEmail(data?.user?.email || email);
+    }
+    return data;
+  },
+  async logout() {
+    try { await apiClient.post("/auth/logout"); } catch {}
+    setAccessToken(null);
+    setAuthEmail(null);
+  },
+  async refresh() {
+    // Importante: este endpoint usa la cookie HttpOnly + withCredentials:true
+    const { data } = await apiClient.post("/auth/refresh", {});
+    if (data?.ok && data?.accessToken) {
+      setAccessToken(data.accessToken);
+      return true;
+    }
+    return false;
+  },
+  async me() {
+    const { data } = await apiClient.get("/auth/me");
+    return data; // { ok, user }
+  },
 };
 
-// API pública
-export const api = {
-  // Meta
-  getServices: async () => {
-    const { data } = await apiClient.get("/api/services");
-    return asArray(data);
-  },
+/* =========================
+   API de dominio (turnos)
+   =========================
+   Ajustá los PATH_* si tu backend usa otros endpoints.
+*/
+const PATH_SERVICES = "/api/meta/services";
+const PATH_STYLISTS = "/api/meta/stylists";
+const PATH_AVAIL    = "/api/availability";
+const PATH_APPTS    = "/api/appointments";
+const PATH_ADMIN = "/api/admin";
 
-  getStylists: async () => {
-    const { data } = await apiClient.get("/api/stylists");
-    return asArray(data);
-  },
+// Lista de servicios
+apiClient.getServices = async function () {
+  const { data } = await apiClient.get(PATH_SERVICES);
+  return Array.isArray(data?.services) ? data.services : (data ?? []);
+};
 
-  // Disponibilidad (step=20 por defecto)
-  getAvailability: async ({ serviceId, stylistId, date, stepMin = 20 }) => {
-    const sid = Number(serviceId);
-    const tid = Number(stylistId);
-    const step = String(stepMin);
-    const params = {
-      serviceId: sid, stylistId: tid, date, stepMin: step,
-      // compat snake
-      service_id: sid, stylist_id: tid, step_min: step,
-    };
-    const { data } = await apiClient.get("/api/availability", { params });
-    return data;
-  },
+// Lista de estilistas
+apiClient.getStylists = async function () {
+  const { data } = await apiClient.get(PATH_STYLISTS);
+  return Array.isArray(data?.stylists) ? data.stylists : (data ?? []);
+};
 
-  // Calendario (permite filtrar por estilista)
-  getAppointmentsBetween: async (fromIso, toIso, stylistId) => {
-    const params = {
-      from: fromIso, // el backend ya normaliza ISO → MySQL
-      to: toIso,
-    };
-    if (stylistId) params.stylistId = stylistId;
-    const { data } = await apiClient.get("/api/appointments", { params });
-    return data;
-  },
+// Disponibilidad (GET con query params)
+apiClient.getAvailability = async function ({ serviceId, stylistId, date, stepMin }) {
+  const { data } = await apiClient.get(PATH_AVAIL, {
+    params: { serviceId, stylistId, date, stepMin },
+  });
+  // Normalizamos: { ok, data: { slots, busySlots } }
+  if (data?.data) return data;
+  return {
+    ok: data?.ok ?? true,
+    data: { slots: data?.slots ?? [], busySlots: data?.busySlots ?? [] },
+  };
+};
 
-  // Crear turno
-  createAppointment: async (payload) => {
-    const body = {
-      customerPhone: payload.customerPhone,
-      customerName: payload.customerName,
-      stylistId: Number(payload.stylistId),
-      serviceId: Number(payload.serviceId),
-      startsAt: ensureMySQLish(payload.startsAt),
-      endsAt: ensureMySQLish(payload.endsAt) || undefined,
-      durationMin: payload.durationMin ?? undefined,
-      status: payload.status || "scheduled",
-      depositDecimal: payload.depositDecimal ?? 0,      
-      markDepositAsPaid: !!payload.markDepositAsPaid,   
-      // snake compat (dejalo igual)
-      phone_e164: payload.customerPhone,
-      customer_name: payload.customerName,
-      stylist_id: Number(payload.stylistId),
-      service_id: Number(payload.serviceId),
-      starts_at: ensureMySQLish(payload.startsAt),
-      ends_at: ensureMySQLish(payload.endsAt) || undefined,
-      duration_min: payload.durationMin ?? undefined,
-    };
+// Turnos entre fechas ISO (from/to)
+apiClient.getAppointmentsBetween = async function (fromIso, toIso) {
+  const { data } = await apiClient.get(PATH_APPTS, { params: { from: fromIso, to: toIso } });
+  return Array.isArray(data?.appointments)
+    ? data
+    : { appointments: Array.isArray(data) ? data : [] };
+};
 
-    const { data } = await apiClient.post("/api/appointments", body);
-    return data;
-  },
+// Crear turno
+apiClient.createAppointment = async function (payload) {
+  const { data } = await apiClient.post(PATH_APPTS, payload);
+  return data; // esperás { ok, id, ... }
+};
 
-  // Editar turno
-  updateAppointment: async (id, payload) => {
-    const body = {
-      id,
-      customerName: payload.customerName,
-      customerPhone: payload.customerPhone,
-      serviceId: Number(payload.serviceId),
-      stylistId: Number(payload.stylistId),
-      startsAt: ensureMySQLish(payload.startsAt),
-      endsAt: ensureMySQLish(payload.endsAt) || undefined,
-      durationMin: payload.durationMin ?? undefined, // permite al back recalcular fin
-      status: payload.status,
-      // snake compat
-      customer_name: payload.customerName,
-      phone_e164: payload.customerPhone,
-      service_id: Number(payload.serviceId),
-      stylist_id: Number(payload.stylistId),
-      starts_at: ensureMySQLish(payload.startsAt),
-      ends_at: ensureMySQLish(payload.endsAt) || undefined,
-      duration_min: payload.durationMin ?? undefined,
-    };
-    const { data } = await apiClient.put(`/api/appointments/${id}`, body);
-    return data; // { ok: true }
-  },
+// Actualizar turno
+apiClient.updateAppointment = async function (id, patch) {
+  const { data } = await apiClient.patch(`${PATH_APPTS}/${id}`, patch);
+  return data; // { ok: true }
+};
 
-  // Eliminar turno
-  deleteAppointment: async (id) => {
-    const { data } = await apiClient.delete(`/api/appointments/${id}`);
-    return data; // { ok: true }
-  },
+// Borrar turno
+apiClient.deleteAppointment = async function (id) {
+  const { data } = await apiClient.delete(`${PATH_APPTS}/${id}`);
+  return data; // { ok: true }
+};
+
+// KPIs “rápidos” para las cards
+apiClient.getAdminMetrics = async function () {
+  const { data } = await apiClient.get(`${PATH_ADMIN}/metrics`);
+  return data; // { today_scheduled, today_cancelled, today_total, week_income }
+};
+
+// Dashboard completo (hoy/mañana, por estilista, depósitos, facturación, etc.)
+apiClient.getAdminDashboard = async function ({ from, to } = {}) {
+  const params = {};
+  if (from && to) { params.from = from; params.to = to; } // YYYY-MM-DD
+  const { data } = await apiClient.get(PATH_ADMIN, { params });
+  return data; // { ok:true, data:{ ... } }
+};
+
+// Línea: ingresos por mes del año
+apiClient.getIncomeByMonth = async function (year = new Date().getFullYear()) {
+  const { data } = await apiClient.get(`${PATH_ADMIN}/charts/income-by-month`, { params: { year } });
+  return data; // [{ month:"Ene", income:123 }, ...]
+};
+
+// Barras: servicios más pedidos
+apiClient.getTopServices = async function ({ months = 3, limit = 6 } = {}) {
+  const { data } = await apiClient.get(`${PATH_ADMIN}/charts/top-services`, { params: { months, limit } });
+  return data; // [{ service_name, count }, ...]
+};
+
+// Agenda de HOY
+apiClient.getAgendaToday = async function () {
+  const { data } = await apiClient.get(`${PATH_ADMIN}/agenda/today`);
+  return data; // [{ id, starts_at, status, customer_name, service_name, stylist_name }, ...]
+};
+
+// (Opcional) Búsqueda de clientes para Admin
+apiClient.searchAdminCustomers = async function (q = "") {
+  const { data } = await apiClient.get(`${PATH_ADMIN}/customers`, { params: q ? { q } : {} });
+  return data;
 };

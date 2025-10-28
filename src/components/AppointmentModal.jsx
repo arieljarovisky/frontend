@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/UseApp";
+import { apiClient } from "../api/client";
 
 /* ===== Helpers fecha ===== */
 function toLocalDatetimeValue(isoOrLocal) {
@@ -19,7 +20,6 @@ function toMySQLFromLocalInput(localValue) {
   const normalized = s.includes("T") ? s.replace("T", " ") : s;
   return normalized.length === 16 ? normalized + ":00" : normalized.slice(0, 19);
 }
-
 /* ===== Estilos inline mínimos ===== */
 const overlay = {
   position: "fixed", inset: 0, background: "rgba(0,0,0,.35)",
@@ -46,7 +46,6 @@ const button = (variant = "solid") => ({
   cursor: "pointer"
 });
 const row = { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" };
-
 /* ===== Subcomponente: Formulario de pago ===== */
 function PayForm({ visible, defaultAmount, method, onConfirm, onCancel, disabled }) {
   const [amount, setAmount] = useState(defaultAmount ?? "");
@@ -119,6 +118,7 @@ function PayForm({ visible, defaultAmount, method, onConfirm, onCancel, disabled
     </div>
   );
 }
+
 function ConfirmDialog({ open, title, message, confirmText = "Confirmar", cancelText = "Cerrar", onConfirm, onCancel, loading }) {
   if (!open) return null;
   return (
@@ -156,16 +156,19 @@ export default function AppointmentModal({ open, onClose, event }) {
   });
   const openConfirm = (cfg) => setConfirmUI({ open: true, cancelText: "Cancelar", confirmText: "Confirmar", ...cfg });
   const closeConfirm = () => setConfirmUI((u) => ({ ...u, open: false, onConfirm: null }));
+
   useEffect(() => {
     if (!msg && !error) return;
     const t = setTimeout(() => { setMsg(""); setError(""); }, 3000);
     return () => clearTimeout(t);
   }, [msg, error]);
+
   const [reprogUI, setReprogUI] = useState({
     visible: false,
     customText: "",
     autoCancel: true,
   });
+
   useEffect(() => {
     if (!open) return;
     const name = event?.extendedProps?.customer_name
@@ -188,7 +191,6 @@ export default function AppointmentModal({ open, onClose, event }) {
     status: a.status || "scheduled",
   });
   const [saving, setSaving] = useState(false);
-
 
   /* NUEVO: estado para formulario de pago */
   const [payUI, setPayUI] = useState({ visible: false, method: null });
@@ -231,6 +233,7 @@ export default function AppointmentModal({ open, onClose, event }) {
         const pad = (n) => String(n).padStart(2, "0");
         endsAt = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
       }
+
 
       await updateAppointment(a.id, {
         customerName: form.customerName || null,
@@ -278,20 +281,15 @@ export default function AppointmentModal({ open, onClose, event }) {
   const postPayment = async ({ method, amount }) => {
     setError(""); setMsg("");
     try {
-      const r = await fetch("/api/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appointmentId: a.id,
-          method,                         // 'cash' | 'card'
-          amount_cents: Math.round(Number(amount) * 100),
-          recorded_by: "admin",
-          notes: method === "cash" ? "Pago en efectivo" : "Pago presencial con débito/tarjeta",
-          markDepositAsPaid: true
-        })
+      const { data: j } = await apiClient.post("/api/payments", {
+        appointmentId: a.id,
+        method, // 'cash' | 'card'
+        amount_cents: Math.round(Number(amount) * 100),
+        recorded_by: "admin",
+        notes: method === "cash" ? "Pago en efectivo" : "Pago presencial con débito/tarjeta",
+        markDepositAsPaid: true
       });
-      const j = await r.json();
-      if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo registrar el pago.");
+      if (!j?.ok) throw new Error(j?.error || "No se pudo registrar el pago.");
       setMsg(`Pago ${method === "cash" ? "en efectivo" : "con tarjeta"} registrado.`);
       setPayUI({ visible: false, method: null });
     } catch (e) {
@@ -302,26 +300,24 @@ export default function AppointmentModal({ open, onClose, event }) {
   /* NUEVO: abrir formularios en vez de prompt() */
   const onPayCash = () => setPayUI({ visible: true, method: "cash" });
   const onPayCard = () => setPayUI({ visible: true, method: "card" });
+
   /* ====== Reprogramación por WhatsApp ====== */
   const onReprogramOpen = () => {
     setReprogUI(u => ({ ...u, visible: true })); // no generar texto acá
   };
   const onReprogramCancel = () => {
     setReprogUI(u => ({ ...u, visible: false }));
-  }; const onReprogramSend = async () => {
+  };
+  const onReprogramSend = async () => {
     setSaving(true); setError(""); setMsg("");
     try {
-      const r = await fetch("/api/whatsapp/reprogram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appointmentId: a.id,
-          customText: reprogUI.customText || null,
-          autoCancel: Boolean(reprogUI.autoCancel),
-        }),
+      const { data: j } = await apiClient.post("/api/whatsapp/reprogram", {
+        appointmentId: a.id,
+        phone: a.phone_e164 || a.customer_phone || form.customerPhone, // ✅ manda el número
+        customText: reprogUI.customText || null,
+        autoCancel: Boolean(reprogUI.autoCancel),
       });
-      const j = await r.json();
-      if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo enviar el mensaje.");
+      if (!j?.ok) throw new Error(j?.error || "No se pudo enviar el mensaje.");
       setMsg(
         `Mensaje enviado por WhatsApp. ${j.cancelled ? "El turno fue cancelado para liberar el hueco." : ""}`
       );
@@ -434,7 +430,7 @@ export default function AppointmentModal({ open, onClose, event }) {
           </div>
         </div>
 
-        {/* Pagos */}
+        {/* Reprogramación */}
         <div style={{ marginTop: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontWeight: 700 }}>Reprogramar</div>
@@ -515,3 +511,9 @@ export default function AppointmentModal({ open, onClose, event }) {
     </div>
   );
 }
+
+
+
+
+
+

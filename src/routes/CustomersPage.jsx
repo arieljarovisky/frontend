@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "../shared/useQuery.js";
-import { adminApi } from "../shared/api.js";
+import { apiClient } from "../api";
 import { SearchInput, initials, formatPhone } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 
@@ -23,7 +23,7 @@ export default function CustomersPage() {
 
     // 4) Fetch dinámico (se cancela si el usuario sigue tecleando)
     const { data: rows = [], loading, error } =
-        useQuery((signal) => adminApi.customers(qDebounced, signal), [qDebounced]);
+        useQuery((signal) => apiClient.customers(qDebounced, signal), [qDebounced]);
 
     // 5) Actualizo la URL cuando se envía el form (Enter o botón Buscar)
     function submitSearch(v) {

@@ -2,7 +2,7 @@
 import React from "react";
 import { Card } from "../shared/ui.jsx";
 import { useQuery } from "../shared/useQuery.js";
-import { adminApi } from "../shared/api.js";
+import { api, authApi, apiClient } from "../api";
 import { useNavigate } from "react-router-dom";
 
 // Recharts

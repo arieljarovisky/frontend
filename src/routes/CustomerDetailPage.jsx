@@ -1,12 +1,12 @@
 import React from "react";
- import { adminApi } from "../shared/api.js";
+ import { apiClient } from "../api";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "../shared/useQuery.js";
 import { formatPhone, initials, formatDateTime, StatusPill} from "../shared/ui.jsx";
 
 export default function CustomerDetailPage() {
     const { id } = useParams();
-    const { data, loading, error } = useQuery((signal) => adminApi.customerDetail(id, signal), [id]);
+    const { data, loading, error } = useQuery((signal) => apiClient.customerDetail(id, signal), [id]);
 
 
     if (loading) return <p className="text-sm text-gray-500">Cargando…</p>;
