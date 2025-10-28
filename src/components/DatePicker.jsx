@@ -1,15 +1,14 @@
-// src/components/DatePicker.jsx
+// src/components/DatePicker.jsx - Versión mejorada modo oscuro
 import { useMemo } from "react";
+import { Calendar } from "lucide-react";
 
 export default function DatePicker({ value, onChange }) {
-  // Obtener fecha mínima (hoy) en formato YYYY-MM-DD
   const minDate = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today.toISOString().split('T')[0];
   }, []);
 
-  // Fecha máxima (ej: 90 días adelante)
   const maxDate = useMemo(() => {
     const future = new Date();
     future.setDate(future.getDate() + 90);
@@ -19,7 +18,6 @@ export default function DatePicker({ value, onChange }) {
   const handleChange = (e) => {
     const selected = e.target.value;
     
-    // Validar que no sea fecha pasada
     if (selected < minDate) {
       alert("⚠️ No podés seleccionar fechas pasadas");
       return;
@@ -29,14 +27,19 @@ export default function DatePicker({ value, onChange }) {
   };
 
   return (
-    <input
-      type="date"
-      value={value}
-      onChange={handleChange}
-      min={minDate}
-      max={maxDate}
-      className="rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10"
-      aria-label="Seleccionar fecha"
-    />
+    <div className="relative flex-1">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+        <Calendar className="w-5 h-5 text-slate-500" />
+      </div>
+      <input
+        type="date"
+        value={value}
+        onChange={handleChange}
+        min={minDate}
+        max={maxDate}
+        className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-700/50 bg-slate-800/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 cursor-pointer hover:border-slate-600/50 transition-all [color-scheme:dark]"
+        aria-label="Seleccionar fecha"
+      />
+    </div>
   );
 }

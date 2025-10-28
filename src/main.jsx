@@ -3,6 +3,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
+import "./calendar-dark.css";
 
 // Layout y páginas
 import AppLayout from "./routes/AppLayout.jsx";
@@ -11,18 +12,20 @@ import CustomersPage from "./routes/CustomersPage.jsx";
 import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
 import BookingPage from "./routes/BookingPage.jsx";
 import DepositsPage from "./routes/Depositspage.jsx";
-import LoginPage from "./routes/LoginPage.jsx"; // 👈 nueva
+import LoginPage from "./routes/LoginPage.jsx";
 
 // Auth
-import { AuthProvider } from "./context/AuthContext.jsx"; // 👈 del kit
-import PrivateRoute from "./components/PrivateRoute.jsx";  // 👈 del kit
+import { AuthProvider } from "./context/AuthContext.jsx";
+import PrivateRoute from "./components/PrivateRoute.jsx";
+
+// Sistema de notificaciones
+import { NotificationSystem } from "./components/notifications/NotificationSystem.jsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <AppLayout />,
     children: [
-      // Dashboard protegido (admin/staff)
       {
         index: true,
         element: (
@@ -31,7 +34,6 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-      // Clientes protegido
       {
         path: "customers",
         element: (
@@ -48,10 +50,7 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-      // Reservas públicas (si querés que cualquiera reserve)
       { path: "appointments", element: <BookingPage /> },
-
-      // Depósitos protegido
       {
         path: "deposits",
         element: (
@@ -60,9 +59,6 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-
-      // Login público
-
     ],
   },
   { path: "login", element: <LoginPage /> },
@@ -71,6 +67,7 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
+      <NotificationSystem />
       <RouterProvider router={router} />
     </AuthProvider>
   </React.StrictMode>

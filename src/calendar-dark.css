@@ -1,0 +1,214 @@
+/* Estilos para modo oscuro del calendario FullCalendar */
+
+/* ===== Dark Mode Calendar Styles ===== */
+.calendar-dark .fc {
+  --fc-border-color: #334155;
+  --fc-button-bg-color: #1e293b;
+  --fc-button-border-color: #475569;
+  --fc-button-hover-bg-color: #334155;
+  --fc-button-hover-border-color: #64748b;
+  --fc-button-active-bg-color: #0f172a;
+  --fc-button-active-border-color: #334155;
+  --fc-page-bg-color: #0f172a;
+  --fc-neutral-bg-color: #1e293b;
+  --fc-neutral-text-color: #f1f5f9;
+  --fc-list-event-hover-bg-color: #334155;
+}
+
+.calendar-dark .fc-theme-standard td,
+.calendar-dark .fc-theme-standard th {
+  border-color: #334155;
+}
+
+.calendar-dark .fc-theme-standard .fc-scrollgrid {
+  border-color: #334155;
+}
+
+.calendar-dark .fc .fc-col-header-cell {
+  background-color: #1e293b;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.calendar-dark .fc .fc-daygrid-day-number,
+.calendar-dark .fc .fc-timegrid-slot-label {
+  color: #cbd5e1;
+}
+
+.calendar-dark .fc .fc-toolbar-title {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.calendar-dark .fc .fc-button {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #475569;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.calendar-dark .fc .fc-button:hover {
+  background-color: #334155;
+  border-color: #64748b;
+}
+
+.calendar-dark .fc .fc-button:focus {
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.3);
+}
+
+.calendar-dark .fc .fc-button-active {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.calendar-dark .fc .fc-button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-dark .fc .fc-day-today {
+  background-color: #1e293b !important;
+}
+
+.calendar-dark .fc .fc-timegrid-slot {
+  height: 3em;
+  border-color: #334155;
+}
+
+.calendar-dark .fc .fc-timegrid-slot-minor {
+  border-top-style: dashed;
+  border-color: #1e293b;
+}
+
+.calendar-dark .fc .fc-timegrid-now-indicator-line {
+  border-color: #ef4444;
+  border-width: 2px;
+}
+
+.calendar-dark .fc .fc-timegrid-now-indicator-arrow {
+  border-color: #ef4444;
+}
+
+/* Eventos */
+.calendar-dark .fc-event {
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.calendar-dark .fc-daygrid-day {
+  background-color: #0f172a;
+}
+
+.calendar-dark .fc-daygrid-day:hover {
+  background-color: #1e293b;
+}
+
+/* Scrollbars en dark mode */
+.calendar-dark .fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.calendar-dark .fc-scroller::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+.calendar-dark .fc-scroller::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.calendar-dark .fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Time labels */
+.calendar-dark .fc-timegrid-slot-label-cushion {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+/* Header cells */
+.calendar-dark .fc-col-header-cell-cushion {
+  color: #cbd5e1;
+  padding: 8px;
+}
+
+/* More link */
+.calendar-dark .fc-daygrid-more-link {
+  color: #60a5fa;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.calendar-dark .fc-daygrid-more-link:hover {
+  background-color: #334155;
+  color: #93c5fd;
+}
+
+/* Popover */
+.calendar-dark .fc-popover {
+  background-color: #1e293b;
+  border-color: #475569;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.calendar-dark .fc-popover-header {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  border-bottom-color: #334155;
+}
+
+.calendar-dark .fc-popover-body {
+  color: #cbd5e1;
+}
+
+/* List view específico */
+.calendar-dark .fc-list-day-cushion {
+  background-color: #1e293b;
+  color: #94a3b8;
+}
+
+.calendar-dark .fc-list-event {
+  background-color: #0f172a;
+  border-left-width: 4px;
+}
+
+.calendar-dark .fc-list-event:hover td {
+  background-color: #1e293b;
+}
+
+.calendar-dark .fc-list-event-time,
+.calendar-dark .fc-list-event-title {
+  color: #e2e8f0;
+}
+
+/* Mejoras visuales adicionales */
+.calendar-dark {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.calendar-dark .fc-view-harness {
+  background-color: #0f172a;
+}
+
+/* Animaciones suaves */
+.calendar-dark .fc-event,
+.calendar-dark .fc-button,
+.calendar-dark .fc-daygrid-day {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Mejora de contraste para accesibilidad */
+.calendar-dark .fc-event-title,
+.calendar-dark .fc-event-time {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}

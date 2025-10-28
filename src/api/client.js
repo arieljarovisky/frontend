@@ -159,10 +159,10 @@ export const authApi = {
 /* =========================
    API de dominio (turnos)
    =========================
-   Ajustá los PATH_* si tu backend usa otros endpoints.
+   ✅ Rutas corregidas para coincidir con el backend.
 */
-const PATH_SERVICES = "/api/meta/services";
-const PATH_STYLISTS = "/api/meta/stylists";
+const PATH_SERVICES = "/api/services";  // ✅ Corregido
+const PATH_STYLISTS = "/api/stylists";  // ✅ Corregido
 const PATH_AVAIL    = "/api/availability";
 const PATH_APPTS    = "/api/appointments";
 const PATH_ADMIN = "/api/admin";
@@ -170,13 +170,15 @@ const PATH_ADMIN = "/api/admin";
 // Lista de servicios
 apiClient.getServices = async function () {
   const { data } = await apiClient.get(PATH_SERVICES);
-  return Array.isArray(data?.services) ? data.services : (data ?? []);
+  // El backend devuelve { ok: true, data: [...] }
+  return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 };
 
 // Lista de estilistas
 apiClient.getStylists = async function () {
   const { data } = await apiClient.get(PATH_STYLISTS);
-  return Array.isArray(data?.stylists) ? data.stylists : (data ?? []);
+  // El backend devuelve { ok: true, data: [...] }
+  return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 };
 
 // Disponibilidad (GET con query params)
@@ -208,7 +210,7 @@ apiClient.createAppointment = async function (payload) {
 
 // Actualizar turno
 apiClient.updateAppointment = async function (id, patch) {
-  const { data } = await apiClient.patch(`${PATH_APPTS}/${id}`, patch);
+  const { data } = await apiClient.put(`${PATH_APPTS}/${id}`, patch);
   return data; // { ok: true }
 };
 
@@ -218,7 +220,7 @@ apiClient.deleteAppointment = async function (id) {
   return data; // { ok: true }
 };
 
-// KPIs “rápidos” para las cards
+// KPIs "rápidos" para las cards
 apiClient.getAdminMetrics = async function () {
   const { data } = await apiClient.get(`${PATH_ADMIN}/metrics`);
   return data; // { today_scheduled, today_cancelled, today_total, week_income }
@@ -253,5 +255,42 @@ apiClient.getAgendaToday = async function () {
 // (Opcional) Búsqueda de clientes para Admin
 apiClient.searchAdminCustomers = async function (q = "") {
   const { data } = await apiClient.get(`${PATH_ADMIN}/customers`, { params: q ? { q } : {} });
+  return data;
+};
+
+// ===== Customers =====
+const PATH_CUSTOMERS = "/api/customers";
+const PATH_CUSTOMERS_ADMIN = "/api/admin/customers";
+
+// Búsqueda admin (requiere rol admin/staff)
+apiClient.customers = async function (q = "", signal) {
+  const params = q ? { q } : {};
+  const config = signal ? { params, signal } : { params };
+  const { data } = await apiClient.get(PATH_CUSTOMERS_ADMIN, config);
+  return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+};
+
+// Detalle de cliente
+apiClient.customerDetail = async function (id, signal) {
+  const config = signal ? { signal } : {};
+  const { data } = await apiClient.get(`${PATH_CUSTOMERS_ADMIN}/${id}`, config);
+  return data?.data ?? data;
+};
+
+// Crear cliente
+apiClient.createCustomer = async function (payload) {
+  const { data } = await apiClient.post(PATH_CUSTOMERS, payload);
+  return data;
+};
+
+// Actualizar cliente
+apiClient.updateCustomer = async function (id, patch) {
+  const { data } = await apiClient.patch(`${PATH_CUSTOMERS}/${id}`, patch);
+  return data;
+};
+
+// Eliminar cliente
+apiClient.deleteCustomer = async function (id) {
+  const { data } = await apiClient.delete(`${PATH_CUSTOMERS}/${id}`);
   return data;
 };
