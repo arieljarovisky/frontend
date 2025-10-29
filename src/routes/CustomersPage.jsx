@@ -50,8 +50,8 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="grid grid-cols-12 px-5 py-3 text-xs font-medium text-gray-500 border-b bg-gray-50">
+            <div className="rounded-2xl border border-gray-200 overflow-hidden bg-dark">
+                <div className="grid grid-cols-12 px-5 py-3 text-xs font-medium text-white-500 border-b bg-dark-200">
                     <div className="col-span-5">Cliente</div>
                     <div className="col-span-4">Teléfono</div>
                     <div className="col-span-3 text-right"># Turnos</div>
@@ -69,7 +69,7 @@ export default function CustomersPage() {
                             <Link
                                 key={r.id}
                                 to={`/customers/${r.id}`}
-                                className="w-full text-left px-5 py-3 hover:bg-gray-50 grid grid-cols-12 items-center"
+                                className="w-full text-left px-5 py-3 hover:bg-gray-800 grid grid-cols-12 items-center"
                             >
                                 <div className="col-span-5 flex items-center gap-3">
                                     <div className="size-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
@@ -80,7 +80,7 @@ export default function CustomersPage() {
                                         <div className="text-xs text-gray-500">ID #{r.id}</div>
                                     </div>
                                 </div>
-                                <div className="col-span-4 text-sm text-gray-700">
+                                <div className="col-span-4 text-sm text-white-700">
                                     {formatPhone(r.phone_e164 ?? r.phone)}
                                 </div>
                                 <div className="col-span-3 text-right text-sm font-semibold">

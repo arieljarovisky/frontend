@@ -1,7 +1,7 @@
+// src/context/AppProvider.jsx
 import React, {
   createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -25,6 +25,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     loading: false,
     error: "",
   });
+
   // --- Booking form ---
   const [booking, setBooking] = useState({
     serviceId: "",
@@ -37,71 +38,72 @@ export function AppProvider({ children, pollMs = 15000 }) {
   const updateBooking = (patch) => setBooking((b) => ({ ...b, ...patch }));
 
   // --- Calendar events ---
-  const [range, setRange] = useState(() => {
+  const [range, _setRange] = useState(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + 30);
     return { fromIso: start.toISOString(), toIso: end.toISOString() };
   });
+  const rangeRef = useRef(range);
+  useEffect(() => {
+    rangeRef.current = range;
+  }, [range]);
+
+  const setRangeSafe = useCallback((next) => {
+    if (!next) return;
+    _setRange((prev) =>
+      prev.fromIso === next.fromIso && prev.toIso === next.toIso ? prev : next
+    );
+  }, []);
+
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState("");
-  const timer = useRef(null);
+  const pollTimer = useRef(null);
+  const debounceTimer = useRef(null);
 
   // --- Booking save state ---
-  const [bookingSave, setBookingSave] = useState({ saving: false, ok: false, error: "" });
+  const [bookingSave, setBookingSave] = useState({
+    saving: false,
+    ok: false,
+    error: "",
+  });
 
   // ============================================
-  // 📅 Helper: Convertir a MySQL local
+  // 🧰 Helper: Local MySQL datetime
   // ============================================
-  function toLocalMySQL(val) {
+  const toLocalMySQL = useCallback((val) => {
     if (!val) return "";
-
     const fmt = (d) => {
       const pad = (n) => String(n).padStart(2, "0");
-      const yyyy = d.getFullYear();
-      const mm = pad(d.getMonth() + 1);
-      const dd = pad(d.getDate());
-      const hh = pad(d.getHours());
-      const mi = pad(d.getMinutes());
-      const ss = pad(d.getSeconds());
-      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+        d.getHours()
+      )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     };
-
-    // 1) Si es string SIN zona (local): NO usar Date, solo normalizar
     if (typeof val === "string") {
       let s = val.trim();
-
-      // "YYYY-MM-DDTHH:MM(:SS)?" -> local (reemplazo T por espacio)
       if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(s)) {
         s = s.replace("T", " ");
         return s.length === 16 ? s + ":00" : s.slice(0, 19);
       }
-
-      // "YYYY-MM-DD HH:MM(:SS)?" -> local (ya está)
       if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(:\d{2})?$/.test(s)) {
         return s.length === 16 ? s + ":00" : s.slice(0, 19);
       }
-
-      // 2) Si trae zona (Z o +hh:mm), AHÍ sí usamos Date para convertir a local
       if (/[Zz]$/.test(s) || /[+\-]\d{2}:\d{2}$/.test(s)) {
         const d = new Date(s);
         if (!Number.isNaN(d.getTime())) return fmt(d);
         return "";
       }
     }
-
-    // 3) Date o epoch -> formateo local
     if (val instanceof Date) return fmt(val);
     if (typeof val === "number") {
       const ms = val > 1e12 ? val : val * 1000;
       const d = new Date(ms);
       if (!Number.isNaN(d.getTime())) return fmt(d);
     }
-
     return "";
-  }
+  }, []);
 
   // ============================================
   // 🔄 Cargar metadata (servicios + estilistas)
@@ -110,11 +112,14 @@ export function AppProvider({ children, pollMs = 15000 }) {
     (async () => {
       try {
         setMetaLoading(true);
-        const [srv, sty] = await Promise.all([apiClient.getServices(), apiClient.getStylists()]);
+        const [srv, sty] = await Promise.all([
+          apiClient.getServices(),
+          apiClient.getStylists(),
+        ]);
         setServices(srv);
         setStylists(sty);
       } catch (e) {
-        console.error("❌ Error cargando metadata:", e.message);
+        console.error("❌ Error cargando metadata:", e);
         setMetaError(String(e.message || e));
       } finally {
         setMetaLoading(false);
@@ -123,12 +128,11 @@ export function AppProvider({ children, pollMs = 15000 }) {
   }, []);
 
   // ============================================
-  // 📅 Cargar eventos del calendario
+  // 📅 Cargar eventos — función ESTABLE
   // ============================================
   const loadEvents = useCallback(async () => {
-    const { fromIso, toIso } = range;
+    const { fromIso, toIso } = rangeRef.current || {};
     if (!fromIso || !toIso) return;
-
     try {
       setEventsLoading(true);
       setEventsError("");
@@ -148,216 +152,159 @@ export function AppProvider({ children, pollMs = 15000 }) {
     } finally {
       setEventsLoading(false);
     }
-  }, [range]);
+  }, []); // 👈 ya no depende de `range`
+
+  // 🔔 Debounce cuando cambia el rango visible (navegación)
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      loadEvents();
+      debounceTimer.current = null;
+    }, 150);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [range, loadEvents]);
+
+  // ⏱️ Polling estable (no se reinicia al scrollear)
+  useEffect(() => {
+    loadEvents(); // primer carga
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    pollTimer.current = setInterval(loadEvents, pollMs);
+    return () => pollTimer.current && clearInterval(pollTimer.current);
+  }, [loadEvents, pollMs]);
 
   // ============================================
   // 🔍 Cargar disponibilidad
   // ============================================
-const loadAvailability = useCallback(async () => {
-  const { serviceId, stylistId, date } = booking;
-  if (!serviceId || !stylistId || !date) return;
+  const loadAvailability = useCallback(async () => {
+    const { serviceId, stylistId, date } = booking;
+    if (!serviceId || !stylistId || !date) return;
 
-  const selectedDate = new Date(date + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(date + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  if (selectedDate < today) {
-    setAvailability({
-      slots: [],
-      busySlots: [],
-      loading: false,
-      error: "⚠️ No podés buscar horarios para fechas pasadas",
-    });
-    return;
-  }
-
-  try {
-    setAvailability((s) => ({ ...s, loading: true, error: "" }));
-
-    const resp = await  apiClient.getAvailability({
-      serviceId,
-      stylistId,
-      date,
-      stepMin: 20,
-    });
-
-    console.log("📥 [Frontend] Respuesta availability:", resp);
-
-    if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
-
-    const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
-    const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
-
-    console.log("📊 [Frontend] Raw data:", {
-      rawSlots: rawSlots.length,
-      rawBusySlots: rawBusySlots.length,
-      sampleSlot: rawSlots[0],
-      sampleBusy: rawBusySlots[0],
-    });
-
-    // ✅ FUNCIÓN HELPER para normalizar: "HH:MM" → "YYYY-MM-DD HH:MM:SS"
-    const normalizeSlot = (slot) => {
-      // Si viene como "09:00", "09:20", etc.
-      if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
-        const [h, m] = slot.split(":");
-        const hh = h.padStart(2, "0");
-        const mm = m.padStart(2, "0");
-        return `${date} ${hh}:${mm}:00`; // ← Formato completo
-      }
-      // Si ya viene completo, lo devolvemos normalizado
-      return toLocalMySQL(slot);
-    };
-
-    let slots = [];
-    let busySlots = [];
-
-    // ✅ Procesar slots
-    if (Array.isArray(rawSlots) && rawSlots.length) {
-      slots = rawSlots.map(normalizeSlot).filter(Boolean);
-    }
-
-    // ✅ Procesar busySlots CON EL MISMO FORMATO
-    if (Array.isArray(rawBusySlots) && rawBusySlots.length) {
-      busySlots = rawBusySlots.map(normalizeSlot).filter(Boolean);
-    }
-
-    console.log("✅ [Frontend] Procesado:", {
-      slots: slots.length,
-      busySlots: busySlots.length,
-      sample: slots[0],
-      busySample: busySlots[0],
-    });
-
-    // Filtrar horarios pasados
-    const now = new Date();
-    const validSlots = slots.filter((iso) => {
-      const slotTime = new Date(iso.replace(" ", "T")); // ← Importante: convertir espacio a T
-      return slotTime > now;
-    });
-
-    const validBusySlots = busySlots.filter((iso) => {
-      const slotTime = new Date(iso.replace(" ", "T"));
-      return slotTime > now;
-    });
-
-    console.log("🎯 [Frontend] Final:", {
-      validSlots: validSlots.length,
-      validBusySlots: validBusySlots.length,
-    });
-
-    setAvailability({
-      slots: validSlots,
-      busySlots: validBusySlots,
-      loading: false,
-      error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
-    });
-  } catch (e) {
-    console.error("❌ [AVAIL][error]", e);
-    setAvailability({
-      slots: [],
-      busySlots: [],
-      loading: false,
-      error: String(e.message || e),
-    });
-  }
-}, [booking, toLocalMySQL]);
-
-  // ============================================
-  // ✅ Crear turno
-  // ============================================
-  const createAppointment = useCallback(async (overrideData = {}) => {
-    const customerPhone = overrideData.customerPhone || booking.customerPhone;
-    const customerName = overrideData.customerName !== undefined
-      ? overrideData.customerName
-      : booking.customerName;
-    const { selectedSlot, serviceId, stylistId } = booking;
-
-    console.log("📤 [createAppointment] Datos recibidos:", {
-      customerPhone,
-      customerName,
-      selectedSlot,
-      serviceId,
-      stylistId,
-    });
-
-    if (!customerPhone) {
-      setBookingSave({
-        saving: false,
-        ok: false,
-        error: "⚠️ Ingresá tu teléfono de WhatsApp",
-      });
-      return;
-    }
-
-    if (!selectedSlot || !serviceId || !stylistId) {
-      setBookingSave({
-        saving: false,
-        ok: false,
-        error: "⚠️ Completá todos los pasos antes de confirmar",
-      });
-      return;
-    }
-
-    const slotTime = new Date(selectedSlot);
-    if (slotTime <= new Date()) {
-      setBookingSave({
-        saving: false,
-        ok: false,
-        error: "⚠️ El horario seleccionado ya pasó. Refrescá la página.",
+    if (selectedDate < today) {
+      setAvailability({
+        slots: [],
+        busySlots: [],
+        loading: false,
+        error: "⚠️ No podés buscar horarios para fechas pasadas",
       });
       return;
     }
 
     try {
-      setBookingSave({ saving: true, ok: false, error: "" });
+      setAvailability((s) => ({ ...s, loading: true, error: "" }));
 
-      const srv = (services || []).find((s) => String(s.id) === String(serviceId));
-      const durationMin = srv?.duration_min ?? srv?.durationMin ?? undefined;
-      const startsAt = toLocalMySQL(selectedSlot);
-
-      const payload = {
-        customerPhone: customerPhone.trim(),
-        customerName: customerName ? customerName.trim() : undefined,
-        stylistId: Number(stylistId),
-        serviceId: Number(serviceId),
-        startsAt,
-        durationMin,
-        status: "scheduled",
-      };
-
-      console.log("📤 [API] Enviando payload:", payload);
-
-      const res = await apiClient.createAppointment(payload);
-
-      console.log("📥 [API] Respuesta:", res);
-
-      if (!res?.ok && !res?.id) {
-        throw new Error(res?.error || "No se pudo crear el turno");
-      }
-
-      setBookingSave({
-        saving: false,
-        ok: true,
-        error: "",
+      const resp = await apiClient.getAvailability({
+        serviceId,
+        stylistId,
+        date,
+        stepMin: 20,
       });
 
-      await loadEvents();
+      if (resp?.ok === false) throw new Error(resp?.error || "Sin disponibilidad");
 
-      setTimeout(() => {
-        setBookingSave({ saving: false, ok: false, error: "" });
-      }, 3000);
+      const rawSlots = resp?.data?.slots ?? resp?.slots ?? [];
+      const rawBusySlots = resp?.data?.busySlots ?? resp?.busySlots ?? [];
+
+      const normalizeSlot = (slot) => {
+        if (typeof slot === "string" && /^\d{1,2}:\d{2}$/.test(slot)) {
+          const [h, m] = slot.split(":");
+          return `${date} ${h.padStart(2, "0")}:${m.padStart(2, "0")}:00`;
+        }
+        return toLocalMySQL(slot);
+      };
+
+      let slots = Array.isArray(rawSlots) ? rawSlots.map(normalizeSlot).filter(Boolean) : [];
+      let busySlots =
+        Array.isArray(rawBusySlots) ? rawBusySlots.map(normalizeSlot).filter(Boolean) : [];
+
+      const now = new Date();
+      const validSlots = slots.filter((iso) => new Date(iso.replace(" ", "T")) > now);
+      const validBusySlots = busySlots.filter((iso) => new Date(iso.replace(" ", "T")) > now);
+
+      setAvailability({
+        slots: validSlots,
+        busySlots: validBusySlots,
+        loading: false,
+        error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
+      });
     } catch (e) {
-      console.error("❌ [createAppointment] Error:", e);
-      setBookingSave({
-        saving: false,
-        ok: false,
+      console.error("❌ [AVAIL] error", e);
+      setAvailability({
+        slots: [],
+        busySlots: [],
+        loading: false,
         error: String(e.message || e),
       });
     }
-  }, [booking, services, loadEvents]);
+  }, [booking, toLocalMySQL]);
+
   // ============================================
-  // ✏️ Editar turno
+  // ✅ Crear / Editar / Eliminar turno
   // ============================================
+  const createAppointment = useCallback(
+    async (overrideData = {}) => {
+      const customerPhone = overrideData.customerPhone || booking.customerPhone;
+      const customerName =
+        overrideData.customerName !== undefined ? overrideData.customerName : booking.customerName;
+      const { selectedSlot, serviceId, stylistId } = booking;
+
+      if (!customerPhone) {
+        setBookingSave({ saving: false, ok: false, error: "⚠️ Ingresá tu teléfono de WhatsApp" });
+        return;
+      }
+      if (!selectedSlot || !serviceId || !stylistId) {
+        setBookingSave({
+          saving: false,
+          ok: false,
+          error: "⚠️ Completá todos los pasos antes de confirmar",
+        });
+        return;
+      }
+      const slotTime = new Date(selectedSlot);
+      if (slotTime <= new Date()) {
+        setBookingSave({
+          saving: false,
+          ok: false,
+          error: "⚠️ El horario seleccionado ya pasó. Refrescá la página.",
+        });
+        return;
+      }
+
+      try {
+        setBookingSave({ saving: true, ok: false, error: "" });
+
+        const srv = (services || []).find((s) => String(s.id) === String(serviceId));
+        const durationMin = srv?.duration_min ?? srv?.durationMin ?? undefined;
+        const startsAt = toLocalMySQL(selectedSlot);
+
+        const payload = {
+          customerPhone: customerPhone.trim(),
+          customerName: customerName ? customerName.trim() : undefined,
+          stylistId: Number(stylistId),
+          serviceId: Number(serviceId),
+          startsAt,
+          durationMin,
+          status: "scheduled",
+        };
+
+        const res = await apiClient.createAppointment(payload);
+        if (!res?.ok && !res?.id) throw new Error(res?.error || "No se pudo crear el turno");
+
+        setBookingSave({ saving: false, ok: true, error: "" });
+        await loadEvents(); // estable
+        setTimeout(() => setBookingSave({ saving: false, ok: false, error: "" }), 3000);
+      } catch (e) {
+        setBookingSave({ saving: false, ok: false, error: String(e.message || e) });
+      }
+    },
+    [booking, services, toLocalMySQL, loadEvents]
+  );
+
   const updateAppointment = useCallback(
     async (id, patch) => {
       try {
@@ -373,12 +320,9 @@ const loadAvailability = useCallback(async () => {
         return { ok: false, error: String(e.message || e) };
       }
     },
-    [loadEvents]
+    [toLocalMySQL, loadEvents]
   );
 
-  // ============================================
-  // 🗑️ Eliminar turno
-  // ============================================
   const deleteAppointment = useCallback(
     async (id) => {
       try {
@@ -393,17 +337,7 @@ const loadAvailability = useCallback(async () => {
   );
 
   // ============================================
-  // 🔄 Polling automático
-  // ============================================
-  useEffect(() => {
-    loadEvents();
-    if (timer.current) clearInterval(timer.current);
-    timer.current = setInterval(loadEvents, pollMs);
-    return () => timer.current && clearInterval(timer.current);
-  }, [loadEvents, pollMs]);
-
-  // ============================================
-  // 📦 Valor del contexto
+  // 📦 Context value
   // ============================================
   const value = useMemo(
     () => ({
@@ -424,7 +358,7 @@ const loadAvailability = useCallback(async () => {
       eventsLoading,
       eventsError,
       range,
-      setRange,
+      setRange: setRangeSafe, // 👈 versión que evita renders inútiles
       loadEvents,
       updateAppointment,
       deleteAppointment,
@@ -441,11 +375,12 @@ const loadAvailability = useCallback(async () => {
       eventsLoading,
       eventsError,
       range,
-      loadEvents,
+      loadAvailability,
       createAppointment,
+      loadEvents,
       updateAppointment,
       deleteAppointment,
-      loadAvailability,
+      setRangeSafe,
     ]
   );
 

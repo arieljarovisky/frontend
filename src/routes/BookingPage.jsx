@@ -39,18 +39,7 @@ export default function BookingPage() {
         </div>
 
         {/* Toaster */}
-        <Toaster
-          theme="dark"
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: 'rgb(30, 41, 59)',
-              border: '1px solid rgb(51, 65, 85)',
-              color: 'rgb(226, 232, 240)',
-            },
-            className: 'backdrop-blur-sm',
-          }}
-        />
+  
       </div>
     </AppProvider>
   );

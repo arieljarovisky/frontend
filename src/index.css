@@ -232,3 +232,36 @@
 .rbc-time-gutter,
 .rbc-day-bg,
 .rbc-time-header.rbc-overflowing { border-color: rgba(255,255,255,.06) !important; }
+
+.rbc-time-view{
+  border-radius: 15px !important;
+}
+.rbc-row-content{
+  border-radius: 15px !important;
+}
+.rbc-timeslot-group{
+  border-bottom: 15px !important;
+  border-top: 15px !important;
+}
+.rbc-today{
+  background-color: #18181b !important;
+}
+.rbc-btn-group  button{
+  color: white !important;
+}
+.rbc-toolbar button:hover{
+  background-color: #363636 !important;
+}
+
+.rbc-btn-group button:focus{
+  background-color: #000000 !important;
+
+}
+.rbc-active{
+  background-color: #0f0f10 !important;
+}
+.rbc-off-range-bg{
+  background-color: #706a6a !important;
+} 
+
+

@@ -23,17 +23,17 @@ export default function CustomerDetailPage() {
                     </div>
                     <div>
                         <div className="text-lg font-semibold">{data.name || "(Sin nombre)"}</div>
-                        <div className="text-sm text-gray-600">{formatPhone(data.phone)}</div>
+                        <div className="text-sm text-white-600">{formatPhone(data.phone)}</div>
                     </div>
                 </div>
-                <Link to="/customers" className="text-sm text-gray-600 hover:text-gray-900">← Volver</Link>
+                <Link to="/customers" className="text-sm text-white-600 hover:text-gray-900">← Volver</Link>
             </div>
 
 
             <div>
                 <div className="text-sm font-medium mb-2">Historial de turnos</div>
                 <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="grid grid-cols-12 px-4 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b">
+                    <div className="grid grid-cols-12 px-4 py-2 text-xs font-medium text-white-500 bg-dark-200 border-b ">
                         <div className="col-span-4">Fecha</div>
                         <div className="col-span-3">Estado</div>
                         <div className="col-span-5">Servicio / Peluquero</div>
@@ -44,7 +44,7 @@ export default function CustomerDetailPage() {
                                 <div key={a.id} className="grid grid-cols-12 px-4 py-2 text-sm">
                                     <div className="col-span-4">{formatDateTime(a.starts_at)}</div>
                                     <div className="col-span-3"><StatusPill status={a.status} /></div>
-                                    <div className="col-span-5 text-gray-700">{a.service} · <span className="text-gray-500">{a.stylist}</span></div>
+                                    <div className="col-span-5 text-white-700">{a.service} · <span className="text-dark-500">{a.stylist}</span></div>
                                 </div>
                             ))}
                         </div>

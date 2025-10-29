@@ -4,7 +4,52 @@ import { apiClient } from "../api/client";
 import { toast } from "sonner";
 import { X, Save, Trash2, MessageSquare, DollarSign, Calendar } from "lucide-react";
 
-/* ===== Helpers fecha ===== */
+function formatDateToLocalInput(d) {
+  if (!d) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
+// Crea Date en zona local desde "YYYY-MM-DDTHH:mm" (no depende de timezone parsing de string)
+function parseLocalInputToDate(local) {
+  if (!local) return null;
+  const s = local.includes("T") ? local : local.replace(" ", "T");
+  const [datePart, timePart = "00:00"] = s.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh = 0, mm = 0] = (timePart.split(":").map(Number) || []);
+  return new Date(y, m - 1, d, hh, mm, 0);
+}
+
+// Convierte cualquier ISO (con zona o sin zona) a "YYYY-MM-DDTHH:mm" en hora LOCAL del navegador.
+// - Si la string tiene offset/Z (ej '...Z' o '-03:00'), new Date(iso) convierte correctamente a local.
+// - Si la string NO tiene offset y es "YYYY-MM-DDTHH:mm" o similar, lo tratamos como local directamente.
+function isoToLocalInput(isoOrLocal) {
+  if (!isoOrLocal) return "";
+  const s = String(isoOrLocal).trim();
+
+  // si contiene Z o +/-HH:MM asumimos zona explícita -> new Date() hará la conversión a local
+  if (/[zZ]$|[+\-]\d{2}:\d{2}$/.test(s)) {
+    const d = new Date(s);
+    return formatDateToLocalInput(d);
+  }
+
+  // si es formato "YYYY-MM-DD HH:mm" o "YYYY-MM-DDTHH:mm" sin zona -> tratar como local
+  const maybeLocal = s.replace(" ", "T");
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(maybeLocal)) {
+    const d = parseLocalInputToDate(maybeLocal);
+    return formatDateToLocalInput(d);
+  }
+
+  // fallback: intentar new Date() por si viene en otro formato con zona
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) return formatDateToLocalInput(d);
+
+  return "";
+}
+
+/* ===== Helpers extra del original (si los tenías) ===== */
 function toLocalDatetimeValue(isoOrLocal) {
   if (!isoOrLocal) return "";
   if (typeof isoOrLocal === "string") {
@@ -15,13 +60,6 @@ function toLocalDatetimeValue(isoOrLocal) {
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function toMySQLFromLocalInput(localValue) {
-  if (!localValue) return null;
-  const s = localValue.trim();
-  const normalized = s.includes("T") ? s.replace("T", " ") : s;
-  return normalized.length === 16 ? normalized + ":00" : normalized.slice(0, 19);
 }
 
 /* ===== Componente principal ===== */
@@ -36,6 +74,21 @@ export default function AppointmentModal({ open, onClose, event }) {
   const { services = [], stylists = [], updateAppointment, deleteAppointment } = useApp();
   const a = event?.extendedProps || {};
 
+  /* ===== Inicializar form usando isoToLocalInput (garantiza hora local) ===== */
+  const [form, setForm] = useState(() => {
+    const _a = event?.extendedProps || {};
+    return {
+      customerName: _a.customer_name || "",
+      customerPhone: _a.phone_e164 || _a.customer_phone || "",
+      serviceId: _a.service_id || _a.serviceId || "",
+      stylistId: _a.stylist_id || _a.stylistId || "",
+      startsLocal: isoToLocalInput(event?.start || _a.starts_at || _a.startsAt),
+      status: _a.status || "scheduled",
+    };
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [payUI, setPayUI] = useState({ visible: false, method: null });
   const [confirmUI, setConfirmUI] = useState({
     open: false,
     title: "",
@@ -50,7 +103,10 @@ export default function AppointmentModal({ open, onClose, event }) {
 
   useEffect(() => {
     if (!msg && !error) return;
-    const t = setTimeout(() => { setMsg(""); setError(""); }, 3000);
+    const t = setTimeout(() => {
+      setMsg("");
+      setError("");
+    }, 3000);
     return () => clearTimeout(t);
   }, [msg, error]);
 
@@ -62,37 +118,28 @@ export default function AppointmentModal({ open, onClose, event }) {
 
   useEffect(() => {
     if (!open) return;
-    const name = event?.extendedProps?.customer_name ? ` ${event.extendedProps.customer_name}` : "";
-    setReprogUI({
-      visible: false,
-      customText: `Hola${name} 💈\nNecesitamos *reprogramar tu turno*. ¿Podemos coordinar una nueva fecha por acá? 🙏`,
-      autoCancel: true,
-    });
-  }, [open, event?.extendedProps?.customer_name]);
-
-  const [form, setForm] = useState({
-    customerName: a.customer_name || "",
-    customerPhone: a.phone_e164 || a.customer_phone || "",
-    serviceId: a.service_id || a.serviceId || "",
-    stylistId: a.stylist_id || a.stylistId || "",
-    startsLocal: toLocalDatetimeValue(event?.start || a.starts_at || a.startsAt),
-    status: a.status || "scheduled",
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [payUI, setPayUI] = useState({ visible: false, method: null });
-
-  useEffect(() => {
-    if (!open) return;
     const _a = event?.extendedProps || {};
+    const localInput = isoToLocalInput(event?.start || _a.starts_at || _a.startsAt);
+
+    // DEBUG opcional:
+    // console.debug("DEBUG dates:", { eventStart: event?.start, starts_at: _a.starts_at, localInput });
+
     setForm({
       customerName: _a.customer_name || "",
       customerPhone: _a.phone_e164 || _a.customer_phone || "",
       serviceId: _a.service_id || _a.serviceId || "",
       stylistId: _a.stylist_id || _a.stylistId || "",
-      startsLocal: toLocalDatetimeValue(event?.start || _a.starts_at || _a.startsAt),
+      startsLocal: localInput,
       status: _a.status || "scheduled",
     });
+
+    const name = _a.customer_name ? ` ${_a.customer_name}` : "";
+    setReprogUI({
+      visible: false,
+      customText: `Hola${name} 💈\nNecesitamos *reprogramar tu turno*. ¿Podemos coordinar una nueva fecha por acá? 🙏`,
+      autoCancel: true,
+    });
+
     setMsg("");
     setError("");
     setSaving(false);
@@ -106,26 +153,36 @@ export default function AppointmentModal({ open, onClose, event }) {
     [services, form.serviceId]
   );
 
+  /* ===== Variables relacionadas al pago - definidas antes del JSX ===== */
+  const mpPaymentId = a.mp_payment_id || a.mp_paymentId || a.payment_id || null;
+  const mpStatus = a.mp_payment_status || a.payment_status || null;
+  const depositDecimal = a.deposit_decimal ?? a.depositAmount ?? null;
+  const isDepositPaid = a.status === "deposit_paid" || a.status === "confirmed" || !!a.deposit_paid_at;
+
+  /* ===== Guardar turno (usa parseLocalInputToDate para evitar offset UTC) ===== */
   const onSave = async () => {
     setSaving(true);
     setError("");
     setMsg("");
     try {
-      const startsAt = toMySQLFromLocalInput(form.startsLocal);
+      const startsAt = form.startsLocal; // string "YYYY-MM-DDTHH:mm" (local)
+
       let endsAt = null;
       if (selectedService?.duration_min && form.startsLocal) {
-        const d = new Date(form.startsLocal);
+        const d = parseLocalInputToDate(form.startsLocal); // crea Date en zona local
         d.setMinutes(d.getMinutes() + Number(selectedService.duration_min));
-        const pad = (n) => String(n).padStart(2, "0");
-        endsAt = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+        endsAt = formatDateToLocalInput(d) + ":00"; // "YYYY-MM-DDTHH:mm:00"
       }
+
+      // Si tu backend espera "YYYY-MM-DD HH:mm:ss" convertí startsAt:
+      // const startsAtForDb = startsAt ? startsAt.replace("T", " ") + ":00" : null;
 
       await updateAppointment(a.id, {
         customerName: form.customerName || null,
         customerPhone: form.customerPhone || null,
         serviceId: Number(form.serviceId) || null,
         stylistId: Number(form.stylistId) || null,
-        startsAt,
+        startsAt, // o startsAtForDb si tu backend lo requiere así
         endsAt,
         status: form.status,
       });
@@ -143,6 +200,7 @@ export default function AppointmentModal({ open, onClose, event }) {
     }
   };
 
+  /* ===== Eliminar turno ===== */
   const onDelete = async () => {
     setSaving(true);
     setError("");
@@ -174,40 +232,7 @@ export default function AppointmentModal({ open, onClose, event }) {
       },
     });
 
-  const mpPaymentId = a.mp_payment_id || a.mp_paymentId || a.payment_id || null;
-  const mpStatus = a.mp_payment_status || a.payment_status || null;
-  const depositDecimal = a.deposit_decimal ?? a.depositAmount ?? null;
-  const isDepositPaid = a.status === "deposit_paid" || a.status === "confirmed" || !!a.deposit_paid_at;
-
-  const postPayment = async ({ method, amount }) => {
-    setError("");
-    setMsg("");
-    try {
-      const { data: j } = await apiClient.post("/api/payments", {
-        appointmentId: a.id,
-        method,
-        amount_cents: Math.round(Number(amount) * 100),
-        recorded_by: "admin",
-        notes: method === "cash" ? "Pago en efectivo" : "Pago presencial con débito/tarjeta",
-        markDepositAsPaid: true,
-      });
-      if (!j?.ok) throw new Error(j?.error || "No se pudo registrar el pago.");
-
-      toast.success(`Pago registrado: ${method === "cash" ? "Efectivo" : "Tarjeta"}`, {
-        description: `Monto: $${amount}`,
-      });
-      setMsg(`Pago ${method === "cash" ? "en efectivo" : "con tarjeta"} registrado.`);
-      setPayUI({ visible: false, method: null });
-    } catch (e) {
-      const errorMsg = e?.message || "Error registrando el pago.";
-      toast.error("Error al registrar pago", { description: errorMsg });
-      setError(errorMsg);
-    }
-  };
-
-  const onPayCash = () => setPayUI({ visible: true, method: "cash" });
-  const onPayCard = () => setPayUI({ visible: true, method: "card" });
-
+  /* ===== Reprogramación (WhatsApp) ===== */
   const onReprogramOpen = () => {
     setReprogUI((u) => ({ ...u, visible: true }));
   };
@@ -235,7 +260,7 @@ export default function AppointmentModal({ open, onClose, event }) {
 
       setMsg(`Mensaje enviado por WhatsApp. ${j.cancelled ? "El turno fue cancelado para liberar el hueco." : ""}`);
       setReprogUI({ visible: false, customText: "", autoCancel: true });
-      
+
       if (j.cancelled) {
         await updateAppointment(a.id, { status: "cancelled" });
         onClose?.();
@@ -406,6 +431,7 @@ export default function AppointmentModal({ open, onClose, event }) {
               className={`w-full rounded-xl border px-3 py-2 text-sm ${inputBg}`}
               value={form.startsLocal}
               onChange={onChange("startsLocal")}
+              step="300"
             />
           </div>
           <div>
