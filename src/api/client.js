@@ -7,7 +7,7 @@ const API_BASE = RAW_BASE.replace(/\/$/, "");
 
 /** Claves de localStorage */
 const LS_ACCESS = "auth:accessToken";
-const LS_EMAIL  = "auth:email";
+const LS_EMAIL = "auth:email";
 
 /** Set/Get/Remove token */
 export function setAccessToken(token) {
@@ -137,7 +137,7 @@ export const authApi = {
     return data;
   },
   async logout() {
-    try { await apiClient.post("/auth/logout"); } catch {}
+    try { await apiClient.post("/auth/logout"); } catch { }
     setAccessToken(null);
     setAuthEmail(null);
   },
@@ -163,8 +163,8 @@ export const authApi = {
 */
 const PATH_SERVICES = "/api/services";  // ✅ Corregido
 const PATH_STYLISTS = "/api/stylists";  // ✅ Corregido
-const PATH_AVAIL    = "/api/availability";
-const PATH_APPTS    = "/api/appointments";
+const PATH_AVAIL = "/api/availability";
+const PATH_APPTS = "/api/appointments";
 const PATH_ADMIN = "/api/admin";
 
 // Lista de servicios
@@ -293,4 +293,40 @@ apiClient.updateCustomer = async function (id, patch) {
 apiClient.deleteCustomer = async function (id) {
   const { data } = await apiClient.delete(`${PATH_CUSTOMERS}/${id}`);
   return data;
+};
+
+/* =========================
+   CONFIGURACIÓN DE SEÑAS
+   ========================= */
+apiClient.getDepositConfig = async function () {
+  const { data } = await apiClient.get("/api/config/deposit");
+  return data; // { deposit_percentage, hold_minutes, expire_minutes, ... }
+};
+
+apiClient.updateDepositConfig = async function (payload) {
+  const { data } = await apiClient.put("/api/config/deposit", payload);
+  return data; // { ok:true }
+};
+
+/* =========================
+   COMISIONES DE PELUQUEROS
+   ========================= */
+apiClient.getCommissions = async function () {
+  const { data } = await apiClient.get("/api/commissions");
+  return Array.isArray(data) ? data : data?.data || [];
+};
+
+apiClient.updateCommission = async function (stylistId, percentage) {
+  const { data } = await apiClient.put(`/api/commissions/${stylistId}`, {
+    percentage,
+  });
+  return data; // { ok:true }
+};
+
+/* =========================
+   ESTADÍSTICAS POR PELUQUERO
+   ========================= */
+apiClient.getStylistStats = async function (stylistId) {
+  const { data } = await apiClient.get(`/api/stats/${stylistId}`);
+  return data; // { stylist_id, total_cortes, monto_total, porcentaje, comision_ganada, neto_local }
 };

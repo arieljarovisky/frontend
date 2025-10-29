@@ -20,6 +20,9 @@ import PrivateRoute from "./components/PrivateRoute.jsx";
 
 // Sistema de notificaciones
 import { NotificationSystem } from "./components/notifications/NotificationSystem.jsx";
+import DepositsConfig from "./routes/Admin/DepositsConfig.jsx";
+import Commissions from "./routes/Admin/Comissions.jsx";
+import StylistStats from "./routes/Admin/StylistStats.jsx";
 
 const router = createBrowserRouter([
   {
@@ -50,7 +53,11 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+
+      // Turnos (público para reservar o dejalo así si ya lo usás así)
       { path: "appointments", element: <BookingPage /> },
+
+      // Tu página existente de depósitos (si la querés para staff también)
       {
         path: "deposits",
         element: (
@@ -59,10 +66,39 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+
+      // =========================
+      //   Rutas SOLO ADMIN
+      // =========================
+      {
+        path: "admin/config/depositos",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <DepositsConfig />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/comisiones",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <Commissions />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/stats",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <StylistStats />
+          </PrivateRoute>
+        ),
+      },
     ],
   },
   { path: "login", element: <LoginPage /> },
 ]);
+
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
