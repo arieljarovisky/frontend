@@ -162,7 +162,7 @@ export default function CalendarView() {
         : { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek" },
     [isMobile]
   );
-  const initialView = isMobile ? "listWeek" : "timeGridWeek";
+
 
   // Día en dos líneas (DOW + DD/MM) en week/day/month
   const dayHeaderContent = useCallback((arg) => {
@@ -266,7 +266,7 @@ export default function CalendarView() {
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
                 locale={esLocale}
                 headerToolbar={headerToolbar}
-                initialView={initialView}
+                initialView="listWeek"
                 windowResize={handleWindowResize}
                 buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día", list: "Agenda" }}
                 dayHeaderContent={dayHeaderContent}
