@@ -1,5 +1,7 @@
 // src/routes/AppLayout.jsx
-import React, { useState } from "react";
+import React from "react";
+import { useState, useEffect } from "react";
+import { apiClient } from "../api/client";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -11,7 +13,8 @@ import {
   Menu,
   X,
   Settings,
-  Bell
+  Bell,
+  Activity
 } from "lucide-react";
 
 export default function AppLayout() {
@@ -24,13 +27,46 @@ export default function AppLayout() {
     await logout();
     navigate("/login");
   };
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Cargar contador de notificaciones
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const count = await apiClient.getUnreadCount();
+        setUnreadCount(count);
+      } catch (error) {
+        console.error("Error loading unread count:", error);
+      }
+    };
+
+    loadUnreadCount();
+
+    // Actualizar cada 30 segundos
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/" },
     { to: "/appointments", label: "Calendario", icon: Calendar, active: pathname === "/appointments" },
     { to: "/customers", label: "Clientes", icon: Users, active: pathname.startsWith("/customers") },
     { to: "/deposits", label: "Depósitos", icon: DollarSign, active: pathname === "/deposits" },
+    // NUEVA: Notificaciones
+    {
+      to: "/notifications",
+      label: "Notificaciones",
+      icon: Bell,
+      active: pathname === "/notifications",
+      badge: unreadCount > 0 ? unreadCount : null
+    },
   ];
+
+  // Filtrar elementos según el rol del usuario
+  const filteredNavItems = navItems.filter(item => {
+    if (item.adminOnly && user?.role !== 'admin') return false;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -51,24 +87,13 @@ export default function AppLayout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <NavButton key={item.to} {...item} />
               ))}
             </nav>
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
-              {/* Notifications */}
-              <button className="relative p-2 rounded-xl text-dark-600 hover:text-dark-900 hover:bg-dark-200/50 transition-all">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              </button>
-
-              {/* Settings */}
-              <button className="p-2 rounded-xl text-dark-600 hover:text-dark-900 hover:bg-dark-200/50 transition-all">
-                <Settings className="w-5 h-5" />
-              </button>
-
               {/* User Menu */}
               <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-200/50">
                 <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
@@ -107,7 +132,7 @@ export default function AppLayout() {
           {mobileMenuOpen && (
             <nav className="lg:hidden py-4 border-t border-dark-200/50 animate-slide-down">
               <div className="space-y-1">
-                {navItems.map((item) => (
+                {filteredNavItems.map((item) => (
                   <MobileNavButton
                     key={item.to}
                     {...item}

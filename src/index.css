@@ -264,4 +264,15 @@
   background-color: #706a6a !important;
 } 
 
+.rbc-label {
+  background-color: transparent !important;
+}
 
+.calendar-dark .fc .fc-popover .fc-popover-body {
+    color: var(--fc-subtext);
+    background: #0c1326;
+}
+
+.fc-license-message {
+    display: none;
+}

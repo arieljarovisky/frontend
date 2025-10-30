@@ -23,6 +23,8 @@ import { NotificationSystem } from "./components/notifications/NotificationSyste
 import DepositsConfig from "./routes/Admin/DepositsConfig.jsx";
 import Commissions from "./routes/Admin/Comissions.jsx";
 import StylistStats from "./routes/Admin/StylistStats.jsx";
+import ConfigPage from "./routes/Admin/ConfigPage.jsx";
+import NotificationsPage from "./routes/NotificationPage.jsx";
 
 const router = createBrowserRouter([
   {
@@ -54,10 +56,12 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Turnos (público para reservar o dejalo así si ya lo usás así)
+      // Turnos (público)
       { path: "appointments", element: <BookingPage /> },
 
-      // Tu página existente de depósitos (si la querés para staff también)
+      // =========================
+      //   RUTAS DE DEPÓSITOS (separadas en el navbar)
+      // =========================
       {
         path: "deposits",
         element: (
@@ -66,18 +70,34 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-
-      // =========================
-      //   Rutas SOLO ADMIN
-      // =========================
       {
-        path: "admin/config/depositos",
+        path: "deposits/config", // 👈 Nueva ruta separada
         element: (
           <PrivateRoute roles={["admin"]}>
             <DepositsConfig />
           </PrivateRoute>
         ),
       },
+      {
+        path: "notifications",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <NotificationsPage />
+          </PrivateRoute>
+        ),
+      },
+        {
+        path: "admin/config",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <ConfigPage />
+          </PrivateRoute>
+        ),
+      },
+
+      // =========================
+      //   Otras rutas ADMIN
+      // =========================
       {
         path: "admin/comisiones",
         element: (
@@ -98,7 +118,6 @@ const router = createBrowserRouter([
   },
   { path: "login", element: <LoginPage /> },
 ]);
-
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

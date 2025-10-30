@@ -9,6 +9,8 @@ import esLocale from "@fullcalendar/core/locales/es";
 import { Filter, RefreshCw } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
 import { useApp } from "../context/UseApp";
+import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
+import resourcePlugin from "@fullcalendar/resource";
 
 /* =========================
    Helpers Responsive
@@ -30,6 +32,13 @@ function useIsMobile(bp = 768) {
 const PALETTE = ["#6366F1", "#F59E0B", "#10B981", "#EF4444", "#06B6D4", "#A855F7", "#84CC16", "#F97316", "#22C55E", "#E11D48"];
 const colorByIndex = (i) => PALETTE[i % PALETTE.length];
 
+function hexToRgba(hex, alpha = 0.08) {
+  const h = hex.replace("#", "").trim();
+  const bigint = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function buildStylistColorMap(stylists) {
   const map = {};
   (stylists || []).forEach((s, idx) => {
@@ -48,25 +57,18 @@ function useCalendarEvents(events, stylistColors) {
         const st = ev.extendedProps?.status;
         const sid = ev.extendedProps?.stylist_id ?? ev.extendedProps?.stylistId;
         const base = ev.extendedProps?.color_hex || stylistColors[sid] || "#6B7280";
-        let bg = base,
-          border = base,
-          opacity = 1;
+
+        let bg = base, border = base, opacity = 1;
         if (st === "pending_deposit") opacity = 0.85;
-        if (st === "cancelled") {
-          bg = "#475569";
-          border = "#64748B";
-          opacity = 0.6;
-        }
+        if (st === "cancelled") { bg = "#475569"; border = "#64748B"; opacity = 0.6; }
+
         return {
-          id: ev.id,
-          title: ev.title,
-          start: ev.start,
-          end: ev.end,
-          extendedProps: ev.extendedProps,
+          ...ev,
+          // ➜ clave para que el evento caiga en la columna del peluquero
+          resourceId: sid ? String(sid) : undefined,
           backgroundColor: bg,
           borderColor: border,
           textColor: "#fff",
-          display: "block",
           classNames: opacity < 1 ? ["fc-opacity"] : [],
         };
       }),
@@ -84,18 +86,18 @@ export default function CalendarView() {
   const [hideCancelled, setHideCancelled] = useState(false);
 
   const stylistColors = useMemo(() => buildStylistColorMap(stylists), [stylists]);
- const filtered = useMemo(() => {
-  let list = Array.isArray(events) ? events : [];
-  if (stylistFilter) {
-    list = list.filter(
-      (ev) => String(ev?.extendedProps?.stylist_id ?? ev?.extendedProps?.stylistId) === String(stylistFilter)
-    );
-  }
-  if (hideCancelled) {
-    list = list.filter((ev) => (ev?.extendedProps?.status || "") !== "cancelled");
-  }
-  return list;
-}, [events, stylistFilter, hideCancelled]);
+  const filtered = useMemo(() => {
+    let list = Array.isArray(events) ? events : [];
+    if (stylistFilter) {
+      list = list.filter(
+        (ev) => String(ev?.extendedProps?.stylist_id ?? ev?.extendedProps?.stylistId) === String(stylistFilter)
+      );
+    }
+    if (hideCancelled) {
+      list = list.filter((ev) => (ev?.extendedProps?.status || "") !== "cancelled");
+    }
+    return list;
+  }, [events, stylistFilter, hideCancelled]);
   const fullEvents = useCalendarEvents(filtered, stylistColors);
 
   // Rango sin desmontar
@@ -128,6 +130,35 @@ export default function CalendarView() {
     });
     setModalOpen(true);
   }, []);
+  useEffect(() => {
+    const elId = "stylist-colors";
+    let styleEl = document.getElementById(elId);
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = elId;
+      document.head.appendChild(styleEl);
+    }
+
+    // armamos mapa id->color
+    const map = buildStylistColorMap(stylists);
+    const rules = Object.entries(map).map(([id, hex]) => {
+      const light = hexToRgba(hex, 0.07); // intensidad del fondo
+      // Header y cuerpo de la columna del resource (peluquero)
+      return `
+      /* header de la columna */
+      .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
+        background: ${light};
+      }
+      /* celdas del grid (cuerpo) */
+      .fc-resource-timegrid .fc-timegrid-col[data-resource-id="${id}"] {
+        background: ${light};
+      }
+    `;
+    }).join("\n");
+
+    styleEl.textContent = rules;
+    return () => { /* si querés limpiar en unmount, podés borrar styleEl */ };
+  }, [stylists]);
 
   // Render elegante del evento
   const eventContent = useCallback((arg) => {
@@ -156,14 +187,11 @@ export default function CalendarView() {
 
   // Vista/toolbar responsive
   const headerToolbar = useMemo(
-    () =>
-      isMobile
-        ? { left: "prev,next today", center: "title", right: "" }
-        : { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek" },
+    () => isMobile
+      ? { left: "prev,next today", center: "title", right: "" }
+      : { left: "prev,next today", center: "title", right: "resourceTimeGridDay,resourceTimeGridWeek,dayGridMonth,listWeek" },
     [isMobile]
   );
-
-
   // Día en dos líneas (DOW + DD/MM) en week/day/month
   const dayHeaderContent = useCallback((arg) => {
     if (["timeGridWeek", "dayGridWeek", "dayGridMonth"].includes(arg.view.type)) {
@@ -263,17 +291,28 @@ export default function CalendarView() {
             <div className="calendar-dark w-full min-w-0 overflow-hidden rounded-2xl">
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+                licenseKey="GPL-My-Project-Is-Open-Source"
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
                 locale={esLocale}
                 headerToolbar={headerToolbar}
-                initialView="listWeek"
+                initialView="resourceTimeGridDay"
                 windowResize={handleWindowResize}
+                resources={(stylists || []).map((s, idx) => ({
+                  id: String(s.id),
+                  title: s.name,
+                  color_hex: s.color_hex?.trim() || colorByIndex(idx),
+                }))}
                 buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día", list: "Agenda" }}
                 dayHeaderContent={dayHeaderContent}
                 allDaySlot={false}
-                slotMinTime="09:00:00"
+                slotMinTime="10:00:00"
                 slotMaxTime="21:00:00"
                 slotDuration="00:15:00"
+                slotLabelFormat={{               // 24h y con minutos
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false
+                }}
                 expandRows
                 stickyHeaderDates
                 nowIndicator={!isMobile}

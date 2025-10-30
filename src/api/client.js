@@ -167,6 +167,44 @@ const PATH_AVAIL = "/api/availability";
 const PATH_APPTS = "/api/appointments";
 const PATH_ADMIN = "/api/admin";
 
+
+/* ---------------------------
+   🔔 Refresh helpers (front)
+--------------------------- */
+
+// emite evento en la pestaña actual
+function emitAppointmentsChanged(detail) {
+  try {
+    window.dispatchEvent(new CustomEvent("appointments:changed", { detail }));
+  } catch { }
+}
+
+// sincroniza entre pestañas (BroadcastChannel si existe; si no, storage)
+let _bc = null;
+try {
+  if ("BroadcastChannel" in window) {
+    _bc = new BroadcastChannel("appointments");
+    _bc.addEventListener("message", (ev) => {
+      if (ev?.data === "changed") emitAppointmentsChanged({ source: "bc" });
+    });
+  } else {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "appointments:pulse") {
+        emitAppointmentsChanged({ source: "storage" });
+      }
+    });
+  }
+} catch { }
+function fanout() {
+  try {
+    if (_bc) _bc.postMessage("changed");
+    else localStorage.setItem("appointments:pulse", String(Date.now()));
+  } catch { }
+}
+
+
+
+
 // Lista de servicios
 apiClient.getServices = async function () {
   const { data } = await apiClient.get(PATH_SERVICES);
@@ -203,22 +241,37 @@ apiClient.getAppointmentsBetween = async function (fromIso, toIso) {
 };
 
 // Crear turno
+// Crear turno
 apiClient.createAppointment = async function (payload) {
   const { data } = await apiClient.post(PATH_APPTS, payload);
-  return data; // esperás { ok, id, ... }
+  // si el backend respondió ok, notificamos
+  if (data?.ok !== false) {
+    emitAppointmentsChanged({ op: "create", id: data?.id });
+    fanout();
+  }
+  return data; // { ok, id, ... }
 };
 
 // Actualizar turno
 apiClient.updateAppointment = async function (id, patch) {
   const { data } = await apiClient.put(`${PATH_APPTS}/${id}`, patch);
-  return data; // { ok: true }
+  if (data?.ok !== false) {
+    emitAppointmentsChanged({ op: "update", id });
+    fanout();
+  }
+  return data; // { ok:true }
 };
 
 // Borrar turno
 apiClient.deleteAppointment = async function (id) {
   const { data } = await apiClient.delete(`${PATH_APPTS}/${id}`);
-  return data; // { ok: true }
+  if (data?.ok !== false) {
+    emitAppointmentsChanged({ op: "delete", id });
+    fanout();
+  }
+  return data; // { ok:true }
 };
+
 
 // KPIs "rápidos" para las cards
 apiClient.getAdminMetrics = async function () {
@@ -330,3 +383,85 @@ apiClient.getStylistStats = async function (stylistId) {
   const { data } = await apiClient.get(`/api/stats/${stylistId}`);
   return data; // { stylist_id, total_cortes, monto_total, porcentaje, comision_ganada, neto_local }
 };
+
+
+// ============================================
+// AGREGAR AL ARCHIVO src/api/client.js
+// (al final del archivo, antes del export)
+// ============================================
+
+/* =========================
+   NOTIFICACIONES
+   ========================= */
+
+// Obtener notificaciones
+apiClient.getNotifications = async function ({ unreadOnly = false } = {}) {
+  const params = unreadOnly ? { unreadOnly: 'true' } : {};
+  const { data } = await apiClient.get('/api/notifications', { params });
+  return Array.isArray(data?.data) ? data.data : [];
+};
+
+// Contar notificaciones no leídas
+apiClient.getUnreadCount = async function () {
+  const { data } = await apiClient.get('/api/notifications/count');
+  return data?.count || 0;
+};
+
+// Marcar notificación como leída
+apiClient.markNotificationRead = async function (id) {
+  const { data } = await apiClient.put(`/api/notifications/${id}/read`);
+  return data;
+};
+
+// Marcar todas como leídas
+apiClient.markAllNotificationsRead = async function () {
+  const { data } = await apiClient.put('/api/notifications/read-all');
+  return data;
+};
+
+// Eliminar notificación
+apiClient.deleteNotification = async function (id) {
+  const { data } = await apiClient.delete(`/api/notifications/${id}`);
+  return data;
+};
+
+// Crear notificación de prueba (solo admin)
+apiClient.createTestNotification = async function (payload) {
+  const { data } = await apiClient.post('/api/notifications/test', payload);
+  return data;
+};
+
+/* =========================
+   CONFIGURACIÓN
+   ========================= */
+
+// Obtener configuración completa
+apiClient.getConfig = async function () {
+  const { data } = await apiClient.get('/api/config');
+  return data?.data || {};
+};
+
+// Actualizar configuración completa
+apiClient.updateConfig = async function (config) {
+  const { data } = await apiClient.put('/api/config', config);
+  return data;
+};
+
+// Obtener configuración de una sección
+apiClient.getConfigSection = async function (section) {
+  const { data } = await apiClient.get(`/api/config/${section}`);
+  return data?.data || {};
+};
+
+// Actualizar configuración de una sección
+apiClient.updateConfigSection = async function (section, updates) {
+  const { data } = await apiClient.put(`/api/config/${section}`, updates);
+  return data;
+};
+
+// Restablecer configuración
+apiClient.resetConfig = async function (section = null) {
+  const { data } = await apiClient.post('/api/config/reset', { section });
+  return data;
+};
+
