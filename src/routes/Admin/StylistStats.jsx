@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   TrendingUp, Scissors, Coins, PiggyBank, Download,
-  Calendar, Loader2, AlertTriangle, Save, RotateCw
+  Calendar, Loader2, AlertTriangle, Save, RotateCw, Clock, X, Trash2
 } from "lucide-react";
 import { apiClient } from "../../api/client";
+import { toast } from "sonner";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
 } from "recharts";
@@ -46,6 +47,7 @@ function WorkingHoursEditor({ stylistId }) {
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [blocks, setBlocks] = useState([]); // bloqueos de tiempo
   const week = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const load = useCallback(async () => {
@@ -69,7 +71,28 @@ function WorkingHoursEditor({ stylistId }) {
     }
   }, [stylistId]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadBlocks = useCallback(async () => {
+    if (!stylistId) return;
+    try {
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + 90); // próximos 90 días
+      
+      const res = await apiClient.listDaysOff({
+        stylistId,
+        from: today.toISOString().split('T')[0],
+        to: futureDate.toISOString().split('T')[0],
+      });
+      setBlocks(res?.data || []);
+    } catch (e) {
+      console.error("Error cargando bloqueos:", e);
+    }
+  }, [stylistId]);
+
+  useEffect(() => { 
+    load();
+    loadBlocks();
+  }, [load, loadBlocks]);
 
   const update = (idx, patch) => setRows(rs => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   
@@ -97,73 +120,333 @@ function WorkingHoursEditor({ stylistId }) {
       });
 
       await apiClient.saveWorkingHours(stylistId, hours);
+      toast.success("Horarios guardados correctamente");
     } catch (e) {
       setErr(e?.response?.data?.error || e.message || "No pude guardar horarios.");
+      toast.error("Error al guardar horarios");
       console.error("[saveWorkingHours]", e);
     } finally {
       setSaving(false);
     }
   };
 
+  const deleteBlock = async (blockId) => {
+    if (!confirm("¿Eliminar este bloqueo?")) return;
+    try {
+      await apiClient.deleteDayOff(blockId);
+      toast.success("Bloqueo eliminado");
+      loadBlocks();
+    } catch (e) {
+      toast.error("Error al eliminar bloqueo");
+      console.error(e);
+    }
+  };
+
   if (!stylistId) return null;
 
   return (
-    <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Horarios y francos</h3>
-        <div className="flex items-center gap-2">
-          <Btn onClick={load}><RotateCw className="size-4" /> Recargar</Btn>
-          <Btn onClick={save} className="bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20">
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            Guardar
-          </Btn>
+    <div className="mt-10 space-y-6">
+      {/* Horarios semanales */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Horarios semanales</h3>
+          <div className="flex items-center gap-2">
+            <Btn onClick={load}><RotateCw className="size-4" /> Recargar</Btn>
+            <Btn onClick={save} className="bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20">
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Guardar
+            </Btn>
+          </div>
         </div>
-      </div>
-      {err && (
-        <div className="mb-3 text-sm rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300 flex items-center gap-2">
-          <AlertTriangle className="size-4" /> {err}
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {rows.map((r, idx) => {
-          const off = !r.start_time && !r.end_time;
-          return (
-            <div key={idx} className={`rounded-xl border px-4 py-3 ${off ? "border-white/10 bg-white/[0.02]" : "border-white/10 bg-white/[0.04]"}`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">{week[r.weekday]}</span>
-                <button
-                  onClick={() => toggleFranco(idx)}
-                  className={`text-xs rounded-lg px-2 py-1 border ${off ? "border-white/10 bg-white/5" : "border-amber-500/30 bg-amber-500/10 text-amber-200"}`}
-                >
-                  {off ? "Franco" : "Trabaja"}
-                </button>
-              </div>
-              {!off && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <label className="text-xs text-zinc-400">Desde</label>
-                    <input
-                      type="time"
-                      value={(r.start_time || "").slice(0, 5)}
-                      onChange={(e) => update(idx, { start_time: `${e.target.value}:00` })}
-                      className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-xs text-zinc-400">Hasta</label>
-                    <input
-                      type="time"
-                      value={(r.end_time || "").slice(0, 5)}
-                      onChange={(e) => update(idx, { end_time: `${e.target.value}:00` })}
-                      className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
-                    />
-                  </div>
+        {err && (
+          <div className="mb-3 text-sm rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300 flex items-center gap-2">
+            <AlertTriangle className="size-4" /> {err}
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {rows.map((r, idx) => {
+            const off = !r.start_time && !r.end_time;
+            return (
+              <div key={idx} className={`rounded-xl border px-4 py-3 ${off ? "border-white/10 bg-white/[0.02]" : "border-white/10 bg-white/[0.04]"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">{week[r.weekday]}</span>
+                  <button
+                    onClick={() => toggleFranco(idx)}
+                    className={`text-xs rounded-lg px-2 py-1 border ${off ? "border-white/10 bg-white/5" : "border-amber-500/30 bg-amber-500/10 text-amber-200"}`}
+                  >
+                    {off ? "Franco" : "Trabaja"}
+                  </button>
                 </div>
-              )}
-            </div>
-          );
-        })}
+                {!off && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-zinc-400">Desde</label>
+                      <input
+                        type="time"
+                        value={(r.start_time || "").slice(0, 5)}
+                        onChange={(e) => update(idx, { start_time: `${e.target.value}:00` })}
+                        className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-zinc-400">Hasta</label>
+                      <input
+                        type="time"
+                        value={(r.end_time || "").slice(0, 5)}
+                        onChange={(e) => update(idx, { end_time: `${e.target.value}:00` })}
+                        className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Bloqueos de tiempo */}
+      <TimeBlocksSection
+        stylistId={stylistId}
+        blocks={blocks}
+        onRefresh={loadBlocks}
+        onDelete={deleteBlock}
+      />
+    </div>
+  );
+}
+
+/* ===== Sección de bloqueos de tiempo ===== */
+function TimeBlocksSection({ stylistId, blocks, onRefresh, onDelete }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    date: "",
+    startTime: "",
+    endTime: "",
+    reason: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.date || !formData.startTime || !formData.endTime) {
+      toast.error("Completá todos los campos obligatorios");
+      return;
+    }
+
+    // Validar que la hora de fin sea posterior a la de inicio
+    if (formData.endTime <= formData.startTime) {
+      toast.error("La hora de fin debe ser posterior a la de inicio");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const starts_at = `${formData.date}T${formData.startTime}:00`;
+      const ends_at = `${formData.date}T${formData.endTime}:00`;
+
+      await apiClient.addDayOff({
+        stylistId,
+        starts_at,
+        ends_at,
+        reason: formData.reason || "Bloqueo de tiempo",
+      });
+
+      toast.success("Bloqueo creado correctamente");
+      setFormData({ date: "", startTime: "", endTime: "", reason: "" });
+      setShowForm(false);
+      onRefresh();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Error al crear bloqueo");
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Filtrar solo futuros y ordenar
+  const futureBlocks = blocks
+    .filter(b => new Date(b.starts_at) > new Date())
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Bloqueos de tiempo</h3>
+          <p className="text-sm text-zinc-400 mt-1">
+            Bloqueá horarios específicos (ej: trámites, descansos, almuerzo)
+          </p>
+        </div>
+        <Btn 
+          onClick={() => setShowForm(!showForm)}
+          className="bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/20"
+        >
+          {showForm ? <X className="size-4" /> : <>+ Nuevo bloqueo</>}
+        </Btn>
+      </div>
+
+      {/* Formulario */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/[0.02] border border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-zinc-300 mb-1">
+                Fecha *
+              </label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">
+                  Desde *
+                </label>
+                <input
+                  type="time"
+                  value={formData.startTime}
+                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">
+                  Hasta *
+                </label>
+                <input
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-zinc-300 mb-1">
+                Motivo (opcional)
+              </label>
+              <input
+                type="text"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                placeholder="Ej: Trámite en el banco, Almuerzo"
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm placeholder:text-zinc-600"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm flex items-center gap-2"
+            >
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Crear bloqueo
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Lista de bloqueos */}
+      <div className="space-y-2">
+        {futureBlocks.length === 0 ? (
+          <div className="text-center py-8 text-zinc-400 text-sm">
+            <Clock className="size-8 mx-auto mb-2 opacity-50" />
+            <p>No hay bloqueos programados</p>
+            <p className="text-xs text-zinc-500 mt-1">
+              Creá un bloqueo para reservar tiempo específico
+            </p>
+          </div>
+        ) : (
+          futureBlocks.map((block) => (
+            <BlockItem key={block.id} block={block} onDelete={onDelete} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ===== Item de bloqueo individual ===== */
+function BlockItem({ block, onDelete }) {
+  const startDate = new Date(block.starts_at);
+  const endDate = new Date(block.ends_at);
+  
+  const formatDate = (date) => {
+    return date.toLocaleDateString("es-AR", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const isToday = startDate.toDateString() === new Date().toDateString();
+  const isPast = startDate < new Date();
+
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-colors ${isPast ? "opacity-60" : ""}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${
+          isToday 
+            ? "bg-amber-500/20 border border-amber-500/30" 
+            : "bg-blue-500/20 border border-blue-500/30"
+        }`}>
+          <Clock className={`size-4 ${isToday ? "text-amber-400" : "text-blue-400"}`} />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{formatDate(startDate)}</span>
+            {isToday && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Hoy
+              </span>
+            )}
+            {isPast && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-500/20 text-zinc-400 border border-zinc-500/30">
+                Pasado
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1">
+            <span>{formatTime(startDate)} - {formatTime(endDate)}</span>
+            {block.reason && (
+              <>
+                <span>•</span>
+                <span className="text-zinc-300">{block.reason}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={() => onDelete(block.id)}
+        className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+        title="Eliminar bloqueo"
+      >
+        <Trash2 className="size-4" />
+      </button>
     </div>
   );
 }
@@ -317,7 +600,7 @@ export default function StylistStatsPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Estadísticas por Peluquero</h1>
-            <p className="text-zinc-400 mt-1">Cortes, facturación y comisión.</p>
+            <p className="text-zinc-400 mt-1">Cortes, facturación, comisión y configuración de horarios.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -440,7 +723,7 @@ export default function StylistStatsPage() {
               )}
             </div>
 
-            {/* Editor de horarios / francos */}
+            {/* Editor de horarios / francos / bloqueos */}
             <WorkingHoursEditor stylistId={selected} />
           </>
         ) : (

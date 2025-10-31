@@ -1,5 +1,5 @@
-// src/routes/NotificationsPage.jsx - Con paginado
-import { useEffect, useState } from "react";
+// src/routes/NotificationsPage.jsx - Con paginado superior/inferior y botón de limpiar
+import { useEffect, useState, useRef } from "react";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
 import {
@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Eraser
 } from "lucide-react";
 
 // Configuración de iconos y colores por tipo de notificación
@@ -153,8 +154,8 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
   );
 }
 
-// Componente de Paginación
-function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }) {
+// Componente de Paginación (ahora con variant para distinguir posición)
+function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange, variant = "bottom", isSticky = false }) {
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
@@ -195,8 +196,14 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
 
   if (totalPages <= 1) return null;
 
+  const stickyClass = isSticky 
+    ? "sticky top-[4.5rem] z-40 bg-slate-950/95 backdrop-blur-xl border-y border-dark-200/50 shadow-lg" 
+    : variant === "top" 
+      ? "border-b border-dark-200/50" 
+      : "border-t border-dark-200/50";
+
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-dark-200/50">
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 ${stickyClass}`}>
       {/* Info de items */}
       <div className="text-sm text-dark-600">
         Mostrando <span className="font-medium text-dark-900">{startItem}</span> a{" "}
@@ -286,10 +293,27 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const topPaginationRef = useRef(null);
   
   // Estados de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  // Detectar scroll para hacer sticky el paginador superior
+  useEffect(() => {
+    const handleScroll = () => {
+      if (topPaginationRef.current) {
+        const rect = topPaginationRef.current.getBoundingClientRect();
+        setIsScrolled(rect.top <= 72); // 72px es aproximadamente la altura del header
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Verificar estado inicial
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -343,6 +367,32 @@ export default function NotificationsPage() {
     await apiClient.delete(`/api/notifications/${id}`);
   };
 
+  const handleDeleteAll = async () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmDeleteAll = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
+    
+    try {
+      // Eliminar todas las notificaciones actuales
+      const deletePromises = notifications.map(notif => 
+        apiClient.delete(`/api/notifications/${notif.id}`)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      toast.success(`${notifications.length} notificaciones eliminadas correctamente`);
+      handleRefresh();
+    } catch (error) {
+      toast.error("Error al eliminar las notificaciones");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Cálculos de paginación
   const totalItems = notifications.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -358,6 +408,118 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Modal de Confirmación Moderno */}
+      {showConfirmModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowConfirmModal(false)}
+        >
+          {/* Backdrop con blur */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          
+          {/* Modal */}
+          <div 
+            className="relative w-full max-w-md transform transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="card overflow-hidden border-2 border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+              {/* Header con gradiente */}
+              <div className="relative bg-gradient-to-r from-red-600/20 to-red-500/10 p-6 border-b border-red-500/20">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(239,68,68,0.15),transparent_70%)]" />
+                <div className="relative flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/30">
+                    <AlertTriangle className="w-8 h-8 text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-red-100 mb-1">
+                      ¿Eliminar todas las notificaciones?
+                    </h3>
+                    <p className="text-sm text-red-200/80">
+                      Esta acción no se puede deshacer
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contenido */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-center py-6">
+                  <div className="text-center space-y-3">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 border-2 border-red-500/30 mb-2">
+                      <Trash2 className="w-8 h-8 text-red-400" />
+                    </div>
+                    <div className="text-6xl font-bold text-gradient bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
+                      {notifications.length}
+                    </div>
+                    <p className="text-dark-600 font-medium">
+                      notificaciones serán eliminadas permanentemente
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lista de consecuencias */}
+                <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-4 space-y-2">
+                  <p className="text-sm text-dark-700 font-medium mb-2">Esto incluye:</p>
+                  <div className="space-y-1.5 text-sm text-dark-600">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span>{unreadCount} notificaciones sin leer</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span>{notifications.length - unreadCount} notificaciones leídas</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span>Todo el historial de notificaciones</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warning adicional */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-200/90 leading-relaxed">
+                    <strong className="font-semibold">Importante:</strong> Una vez eliminadas, 
+                    no podrás recuperar estas notificaciones. Considera si realmente necesitás 
+                    borrar todo el historial.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer con botones */}
+              <div className="border-t border-dark-200/50 p-6 bg-dark-100/30">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-dark-300 hover:border-dark-400 bg-dark-200/50 hover:bg-dark-200 text-dark-900 font-medium transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDeleteAll}
+                    disabled={loading}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-semibold shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Eliminando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Sí, eliminar todo
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -370,7 +532,7 @@ export default function NotificationsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
@@ -378,6 +540,17 @@ export default function NotificationsPage() {
             >
               <CheckCheck className="w-4 h-4" />
               Marcar todas leídas
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              disabled={loading}
+              className="btn-danger flex items-center gap-2"
+              title="Eliminar todas las notificaciones"
+            >
+              <Eraser className="w-4 h-4" />
+              Limpiar todo
             </button>
           )}
           <button
@@ -461,7 +634,22 @@ export default function NotificationsPage() {
         </button>
       </div>
 
-      {/* Lista de notificaciones con paginación */}
+      {/* Paginación superior */}
+      {totalPages > 1 && (
+        <div ref={topPaginationRef}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            variant="top"
+            isSticky={isScrolled}
+          />
+        </div>
+      )}
+
+      {/* Lista de notificaciones */}
       <div className="card p-6">
         <div className="space-y-3">
           {loading ? (
@@ -492,19 +680,24 @@ export default function NotificationsPage() {
                   onRefresh={handleRefresh}
                 />
               ))}
-              
-              {/* Componente de paginación */}
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={itemsPerPage}
-                onPageChange={handlePageChange}
-              />
             </>
           )}
         </div>
       </div>
+
+      {/* Paginación inferior */}
+      {totalPages > 1 && !loading && currentNotifications.length > 0 && (
+        <div className="card p-0">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            variant="bottom"
+          />
+        </div>
+      )}
     </div>
   );
 }

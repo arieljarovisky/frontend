@@ -15,7 +15,8 @@ import {
   Settings,
   Bell,
   Activity,
-  TrendingUp
+  TrendingUp,
+  Scissors
 } from "lucide-react";
 
 export default function AppLayout() {
@@ -63,10 +64,10 @@ export default function AppLayout() {
     },
     // NUEVA: Estadísticas de peluqueros
     {
-      to: "/admin/stats",
-      label: "Estadísticas",
-      icon: TrendingUp,
-      active: pathname === "/admin/stats",
+      to: "/admin/peluqueros",
+      label: "Peluqueros",
+      icon: Scissors,
+      active: pathname === "/admin/peluqueros",
       adminOnly: true
     },
     {

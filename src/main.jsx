@@ -99,7 +99,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "admin/stats",
+        path: "admin/peluqueros",
         element: (
           <PrivateRoute roles={["admin"]}>
             <StylistStats />

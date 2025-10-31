@@ -3,10 +3,10 @@ import React from "react";
 import { useQuery } from "../shared/useQuery.js";
 import { apiClient } from "../api";
 import { useNavigate } from "react-router-dom";
-import { 
-  TrendingUp, 
-  Users, 
-  Calendar, 
+import {
+  TrendingUp,
+  Users,
+  Calendar,
   DollarSign,
   Clock,
   CheckCircle2,
@@ -87,7 +87,7 @@ const ymd = (d) => {
 };
 
 const startOfWeek = (base = new Date()) => {
-  const d = new Date(base); 
+  const d = new Date(base);
   d.setHours(0, 0, 0, 0);
   const dow = d.getDay() || 7;
   d.setDate(d.getDate() - (dow - 1));
@@ -103,6 +103,8 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { data: topServices, loading: loadingSvc } =
+    useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
 
   const { data: raw, loading: loadingM } =
     useQuery(() => apiClient.getAdminDashboard({}), []);
@@ -117,11 +119,17 @@ export default function DashboardPage() {
   const year = new Date().getFullYear();
   const { data: income, loading: loadingInc } =
     useQuery(() => apiClient.getIncomeByMonth(year), [year]);
-  const incomeArr = asArray(income);
+  const incomeArr = asArray(income).map(d => ({
+    month: String(d.month ?? d.mm ?? d.m ?? "").padStart(2, "0"),
+    income: Number(d.income ?? d.total ?? 0),
+  }));
+  const topServicesArr = asArray(topServices).map(d => ({
+    service_name: String(d.service_name ?? d.name ?? ""),
+    count: Number(d.count ?? d.qty ?? 0),
+  }));
 
-  const { data: topServices, loading: loadingSvc } =
-    useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
-  const topServicesArr = asArray(topServices);
+
+
 
   const { data: agenda, loading: loadingAgenda } =
     useQuery(() => apiClient.getAgendaToday(), []);
@@ -131,6 +139,7 @@ export default function DashboardPage() {
   const todayConfirmed = dashboard?.today?.confirmed ?? 0;
   const todayPending = dashboard?.today?.pending ?? 0;
   const incomeWeek = week?.deposits?.rangeAmount ?? 0;
+
 
   return (
     <div className="space-y-6 lg:space-y-8 animate-fade-in">
@@ -198,14 +207,14 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <ResponsiveContainer>
-                  <LineChart data={incomeArr}>
+                  <LineChart data={Array.isArray(incomeArr) ? incomeArr : []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
-                    <XAxis 
-                      dataKey="month" 
+                    <XAxis
+                      dataKey="month"
                       stroke="#a1a1aa"
                       style={{ fontSize: '12px' }}
                     />
-                    <YAxis 
+                    <YAxis
                       stroke="#a1a1aa"
                       style={{ fontSize: '12px' }}
                     />
@@ -217,13 +226,13 @@ export default function DashboardPage() {
                         color: '#fafafa'
                       }}
                     />
-                    <Legend 
+                    <Legend
                       wrapperStyle={{ color: '#a1a1aa' }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="income" 
-                      stroke="#0ea5e9" 
+                    <Line
+                      type="monotone"
+                      dataKey="income"
+                      stroke="#0ea5e9"
                       strokeWidth={3}
                       dot={{ fill: '#0ea5e9', strokeWidth: 2, r: 4 }}
                       activeDot={{ r: 6 }}
@@ -244,41 +253,45 @@ export default function DashboardPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
                 </div>
               ) : (
-                <ResponsiveContainer>
-                  <BarChart data={topServicesArr}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
-                    <XAxis 
-                      dataKey="service_name" 
-                      stroke="#a1a1aa"
-                      style={{ fontSize: '11px' }}
-                      angle={-15}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis 
-                      allowDecimals={false} 
-                      stroke="#a1a1aa"
-                      style={{ fontSize: '12px' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#27272a',
-                        border: '1px solid #3f3f46',
-                        borderRadius: '12px',
-                        color: '#fafafa'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="count" 
-                      fill="url(#colorGradient)"
-                      radius={[8, 8, 0, 0]}
-                    />
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={Array.isArray(topServicesArr) ? topServicesArr : []}>
                     <defs>
-                      <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.8}/>
-                        <stop offset="100%" stopColor="#d946ef" stopOpacity={0.6}/>
+                      <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#60a5fa" />
+                        <stop offset="100%" stopColor="#a78bfa" />
                       </linearGradient>
                     </defs>
+
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.25} />
+                    <XAxis
+                      dataKey="service_name"
+                      stroke="#a1a1aa"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                      interval={0}
+                      angle={-12}
+                      dy={8}
+                    />
+                    <YAxis
+                      stroke="#a1a1aa"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "rgba(255,255,255,0.04)" }}           // 👈 sin hover blanco
+                      contentStyle={{
+                        backgroundColor: "#18181b",
+                        border: "1px solid #3f3f46",
+                        borderRadius: 12,
+                        color: "#fafafa",
+                      }}
+                      itemStyle={{ color: "#fafafa" }}
+                      labelStyle={{ color: "#fafafa" }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="url(#barFill)"
+                      radius={[12, 12, 0, 0]}
+                      background={false}                                    // 👈 saca la banda gris
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -321,14 +334,14 @@ export default function DashboardPage() {
                 {agendaArr.map((a) => {
                   const config = STATUS_CONFIG[a.status] || STATUS_CONFIG.scheduled;
                   return (
-                    <tr 
-                      key={a.id} 
+                    <tr
+                      key={a.id}
                       className="border-b border-dark-200/30 hover:bg-dark-200/20 transition-colors"
                     >
                       <td className="py-3 px-4 text-sm font-medium text-dark-900">
-                        {new Date(a.starts_at).toLocaleTimeString("es-AR", { 
-                          hour: "2-digit", 
-                          minute: "2-digit" 
+                        {new Date(a.starts_at).toLocaleTimeString("es-AR", {
+                          hour: "2-digit",
+                          minute: "2-digit"
                         })}
                       </td>
                       <td className="py-3 px-4 text-sm text-dark-800">{a.customer_name}</td>
