@@ -276,3 +276,9 @@
 .fc-license-message {
     display: none;
 }
+
+/* en tu CSS global */
+.fc .fc-timegrid-col,
+.fc .fc-col-header-cell {
+  color: #dbe3f5;
+}

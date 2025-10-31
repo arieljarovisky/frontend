@@ -383,12 +383,85 @@ apiClient.getStylistStats = async function (stylistId) {
   const { data } = await apiClient.get(`/api/stats/${stylistId}`);
   return data; // { stylist_id, total_cortes, monto_total, porcentaje, comision_ganada, neto_local }
 };
+// Stats resumidas (permite ?from=YYYY-MM-DD&to=YYYY-MM-DD)
+apiClient.getStylistStatsRange = async function (stylistId, { from, to } = {}) {
+  const params = {};
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const { data } = await apiClient.get(`/api/stats/${stylistId}`, { params });
+  return data; // { total_cortes, monto_total, porcentaje, comision_ganada, neto_local, daily?, services?, turnos? }
+};
 
+// (Opcional) Turnos crudos para export
+apiClient.getStylistTurns = async function (stylistId, { from, to } = {}) {
+  const params = {};
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const { data } = await apiClient.get(`/api/stats/${stylistId}/turnos`, { params });
+  return Array.isArray(data) ? data : data?.data || [];
+};
 
-// ============================================
-// AGREGAR AL ARCHIVO src/api/client.js
-// (al final del archivo, antes del export)
-// ============================================
+/* =========================
+   WORKING HOURS / FRANCOS
+   ========================= */
+
+// GET ?stylistId=ID  → [{weekday,start_time,end_time}, ...]
+// === Working hours ===
+apiClient.getWorkingHours = async function (stylistId) {
+  const { data } = await apiClient.get("/api/working-hours", { params: { stylistId } });
+  // normalizamos: siempre devolvemos un array
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+};
+apiClient.setWorkingHour = async function ({ stylistId, weekday, is_open, start_time, end_time }) {
+  const { data } = await apiClient.put("/api/working-hours", { stylistId, weekday, is_open, start_time, end_time });
+  return data; // { ok:true }
+};
+
+apiClient.setWorkingHoursBulk = async function ({ stylistId, week }) {
+  const { data } = await apiClient.put("/api/working-hours/bulk", { stylistId, week });
+  return data; // { ok:true, updated:n }
+};
+
+// === Días de franco (time_off) ===
+apiClient.listDaysOff = async function ({ stylistId, from, to }) {
+  const params = { stylistId };
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const { data } = await apiClient.get("/api/days-off", { params });
+  return data; // { ok:true, data:[...] }
+};
+
+apiClient.addDayOff = async function ({ stylistId, starts_at, ends_at, reason }) {
+  const { data } = await apiClient.post("/api/days-off", { stylistId, starts_at, ends_at, reason });
+  return data; // { ok:true, id }
+};
+
+apiClient.deleteDayOff = async function (id) {
+  const { data } = await apiClient.delete(`/api/days-off/${id}`);
+  return data; // { ok:true }
+};
+
+apiClient.getWorkingHours = async function (stylistId) {
+  const { data } = await apiClient.get("/api/working-hours", { params: { stylistId } });
+  // normalizo a array plano
+  return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+};
+
+apiClient.saveWorkingHours = async function (stylistId, hours) {
+  // hours: [{ weekday:number, start_time:null|"HH:MM:SS", end_time:null|"HH:MM:SS" }, ...]
+  const payload = {
+    stylistId: Number(stylistId),
+    hours: hours.map(h => ({
+      weekday: Number(h.weekday),
+      start_time: h.start_time ?? null,
+      end_time: h.end_time ?? null,
+    })),
+  };
+  const { data } = await apiClient.put("/api/working-hours", payload);
+  return data; // { ok:true }
+};
 
 /* =========================
    NOTIFICACIONES
@@ -465,3 +538,12 @@ apiClient.resetConfig = async function (section = null) {
   return data;
 };
 
+// --- CONFIG (secciones) ---
+apiClient.getConfigSection = async function (section) {
+  const r = await apiClient.get(`/api/config/${section}`, { withCredentials: true });
+  return r.data || {};
+}
+apiClient.saveConfigSection = async function (section, payload) {
+  const r = await apiClient.put(`/api/config/${section}`, payload, { withCredentials: true });
+  return r.data || { ok: false };
+}

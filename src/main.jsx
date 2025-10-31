@@ -71,14 +71,6 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "deposits/config", // 👈 Nueva ruta separada
-        element: (
-          <PrivateRoute roles={["admin"]}>
-            <DepositsConfig />
-          </PrivateRoute>
-        ),
-      },
-      {
         path: "notifications",
         element: (
           <PrivateRoute roles={["admin", "staff"]}>

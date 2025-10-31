@@ -169,7 +169,15 @@ export default function CalendarView() {
         <div className="text-xs font-semibold leading-tight line-clamp-1">{arg.event.title}</div>
         <div className="flex flex-wrap gap-1">
           {ep.stylist_name && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-black/25 backdrop-blur-sm">{ep.stylist_name}</span>
+            <span
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
+              style={{
+                backgroundColor: stylistColors[ep.stylist_id] || "#475569",
+                opacity: 0.9,
+              }}
+            >
+              {ep.stylist_name}
+            </span>
           )}
           {status === "pending_deposit" && (
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/25 text-amber-200">Seña pendiente</span>
@@ -281,14 +289,14 @@ export default function CalendarView() {
           )}
 
           {/* Calendario + overlay */}
-          <div className="relative rounded-2xl border border-slate-800/30 bg-slate-900/30 p-2">
+          <div className="relative rounded-2xl border border-slate-800/30 bg-slate-900/30 p-2 overflow-visible">
             {eventsLoading && (
               <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
                 <div className="animate-pulse text-slate-300 font-medium">Actualizando calendario…</div>
               </div>
             )}
 
-            <div className="calendar-dark w-full min-w-0 overflow-hidden rounded-2xl">
+            <div className="calendar-dark w-full min-w-0 overflow-visible rounded-2xl">
               <FullCalendar
                 ref={calendarRef}
                 licenseKey="GPL-My-Project-Is-Open-Source"
@@ -327,6 +335,21 @@ export default function CalendarView() {
                 dayMaxEvents={isMobile ? 2 : 3}
                 displayEventTime={true}
                 eventClassNames="rounded-xl shadow-md border-0"
+                moreLinkClick={(arg) => {
+                  // deja el comportamiento de popover
+                  setTimeout(() => {
+                    document.querySelectorAll(".fc-popover").forEach((el) => {
+                      el.style.maxHeight = "70vh";
+                      el.style.overflow = "hidden";
+                      const body = el.querySelector(".fc-popover-body");
+                      if (body) {
+                        body.style.maxHeight = "100vh";
+                        body.style.overflow = "auto";
+                      }
+                    });
+                  }, 0);
+                  return "popover";
+                }}
               />
             </div>
           </div>

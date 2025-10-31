@@ -60,6 +60,13 @@ export default function AppLayout() {
       active: pathname === "/notifications",
       badge: unreadCount > 0 ? unreadCount : null
     },
+    {
+      to: "/admin/config",
+      label: "configuración",
+      icon: Settings,
+      active: pathname === "/admin/config",
+      adminOnly: true
+    },
   ];
 
   // Filtrar elementos según el rol del usuario

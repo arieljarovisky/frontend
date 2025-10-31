@@ -1,23 +1,17 @@
 // src/routes/Admin/ConfigPage.jsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings,
   DollarSign,
-  Clock,
   Bell,
-  Shield,
   Percent,
   TrendingUp,
   Save,
   RefreshCw,
-  Calendar,
   Users,
-  Scissors,
-  Plus,
-  Edit2,
-  Trash2
 } from "lucide-react";
+import { apiClient } from "../../api/client.js";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
@@ -69,7 +63,111 @@ function SwitchField({ label, description, checked, onChange }) {
 
 export default function ConfigPage() {
   const navigate = useNavigate();
+  const [active, setActive] = useState("general");
+  const [floating, setFloating] = useState(false);
+  const [topOffset, setTopOffset] = useState(12);
+  const [barH, setBarH] = useState(56);
+  const barRef = useRef(null);
 
+
+  const TABS = [
+    { id: "general", label: "General", Icon: Settings },
+    { id: "deposits", label: "Señas", Icon: DollarSign },
+    { id: "commissions", label: "Comisiones", Icon: Percent },
+    { id: "notifications", label: "Notificaciones", Icon: Bell },
+    { id: "stylists", label: "Config. Peluqueros", Icon: Users, external: true },
+  ];
+  useEffect(() => {
+    const calcOffsets = () => {
+      // Intentá encontrar tu topbar: marcala con data-appbar si podés
+      const appbar =
+        document.querySelector("[data-appbar]") ||
+        document.querySelector("nav[role='navigation']") ||
+        document.querySelector("header");
+      const h = appbar ? Math.ceil(appbar.getBoundingClientRect().height) : 64;
+      setTopOffset(h + 8); // 8px de separación
+      if (barRef.current) setBarH(Math.ceil(barRef.current.getBoundingClientRect().height));
+    };
+    calcOffsets();
+    window.addEventListener("resize", calcOffsets, { passive: true });
+    return () => window.removeEventListener("resize", calcOffsets);
+  }, []);
+
+  // 2) Alterna a fixed cuando scrolleás
+  useEffect(() => {
+    const ids = TABS.filter(t => !t.external).map(t => t.id);
+
+    let ticking = false;
+    const calcActive = () => {
+      ticking = false;
+
+      // Línea de lectura: justo debajo de la barra
+      const refY = (topOffset + barH + 12);
+
+      // Si estamos al final de la página, forzamos la última sección
+      const nearBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      if (nearBottom) {
+        setActive(ids[ids.length - 1]);
+        return;
+      }
+
+      // Elegimos la sección cuyo top sea el último que pasó la línea de lectura
+      // y, si ninguna pasó, la más cercana hacia abajo.
+      let current = ids[0];
+      let bestTop = -Infinity;
+      let closestDown = { id: ids[0], dist: Infinity };
+
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+
+        // Último top que quedó por encima de la línea (=> sección “en curso”)
+        if (rect.top <= refY && rect.top > bestTop) {
+          bestTop = rect.top;
+          current = id;
+        }
+
+        // Guardamos también la más cercana hacia abajo por si ninguna pasó
+        const distDown = rect.top - refY;
+        if (distDown > 0 && distDown < closestDown.dist) {
+          closestDown = { id, dist: distDown };
+        }
+      }
+
+      // Si ninguna pasó la línea, usamos la más cercana hacia abajo
+      if (bestTop === -Infinity && closestDown.id) {
+        current = closestDown.id;
+      }
+
+      setActive(current);
+    };
+
+    const onScrollOrResize = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(calcActive);
+      }
+    };
+
+    calcActive();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [topOffset, barH, TABS]);
+
+  const goTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const targetY = window.scrollY + el.getBoundingClientRect().top - (topOffset + barH + 8);
+    window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+    setActive(id);
+  };
   // Estado para las diferentes secciones
   const [deposits, setDeposits] = useState({
     percentage: 50,
@@ -102,13 +200,64 @@ export default function ConfigPage() {
 
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const [g, d, c, n] = await Promise.all([
+          apiClient.getConfigSection("general"),
+          apiClient.getConfigSection("deposit"),
+          apiClient.getConfigSection("commissions"),
+          apiClient.getConfigSection("notifications"),
+        ]);
+        // Mapear a tu shape local (con defaults)
+        setGeneral({
+          businessName: g.businessName ?? "Pelu de Barrio",
+          timezone: g.timezone ?? "America/Argentina/Buenos_Aires",
+          currency: g.currency ?? "ARS",
+          dateFormat: g.dateFormat ?? "DD/MM/YYYY",
+          timeFormat: g.timeFormat ?? "24h",
+        });
+        setDeposits({
+          percentage: Number(d["deposit.percentage"] ?? d.percentage ?? 50),
+          holdMinutes: Number(d["deposit.holdMinutes"] ?? d.holdMinutes ?? 30),
+          expirationBeforeStart: Number(d["deposit.expirationBeforeStart"] ?? d.expirationBeforeStart ?? 120),
+          autoCancel: (d["deposit.autoCancel"] ?? d.autoCancel ?? true) === true,
+        });
+        setCommissions({
+          defaultPercentage: Number(c.defaultPercentage ?? 50),
+          calculateOnDeposit: Boolean(c.calculateOnDeposit ?? false),
+          showInDashboard: Boolean(c.showInDashboard ?? true),
+        });
+        setNotifications({
+          expiringSoon: Boolean(n.expiringSoon ?? true),
+          expired: Boolean(n.expired ?? true),
+          paid: Boolean(n.paid ?? true),
+          newAppointment: Boolean(n.newAppointment ?? true),
+          cancelled: Boolean(n.cancelled ?? false),
+        });
+      } catch (e) {
+        console.error("Load config failed", e);
+      }
+    })();
+  }, []);
+
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      // Aquí irían las llamadas a la API para guardar cada sección
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulación
+      await Promise.all([
+        apiClient.saveConfigSection("general", general),
+        apiClient.saveConfigSection("deposit", {
+          "deposit.percentage": deposits.percentage,
+          "deposit.holdMinutes": deposits.holdMinutes,
+          "deposit.expirationBeforeStart": deposits.expirationBeforeStart,
+          "deposit.autoCancel": deposits.autoCancel,
+        }),
+        apiClient.saveConfigSection("commissions", commissions),
+        apiClient.saveConfigSection("notifications", notifications),
+      ]);
       alert("✅ Configuración guardada correctamente");
     } catch (error) {
+      console.error(error);
       alert("❌ Error al guardar la configuración");
     } finally {
       setSaving(false);
@@ -116,71 +265,45 @@ export default function ConfigPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-dark-900 flex items-center gap-3">
-            <Settings className="w-8 h-8 text-primary-400" />
-            Configuración del Sistema
-          </h1>
-          <p className="text-dark-600 mt-1">
-            Ajustá los parámetros globales de tu negocio
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* === Spacer cuando la barra está flotando (evita que tape contenido) === */}
+      {floating && <div style={{ height: barH }} />}
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Restablecer
-          </button>
-          <button
-            onClick={handleSaveAll}
-            disabled={saving}
-            className="btn-primary flex items-center gap-2"
-          >
-            {saving ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Guardar Todo
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Navegación rápida */}
-      <div className="card p-4">
-        <div className="flex flex-wrap gap-2">
-          <a href="#general" className="btn-ghost text-xs">
-            <Settings className="w-3 h-3" /> General
-          </a>
-          <a href="#deposits" className="btn-ghost text-xs">
-            <DollarSign className="w-3 h-3" /> Señas
-          </a>
-          <a href="#commissions" className="btn-ghost text-xs">
-            <Percent className="w-3 h-3" /> Comisiones
-          </a>
-          <a href="#notifications" className="btn-ghost text-xs">
-            <Bell className="w-3 h-3" /> Notificaciones
-          </a>
-          <button
-            onClick={() => navigate("/admin/comisiones")}
-            className="btn-ghost text-xs"
-          >
-            <Users className="w-3 h-3" /> Config. Peluqueros
-          </button>
+      {/* === Barra centrada, dark, y por encima del topbar === */}
+      <div
+        ref={barRef}
+        className="w-full px-4"
+        style={{
+          position: floating ? "fixed" : "sticky",
+          top: floating ? topOffset : 12,
+          left: floating ? "50%" : undefined,
+          transform: floating ? "translateX(-50%)" : undefined,
+          zIndex: 70,
+        }}
+      >
+        <div className="mx-auto max-w-4xl rounded-2xl p-[1px] bg-gradient-to-r from-sky-500/30 via-fuchsia-500/20 to-indigo-500/30 shadow-lg">
+          <div className="rounded-2xl bg-slate-900/80 backdrop-blur border border-white/10">
+            <nav className="flex items-center justify-center gap-1 p-1">
+              {TABS.map(({ id, label, Icon, external }) => {
+                const isActive = active === id;
+                const base = "group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm transition-all";
+                const on = "bg-white/10 text-white shadow-inner ring-1 ring-white/10";
+                const off = "text-white/70 hover:text-white hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10";
+                return (
+                  <button
+                    key={id}
+                    onClick={() => (external ? (window.location.href = "/admin/comisiones") : goTo(id))}
+                    className={`${base} ${isActive ? on : off}`}
+                  >
+                    <Icon className="w-4 h-4 opacity-80 group-hover:opacity-100" />
+                    <span className="whitespace-nowrap">{label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </div>
-
       {/* ============================================
           CONFIGURACIÓN GENERAL
           ============================================ */}
