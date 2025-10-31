@@ -172,7 +172,7 @@ export default function CalendarView() {
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
               style={{
-                backgroundColor: stylistColors[ep.stylist_id] || "#475569",
+                backgroundColor: stylistColors[ep.stylist_id] || "#0959c9ff",
                 opacity: 0.9,
               }}
             >
@@ -207,7 +207,7 @@ export default function CalendarView() {
       const dow = d.toLocaleDateString("es-AR", { weekday: "short" }).toUpperCase(); // LUN
       const dd = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
-      return { html: `<span>${dow}</span><span style="opacity:.75;font-weight:600">${dd}/${mm}</span>` };
+      return { html: `<span>${dow}<span style="opacity:.75;font-weight:600"></span>` };
     }
     return undefined;
   }, []);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   TrendingUp, Scissors, Coins, PiggyBank, Download,
   Calendar, Loader2, AlertTriangle, Save, RotateCw
@@ -42,7 +42,6 @@ const Btn = ({ children, className = "", ...props }) => (
 );
 
 /* ===== Editor horarios / francos ===== */
-// WorkingHoursEditor.jsx
 function WorkingHoursEditor({ stylistId }) {
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -53,10 +52,8 @@ function WorkingHoursEditor({ stylistId }) {
     if (!stylistId) return;
     setErr("");
     try {
-      const server = await apiClient.getWorkingHours(stylistId); // 👈 usar stylistId, no "selected"
-      // Mapear por weekday que venga del server
+      const server = await apiClient.getWorkingHours(stylistId);
       const byWd = new Map((server || []).map(x => [Number(x.weekday), x]));
-      // Construir SIEMPRE los 7 días
       const full = Array.from({ length: 7 }, (_, d) => {
         const r = byWd.get(d);
         return {
@@ -72,10 +69,10 @@ function WorkingHoursEditor({ stylistId }) {
     }
   }, [stylistId]);
 
-
   useEffect(() => { load(); }, [load]);
 
   const update = (idx, patch) => setRows(rs => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  
   const toggleFranco = (idx) => {
     const r = rows[idx];
     const off = !r.start_time && !r.end_time;
@@ -88,21 +85,18 @@ function WorkingHoursEditor({ stylistId }) {
     setSaving(true);
     setErr("");
     try {
-      // Construyo payload SIEMPRE con 0..6 y tipos correctos
       const hours = Array.from({ length: 7 }, (_, d) => {
         const r = rows.find(x => Number(x.weekday) === d) || {};
         const st = r.start_time?.trim?.() || null;
         const et = r.end_time?.trim?.() || null;
         return {
           weekday: d,
-          start_time: st ? (st.length === 5 ? `${st}:00` : st) : null, // "HH:MM" -> "HH:MM:00"
+          start_time: st ? (st.length === 5 ? `${st}:00` : st) : null,
           end_time: et ? (et.length === 5 ? `${et}:00` : et) : null,
         };
       });
 
-      console.log("Saving hours →", hours); // debug
       await apiClient.saveWorkingHours(stylistId, hours);
-      // opcional: toast de éxito
     } catch (e) {
       setErr(e?.response?.data?.error || e.message || "No pude guardar horarios.");
       console.error("[saveWorkingHours]", e);
@@ -111,9 +105,7 @@ function WorkingHoursEditor({ stylistId }) {
     }
   };
 
-
-  if (!stylistId) return null; // ⬅️ evita llamadas en vacío
-
+  if (!stylistId) return null;
 
   return (
     <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -187,26 +179,10 @@ export default function StylistStatsPage() {
   const [from, setFrom] = useState(() => new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
 
-  // Cargar peluqueros (commissions → fallback stylists)
-  useEffect(() => {
-    (async () => {
-      try {
-        let list = await apiClient.getCommissions();
-        if (!Array.isArray(list) || !list.length) {
-          const s = await apiClient.getStylists();
-          list = (s || []).map(x => ({ id: x.id, name: x.name, percentage: x.percentage ?? x.commission ?? null }));
-        }
-        setStylists(list);
-        if (list?.length) setSelected(String(list[0].id));
-      } catch (e) {
-        setErr("No pude traer la lista de peluqueros.");
-        console.error(e);
-      }
-    })();
-  }, []);
+  // ✅ useRef para mantener la función actualizada sin causar re-renders
+  const loadStatsRef = useRef();
 
-  // Cargar stats
-  const loadStats = useCallback(async () => {
+  loadStatsRef.current = async () => {
     if (!selected) return;
     setLoading(true);
     setErr("");
@@ -228,13 +204,40 @@ export default function StylistStatsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Un solo useEffect con debounce para evitar doble refresh
+  useEffect(() => {
+    if (!selected) return;
+
+    const timer = setTimeout(() => {
+      loadStatsRef.current();
+    }, 350);
+
+    return () => clearTimeout(timer);
   }, [selected, from, to]);
 
-  useEffect(() => { if (selected) loadStats(); }, [selected, loadStats]);
+  // Cargar peluqueros al inicio
   useEffect(() => {
-    const t = setTimeout(() => { if (selected) loadStats(); }, 350);
-    return () => clearTimeout(t);
-  }, [from, to, selected, loadStats]);
+    (async () => {
+      try {
+        let list = await apiClient.getCommissions();
+        if (!Array.isArray(list) || !list.length) {
+          const s = await apiClient.getStylists();
+          list = (s || []).map(x => ({
+            id: x.id,
+            name: x.name,
+            percentage: x.percentage ?? x.commission ?? null
+          }));
+        }
+        setStylists(list);
+        if (list?.length) setSelected(String(list[0].id));
+      } catch (e) {
+        setErr("No pude traer la lista de peluqueros.");
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const stylist = stylists.find(s => String(s.id) === String(selected));
   const percent = useMemo(() => (stats?.porcentaje ?? stylist?.percentage ?? 0), [stats, stylist]);
@@ -340,12 +343,24 @@ export default function StylistStatsPage() {
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-transparent text-sm outline-none px-1" />
               <span className="text-zinc-500">–</span>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-transparent text-sm outline-none px-1" />
-              <Btn onClick={loadStats}>Aplicar</Btn>
             </div>
 
             {/* Presets */}
-            <Btn onClick={() => { const d = new Date(); const f = new Date(); f.setDate(d.getDate() - 6); setFrom(f.toISOString().slice(0, 10)); setTo(d.toISOString().slice(0, 10)); }}>7d</Btn>
-            <Btn onClick={() => { const d = new Date(); const f = new Date(); f.setDate(d.getDate() - 29); setFrom(f.toISOString().slice(0, 10)); setTo(d.toISOString().slice(0, 10)); }}>30d</Btn>
+            <Btn onClick={() => { 
+              const d = new Date(); 
+              const f = new Date(); 
+              f.setDate(d.getDate() - 6); 
+              setFrom(f.toISOString().slice(0, 10)); 
+              setTo(d.toISOString().slice(0, 10)); 
+            }}>7d</Btn>
+            
+            <Btn onClick={() => { 
+              const d = new Date(); 
+              const f = new Date(); 
+              f.setDate(d.getDate() - 29); 
+              setFrom(f.toISOString().slice(0, 10)); 
+              setTo(d.toISOString().slice(0, 10)); 
+            }}>30d</Btn>
 
             {/* Export */}
             <Btn onClick={doExport}><Download className="size-4" /> Exportar CSV</Btn>
