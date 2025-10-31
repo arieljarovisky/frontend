@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ShieldCheck, Loader2, Mail, Lock } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "sonner";
 
 /**
  * Professional Login Page
@@ -221,7 +222,7 @@ export default function LoginPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => alert("Pedí al admin el reset de contraseña ✅")}
+                    onClick={() => toast.error("Pedí al admin el reset de contraseña ✅")}
                     className="text-sm text-emerald-300 hover:text-emerald-200"
                   >
                     ¿Olvidaste tu contraseña?

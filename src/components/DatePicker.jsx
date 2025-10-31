@@ -1,6 +1,7 @@
 // src/components/DatePicker.jsx - Versión mejorada modo oscuro
 import { useMemo } from "react";
 import { Calendar } from "lucide-react";
+import { toast } from "sonner";
 
 export default function DatePicker({ value, onChange }) {
   const minDate = useMemo(() => {
@@ -19,7 +20,7 @@ export default function DatePicker({ value, onChange }) {
     const selected = e.target.value;
     
     if (selected < minDate) {
-      alert("⚠️ No podés seleccionar fechas pasadas");
+      toast.warning("⚠️ No podés seleccionar fechas pasadas");
       return;
     }
     

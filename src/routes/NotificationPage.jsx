@@ -1,4 +1,4 @@
-// src/routes/NotificationsPage.jsx
+// src/routes/NotificationsPage.jsx - Con paginado
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
@@ -13,7 +13,11 @@ import {
   AlertTriangle,
   Info,
   X,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 
 // Configuración de iconos y colores por tipo de notificación
@@ -149,12 +153,143 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
   );
 }
 
+// Componente de Paginación
+function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }) {
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  // Generar array de números de página para mostrar
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      // Mostrar todas las páginas
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Mostrar páginas con ellipsis
+      if (currentPage <= 3) {
+        // Cerca del inicio
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        // Cerca del final
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        // En el medio
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-dark-200/50">
+      {/* Info de items */}
+      <div className="text-sm text-dark-600">
+        Mostrando <span className="font-medium text-dark-900">{startItem}</span> a{" "}
+        <span className="font-medium text-dark-900">{endItem}</span> de{" "}
+        <span className="font-medium text-dark-900">{totalItems}</span> notificaciones
+      </div>
+
+      {/* Controles de paginación */}
+      <div className="flex items-center gap-2">
+        {/* Primera página */}
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          title="Primera página"
+        >
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+
+        {/* Página anterior */}
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          title="Página anterior"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Números de página */}
+        <div className="hidden sm:flex items-center gap-1">
+          {getPageNumbers().map((page, idx) => (
+            page === '...' ? (
+              <span key={`ellipsis-${idx}`} className="px-3 py-2 text-dark-500">
+                ...
+              </span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`
+                  px-3 py-2 rounded-lg text-sm font-medium transition-all
+                  ${currentPage === page
+                    ? 'bg-gradient-primary text-white shadow-glow'
+                    : 'border border-dark-300 hover:bg-dark-200/50 text-dark-700'
+                  }
+                `}
+              >
+                {page}
+              </button>
+            )
+          ))}
+        </div>
+
+        {/* Indicador móvil */}
+        <div className="sm:hidden px-3 py-2 rounded-lg border border-dark-300 text-sm font-medium">
+          {currentPage} / {totalPages}
+        </div>
+
+        {/* Página siguiente */}
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          title="Página siguiente"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+
+        {/* Última página */}
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          title="Última página"
+        >
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -162,6 +297,8 @@ export default function NotificationsPage() {
       const params = filter === "unread" ? "?unreadOnly=true" : "";
       const res = await apiClient.get(`/api/notifications${params}`);
       setNotifications(res.data?.data || []);
+      // Reset a página 1 cuando cambia el filtro
+      setCurrentPage(1);
     } catch (error) {
       toast.error("Error al cargar notificaciones");
       console.error(error);
@@ -206,7 +343,18 @@ export default function NotificationsPage() {
     await apiClient.delete(`/api/notifications/${id}`);
   };
 
-  const filteredNotifications = notifications;
+  // Cálculos de paginación
+  const totalItems = notifications.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentNotifications = notifications.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll suave al inicio de la lista
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -313,36 +461,49 @@ export default function NotificationsPage() {
         </button>
       </div>
 
-      {/* Lista de notificaciones */}
-      <div className="space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          <div className="card p-12 text-center">
-            <Bell className="w-12 h-12 mx-auto mb-3 text-dark-400" />
-            <p className="text-dark-600 mb-2">
-              {filter === "unread" 
-                ? "No tenés notificaciones sin leer" 
-                : "No tenés notificaciones"
-              }
-            </p>
-            <p className="text-sm text-dark-500">
-              Te avisaremos cuando haya novedades
-            </p>
-          </div>
-        ) : (
-          filteredNotifications.map((notification) => (
-            <NotificationCard
-              key={notification.id}
-              notification={notification}
-              onMarkRead={handleMarkRead}
-              onDelete={handleDelete}
-              onRefresh={handleRefresh}
-            />
-          ))
-        )}
+      {/* Lista de notificaciones con paginación */}
+      <div className="card p-6">
+        <div className="space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
+            </div>
+          ) : currentNotifications.length === 0 ? (
+            <div className="py-12 text-center">
+              <Bell className="w-12 h-12 mx-auto mb-3 text-dark-400" />
+              <p className="text-dark-600 mb-2">
+                {filter === "unread" 
+                  ? "No tenés notificaciones sin leer" 
+                  : "No tenés notificaciones"
+                }
+              </p>
+              <p className="text-sm text-dark-500">
+                Te avisaremos cuando haya novedades
+              </p>
+            </div>
+          ) : (
+            <>
+              {currentNotifications.map((notification) => (
+                <NotificationCard
+                  key={notification.id}
+                  notification={notification}
+                  onMarkRead={handleMarkRead}
+                  onDelete={handleDelete}
+                  onRefresh={handleRefresh}
+                />
+              ))}
+              
+              {/* Componente de paginación */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+              />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

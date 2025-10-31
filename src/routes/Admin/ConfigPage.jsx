@@ -1,4 +1,4 @@
-// src/routes/Admin/ConfigPage.jsx
+// src/routes/Admin/ConfigPage.jsx - Con navegación oculta en mobile
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
+import { toast } from "sonner";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
@@ -123,7 +124,7 @@ export default function ConfigPage() {
         if (!el) continue;
         const rect = el.getBoundingClientRect();
 
-        // Último top que quedó por encima de la línea (=> sección “en curso”)
+        // Último top que quedó por encima de la línea (=> sección "en curso")
         if (rect.top <= refY && rect.top > bestTop) {
           bestTop = rect.top;
           current = id;
@@ -255,10 +256,10 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
       ]);
-      alert("✅ Configuración guardada correctamente");
+      toast.success("Configuración guardada correctamente");
     } catch (error) {
       console.error(error);
-      alert("❌ Error al guardar la configuración");
+      toast.error("❌ Error al guardar la configuración");
     } finally {
       setSaving(false);
     }
@@ -269,13 +270,13 @@ export default function ConfigPage() {
       {/* === Spacer cuando la barra está flotando (evita que tape contenido) === */}
       {floating && <div style={{ height: barH }} />}
 
-      {/* === Barra centrada, dark, y por encima del topbar === */}
+      {/* === Barra centrada, dark, y por encima del topbar - OCULTA EN MOBILE === */}
       <div
         ref={barRef}
-        className="w-full px-4"
+        className="w-full px-4 hidden md:block"
         style={{
           position: floating ? "fixed" : "sticky",
-          top: floating ? topOffset : 12,
+          top: floating ? topOffset : 90,
           left: floating ? "50%" : undefined,
           transform: floating ? "translateX(-50%)" : undefined,
           zIndex: 70,
@@ -304,6 +305,7 @@ export default function ConfigPage() {
           </div>
         </div>
       </div>
+      
       {/* ============================================
           CONFIGURACIÓN GENERAL
           ============================================ */}

@@ -1,7 +1,7 @@
-// src/routes/DepositsPage.jsx - SIMPLIFICADA (sin tabs internas)
+// src/routes/DepositsPage.jsx - Versión corregida
 import React, { useEffect, useState } from "react";
 import { useQuery } from "../shared/useQuery.js";
-import axios from "axios";
+import { apiClient } from "../api/client";
 import {
   DollarSign,
   Clock,
@@ -15,8 +15,6 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-
-const api = axios.create({ baseURL: "/api/admin" });
 
 // ============================================
 // COMPONENTES DE UI
@@ -69,7 +67,7 @@ function UrgencyBadge({ urgency }) {
   };
 
   const config = configs[urgency] || configs.active;
-  return <span className={config.className}>{config.label}</span>;
+  return <span className={`badge ${config.className}`}>{config.label}</span>;
 }
 
 function DepositRow({ deposit, onAction, onRefresh }) {
@@ -208,29 +206,32 @@ export default function DepositsPage() {
   const [refreshKey, setRefresh] = useState(0);
 
   const { data: dashboard, loading: loadingDash } = useQuery(
-    () => api.get("/deposits/dashboard").then((r) => r.data.data),
+    async () => {
+      const { data } = await apiClient.get("/api/admin/deposits/dashboard");
+      return data.data;
+    },
     [refreshKey]
   );
 
   const { data: deposits, loading: loadingDeposits } = useQuery(
-    () =>
-      api
-        .get("/deposits/pending", {
-          params: { includeExpired: includeExpired ? "true" : "false" },
-        })
-        .then((r) => r.data.data),
+    async () => {
+      const { data } = await apiClient.get("/api/admin/deposits/pending", {
+        params: { includeExpired: includeExpired ? "true" : "false" },
+      });
+      return data.data;
+    },
     [includeExpired, refreshKey]
   );
 
   const handleAction = async (depositId, action) => {
     const endpoints = {
-      markPaid: `/deposits/${depositId}/mark-paid`,
-      cancel: `/deposits/${depositId}/cancel`,
-      extend: `/deposits/${depositId}/extend`,
-      remind: `/deposits/${depositId}/remind`,
+      markPaid: `/api/admin/deposits/${depositId}/mark-paid`,
+      cancel: `/api/admin/deposits/${depositId}/cancel`,
+      extend: `/api/admin/deposits/${depositId}/extend`,
+      remind: `/api/admin/deposits/${depositId}/remind`,
     };
 
-    await api.post(endpoints[action]);
+    await apiClient.post(endpoints[action]);
   };
 
   const handleRefresh = () => setRefresh((k) => k + 1);
