@@ -609,7 +609,7 @@ export default function StylistStatsPage() {
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
-                className="appearance-none rounded-xl bg-white/5 border border-white/10 px-3 py-2 pr-8 text-sm"
+                className="appearance-none rounded-xl bg-slate-800 border border-white/10 px-3 py-2 pr-8 text-sm"
               >
                 {stylists.map((s) => (
                   <option key={s.id} value={s.id}>
