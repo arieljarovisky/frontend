@@ -54,7 +54,7 @@ function WorkingHoursEditor({ stylistId }) {
     if (!stylistId) return;
     setErr("");
     try {
-      const server = await apiClient.getWorkingHours(stylistId);
+      const server = await apiClient.getWorkingHours({ stylistId });
       const byWd = new Map((server || []).map(x => [Number(x.weekday), x]));
       const full = Array.from({ length: 7 }, (_, d) => {
         const r = byWd.get(d);
@@ -119,7 +119,7 @@ function WorkingHoursEditor({ stylistId }) {
         };
       });
 
-      await apiClient.saveWorkingHours(stylistId, hours);
+      await apiClient.saveWorkingHours({ stylistId, hours });
       toast.success("Horarios guardados correctamente");
     } catch (e) {
       setErr(e?.response?.data?.error || e.message || "No pude guardar horarios.");
@@ -470,7 +470,7 @@ export default function StylistStatsPage() {
     setLoading(true);
     setErr("");
     try {
-      const data = await apiClient.getStylistStatsRange(selected, { from, to });
+       const data = await apiClient.getStylistStatsRange({ stylistId: selected, from, to });
       setStats({
         total_cortes: data.total_cortes ?? 0,
         monto_total: data.monto_total ?? 0,

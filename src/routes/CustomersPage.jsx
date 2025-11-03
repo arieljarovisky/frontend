@@ -23,7 +23,7 @@ export default function CustomersPage() {
 
     // 4) Fetch dinámico (se cancela si el usuario sigue tecleando)
     const { data: rows = [], loading, error } =
-        useQuery((signal) => apiClient.customers(qDebounced, signal), [qDebounced]);
+        useQuery((signal) => apiClient.listCustomers(qDebounced, signal), [qDebounced]);
 
     // 5) Actualizo la URL cuando se envía el form (Enter o botón Buscar)
     function submitSearch(v) {

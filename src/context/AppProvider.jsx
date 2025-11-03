@@ -112,10 +112,12 @@ export function AppProvider({ children, pollMs = 15000 }) {
     (async () => {
       try {
         setMetaLoading(true);
+
         const [srv, sty] = await Promise.all([
-          apiClient.getServices(),
-          apiClient.getStylists(),
+          apiClient.listServices(),
+          apiClient.listStylists(),
         ]);
+
         setServices(srv);
         setStylists(sty);
       } catch (e) {
@@ -136,7 +138,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     try {
       setEventsLoading(true);
       setEventsError("");
-      const data = await apiClient.getAppointmentsBetween(fromIso, toIso);
+     const data = await apiClient.listAppointments({ from: fromIso, to: toIso });
       const evs = (data?.appointments ?? data ?? []).map((a) => ({
         id: String(a.id),
         title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,

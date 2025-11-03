@@ -1,22 +1,24 @@
 // src/components/PrivateRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getAccessToken } from "../api/client";
 
 export default function PrivateRoute({ children, roles }) {
   const { user, authLoaded } = useAuth();
+  const token = getAccessToken();
 
-  // Esperar carga de auth para decidir (evita flicker/loops)
-  if (!authLoaded) return null; // o <Spinner />
+  // Esperar que se cargue el contexto de autenticación
+  if (!authLoaded) return null; // o un loader/spinner
 
-  // No logueado → al login
-  if (!user) return <Navigate to="/login" replace />;
+  // Si no hay usuario ni token → forzar login
+  if (!user && !token) return <Navigate to="/login" replace />;
 
-  // Si hay restricción de roles
+  // Verificar roles si están definidos
   if (Array.isArray(roles) && roles.length) {
-    const ok = roles.includes(user.role);
+    const ok = user && roles.includes(user.role);
     if (!ok) return <Navigate to="/login" replace />;
   }
 
-  // Autorizado
+  // Si llega acá, está autenticado y autorizado
   return children;
 }

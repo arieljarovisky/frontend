@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
 import "./calendar-dark.css";
+import MercadoPagoConfig from "./routes/Admin/MercadoPagoConfig.jsx";
 
 // Layout y páginas
 import AppLayout from "./routes/AppLayout.jsx";
@@ -17,6 +18,8 @@ import LoginPage from "./routes/LoginPage.jsx";
 // Auth
 import { AuthProvider } from "./context/AuthContext.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
+import PaymentSuccess from "./routes/PaymentSuccess.jsx";
+import PaymentFailure from "./routes/PaymentFailure.jsx";
 
 // Sistema de notificaciones
 import { NotificationSystem } from "./components/notifications/NotificationSystem.jsx";
@@ -34,6 +37,9 @@ const router = createBrowserRouter([
     path: "/:tenantSlug",
     element: <AppLayout />,
     children: [
+      { path: "payment/success", element: <PaymentSuccess /> },
+      { path: "payment/failure", element: <PaymentFailure /> },
+      { path: "payment/pending", element: <PaymentSuccess /> },
       {
         index: true,
         element: (
@@ -99,6 +105,15 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+      {
+        path: "admin/mercadopago",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <MercadoPagoConfig />
+          </PrivateRoute>
+        ),
+      }
+
     ],
   },
 

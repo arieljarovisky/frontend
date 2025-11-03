@@ -22,7 +22,7 @@ apiClient.createCustomer = async function (payload) {
 
 // Actualizar
 apiClient.updateCustomer = async function (id, patch) {
-  const { data } = await apiClient.patch(`${PATH_CUSTOMERS}/${id}`, patch);
+  const { data } = await apiClient.put(`${PATH_CUSTOMERS}/${id}`, patch);
   return data;
 };
 

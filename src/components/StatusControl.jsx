@@ -37,7 +37,7 @@ export default function StatusControl({ appt, onReload }) {
     setPending(true);
     try {
       const res = await fetch(`/api/appointments/${appt.id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
