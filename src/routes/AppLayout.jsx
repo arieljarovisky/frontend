@@ -19,8 +19,8 @@ import {
 
 export default function AppLayout() {
   const { pathname } = useLocation();
-  const { tenantSlug } = useParams();                 // 👈 tomamos el slug del path
-  const base = `/${tenantSlug || ""}`;                // 👈 base para links
+  const { tenantSlug } = useParams();
+  const base = `/${tenantSlug || ""}`;
   const { user, tenant, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -47,7 +47,7 @@ export default function AppLayout() {
   }, []);
 
   const navItems = [
-    { to: `${base}`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}` || pathname === `${base}/` },
+    { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
     { to: `${base}/appointments`, label: "Calendario", icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
     { to: `${base}/customers`, label: "Clientes", icon: Users, active: pathname.startsWith(`${base}/customers`) },
     { to: `${base}/deposits`, label: "Depósitos", icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },

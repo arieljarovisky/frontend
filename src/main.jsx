@@ -37,11 +37,16 @@ const router = createBrowserRouter([
     path: "/:tenantSlug",
     element: <AppLayout />,
     children: [
+      // Redirección del index a dashboard
+      {
+        index: true,
+        element: <Navigate to="dashboard" replace />,
+      },
       { path: "payment/success", element: <PaymentSuccess /> },
       { path: "payment/failure", element: <PaymentFailure /> },
       { path: "payment/pending", element: <PaymentSuccess /> },
       {
-        index: true,
+        path: "dashboard",
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <DashboardPage />

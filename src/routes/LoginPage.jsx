@@ -33,8 +33,10 @@ export default function LoginPage() {
   const goAfterLogin = (resp, fallbackSlug) => {
     const next = safeNextParam(location.search);
 
-    // Si querés ir siempre a dashboard por tenant, podés cambiar esta línea:
+    // Slug del tenant
     const slug = resp?.tenant?.slug || fallbackSlug || "default";
+    
+    // Si hay parámetro next, usarlo; sino ir a dashboard
     const dest = next || `/${slug}/dashboard`;
 
     // Redirección dura para evitar efectos pendientes que hagan requests a /api
@@ -43,7 +45,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (authLoaded && user?.tenant?.slug) {
-      navigate(`/${user.tenant.slug}/`, { replace: true });
+      navigate(`/${user.tenant.slug}/dashboard`, { replace: true });
     }
   }, [authLoaded, user, navigate]);
 

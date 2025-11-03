@@ -477,7 +477,17 @@ apiClient.getCommissions = async function (params = {}) {
     return [];
   }
 };
-
+apiClient.updateCommission = async function (stylistId, percentage) {
+  try {
+    const { data } = await apiClient.put(`/api/commissions/${stylistId}`, {
+      percentage: Number(percentage),
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ [updateCommission] Error:", error);
+    throw error;
+  }
+};
 /* =========================
    STYLIST STATS API
 ========================= */
