@@ -1,8 +1,7 @@
-// src/routes/AppLayout.jsx - Con navegación a estadísticas
-import React from "react";
-import { useState, useEffect } from "react";
+// src/routes/AppLayout.jsx
+import React, { useState, useEffect } from "react";
 import { apiClient } from "../api/client";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard,
@@ -14,22 +13,23 @@ import {
   X,
   Settings,
   Bell,
-  Activity,
-  TrendingUp,
-  Scissors
+  Scissors,
+  Building2
 } from "lucide-react";
 
 export default function AppLayout() {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
+  const { tenantSlug } = useParams();                 // 👈 tomamos el slug del path
+  const base = `/${tenantSlug || ""}`;                // 👈 base para links
+  const { user, tenant, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Cargar contador de notificaciones
   useEffect(() => {
@@ -41,47 +41,23 @@ export default function AppLayout() {
         console.error("Error loading unread count:", error);
       }
     };
-
     loadUnreadCount();
-
-    // Actualizar cada 30 segundos
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const navItems = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/" },
-    { to: "/appointments", label: "Calendario", icon: Calendar, active: pathname === "/appointments" },
-    { to: "/customers", label: "Clientes", icon: Users, active: pathname.startsWith("/customers") },
-    { to: "/deposits", label: "Depósitos", icon: DollarSign, active: pathname === "/deposits" },
-    // NUEVA: Notificaciones
-    {
-      to: "/notifications",
-      label: "Notificaciones",
-      icon: Bell,
-      active: pathname === "/notifications",
-      badge: unreadCount > 0 ? unreadCount : null
-    },
-    // NUEVA: Estadísticas de peluqueros
-    {
-      to: "/admin/peluqueros",
-      label: "Peluqueros",
-      icon: Scissors,
-      active: pathname === "/admin/peluqueros",
-      adminOnly: true
-    },
-    {
-      to: "/admin/config",
-      label: "Configuración",
-      icon: Settings,
-      active: pathname === "/admin/config",
-      adminOnly: true
-    },
+    { to: `${base}`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}` || pathname === `${base}/` },
+    { to: `${base}/appointments`, label: "Calendario", icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
+    { to: `${base}/customers`, label: "Clientes", icon: Users, active: pathname.startsWith(`${base}/customers`) },
+    { to: `${base}/deposits`, label: "Depósitos", icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
+    { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
+    { to: `${base}/admin/peluqueros`, label: "Peluqueros", icon: Scissors, active: pathname.startsWith(`${base}/admin/peluqueros`), adminOnly: true },
+    { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
   ];
 
-  // Filtrar elementos según el rol del usuario
   const filteredNavItems = navItems.filter(item => {
-    if (item.adminOnly && user?.role !== 'admin') return false;
+    if (item.adminOnly && user?.role !== "admin") return false;
     return true;
   });
 
@@ -111,6 +87,19 @@ export default function AppLayout() {
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
+              {/* Tenant Indicator */}
+              {tenant && (
+                <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-600/10 border border-primary-600/20">
+                  <Building2 className="w-4 h-4 text-primary-400" />
+                  <div>
+                    <p className="text-xs text-dark-600 leading-none">Sucursal</p>
+                    <p className="text-sm font-medium text-primary-300">
+                      {tenant.name || tenant.subdomain || `#${tenant.id}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* User Menu */}
               <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-200/50">
                 <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
@@ -148,6 +137,18 @@ export default function AppLayout() {
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
             <nav className="lg:hidden py-4 border-t border-dark-200/50 animate-slide-down">
+              {/* Tenant info en mobile */}
+              {tenant && (
+                <div className="mb-4 p-3 rounded-xl bg-primary-600/10 border border-primary-600/20 flex items-center gap-3">
+                  <Building2 className="w-5 h-5 text-primary-400" />
+                  <div>
+                    <p className="text-xs text-dark-600">Sucursal activa</p>
+                    <p className="text-sm font-medium text-primary-300">
+                      {tenant.name || tenant.subdomain || `#${tenant.id}`}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="space-y-1">
                 {filteredNavItems.map((item) => (
                   <MobileNavButton
@@ -163,7 +164,7 @@ export default function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1  max-w-[1800px] w-full mx-auto px-4 lg:px-6 py-6 lg:py-8">
+      <main className="flex-1 max-w-[1800px] w-full mx-auto px-4 lg:px-6 py-6 lg:py-8">
         <div className="animate-fade-in">
           <Outlet />
         </div>
@@ -173,7 +174,9 @@ export default function AppLayout() {
       <footer className="py-6 border-t border-dark-200/50 text-center text-sm text-zinc-400 bg-slate-950/50">
         <div className="max-w-[1800px] mx-auto px-4">
           <p>© 2025 — Pelu de Barrio</p>
-          <p className="text-xs text-zinc-600 mt-1">Sistema de Gestión v2.0</p>
+          <p className="text-xs text-zinc-600 mt-1">
+            Sistema de Gestión v2.0 {tenant ? `• ${tenant.name || tenant.subdomain}` : ""}
+          </p>
         </div>
       </footer>
     </div>

@@ -8,6 +8,7 @@ const API_BASE = RAW_BASE.replace(/\/$/, "");
 /** Claves de localStorage */
 const LS_ACCESS = "auth:accessToken";
 const LS_EMAIL = "auth:email";
+const LS_TENANT = "auth:tenantId"; // ✅ NUEVO: almacenar tenant ID
 
 /** Set/Get/Remove token */
 export function setAccessToken(token) {
@@ -25,6 +26,15 @@ export function getAuthEmail() {
   return localStorage.getItem(LS_EMAIL) || "";
 }
 
+// ✅ NUEVO: Manejo del Tenant ID
+export function setTenantId(tenantId) {
+  if (tenantId) localStorage.setItem(LS_TENANT, tenantId);
+  else localStorage.removeItem(LS_TENANT);
+}
+export function getTenantId() {
+  return localStorage.getItem(LS_TENANT) || "";
+}
+
 /** Cliente axios */
 export const apiClient = axios.create({
   baseURL: API_BASE,
@@ -32,10 +42,29 @@ export const apiClient = axios.create({
   withCredentials: true, // manda cookies (refresh)
 });
 
-/** Inyecta Authorization si hay token */
+/** 
+ * ✅ INTERCEPTOR MODIFICADO: Inyecta Authorization + X-Tenant-ID
+ * 
+ * ESTRATEGIAS MULTI-TENANT:
+ * 
+ * 1. HEADER (recomendado para API): X-Tenant-ID
+ * 2. SUBDOMAIN: tenant.tuapp.com (requiere configuración DNS/routing)
+ * 3. PATH: /api/tenant123/appointments (menos común)
+ * 4. QUERY PARAM: ?tenantId=123 (menos seguro)
+ */
 apiClient.interceptors.request.use((cfg) => {
-  const t = getAccessToken();
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  // Inyectar token de autorización
+  const token = getAccessToken();
+  if (token) {
+    cfg.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // ✅ Inyectar Tenant ID en header
+  const tenantId = getTenantId();
+  if (tenantId) {
+    cfg.headers['X-Tenant-ID'] = tenantId;
+  }
+
   return cfg;
 });
 
@@ -105,6 +134,7 @@ apiClient.interceptors.response.use(
         // Si el refresh falla, limpiamos sesión y rechazamos toda la cola
         setAccessToken(null);
         setAuthEmail(null);
+        setTenantId(null); // ✅ Limpiar también el tenant
         flushQueue(e, null);
         throw e;
       } finally {
@@ -127,31 +157,84 @@ apiClient.interceptors.response.use(
  *  Auth de alto nivel
  * ======================== */
 export const authApi = {
-  async login(email, password) {
+  /**
+   * ✅ Login modificado para guardar tenantId
+   * El backend debe devolver el tenantId en la respuesta
+   */
+ async login(email, password) {
     const { data } = await apiClient.post("/auth/login", { email, password });
-    // Espera { ok, accessToken, user }
-    if (data?.ok && data?.accessToken) {
-      setAccessToken(data.accessToken);
+    // ✅ Si tiene access token, guardarlo
+    if (data?.ok && data?.access) {
+      setAccessToken(data.access);
       setAuthEmail(data?.user?.email || email);
     }
     return data;
   },
+   async loginTenant(email, password, slug) {
+    const { data } = await apiClient.post("/auth/login-tenant", { 
+      email, 
+      password, 
+      slug 
+    });
+    if (data?.ok && data?.access) {
+      setAccessToken(data.access);
+      setAuthEmail(data?.user?.email || email);
+    }
+    return data;
+  },
+  
   async logout() {
     try { await apiClient.post("/auth/logout"); } catch { }
     setAccessToken(null);
     setAuthEmail(null);
   },
+  
+  async refresh() {
+    const { data } = await apiClient.post("/auth/refresh", {});
+    if (data?.ok && data?.access) {
+      setAccessToken(data.access);
+      return true;
+    }
+    return false;
+  },
+  
+  async me() {
+    const { data } = await apiClient.get("/auth/me");
+    return data;
+  },
+
+  async logout() {
+    try {
+      await apiClient.post("/auth/logout");
+    } catch { }
+    setAccessToken(null);
+    setAuthEmail(null);
+    setTenantId(null); // ✅ Limpiar tenant al hacer logout
+  },
+
   async refresh() {
     // Importante: este endpoint usa la cookie HttpOnly + withCredentials:true
     const { data } = await apiClient.post("/auth/refresh", {});
     if (data?.ok && data?.accessToken) {
       setAccessToken(data.accessToken);
+
+      // ✅ Actualizar tenantId si viene en el refresh
+      if (data?.tenantId) {
+        setTenantId(data.tenantId);
+      }
       return true;
     }
     return false;
   },
+
   async me() {
     const { data } = await apiClient.get("/auth/me");
+
+    // ✅ Actualizar tenantId desde /me si no lo tenemos
+    if (data?.ok && data?.user?.tenantId && !getTenantId()) {
+      setTenantId(data.user.tenantId);
+    }
+
     return data; // { ok, user }
   },
 };
@@ -161,8 +244,8 @@ export const authApi = {
    =========================
    ✅ Rutas corregidas para coincidir con el backend.
 */
-const PATH_SERVICES = "/api/services";  // ✅ Corregido
-const PATH_STYLISTS = "/api/stylists";  // ✅ Corregido
+const PATH_SERVICES = "/api/meta/services";  // ✅ Corregido
+const PATH_STYLISTS = "/api/meta/stylists";  // ✅ Corregido
 const PATH_AVAIL = "/api/availability";
 const PATH_APPTS = "/api/appointments";
 const PATH_ADMIN = "/api/admin";
@@ -208,14 +291,12 @@ function fanout() {
 // Lista de servicios
 apiClient.getServices = async function () {
   const { data } = await apiClient.get(PATH_SERVICES);
-  // El backend devuelve { ok: true, data: [...] }
   return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 };
 
 // Lista de estilistas
 apiClient.getStylists = async function () {
   const { data } = await apiClient.get(PATH_STYLISTS);
-  // El backend devuelve { ok: true, data: [...] }
   return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 };
 
@@ -224,7 +305,6 @@ apiClient.getAvailability = async function ({ serviceId, stylistId, date, stepMi
   const { data } = await apiClient.get(PATH_AVAIL, {
     params: { serviceId, stylistId, date, stepMin },
   });
-  // Normalizamos: { ok, data: { slots, busySlots } }
   if (data?.data) return data;
   return {
     ok: data?.ok ?? true,
@@ -241,68 +321,43 @@ apiClient.getAppointmentsBetween = async function (fromIso, toIso) {
 };
 
 // Crear turno
-// Crear turno
 apiClient.createAppointment = async function (payload) {
   const { data } = await apiClient.post(PATH_APPTS, payload);
-  // si el backend respondió ok, notificamos
-  if (data?.ok !== false) {
-    emitAppointmentsChanged({ op: "create", id: data?.id });
-    fanout();
-  }
-  return data; // { ok, id, ... }
+  fanout();
+  emitAppointmentsChanged({ action: "create" });
+  return data;
 };
 
 // Actualizar turno
 apiClient.updateAppointment = async function (id, patch) {
-  const { data } = await apiClient.put(`${PATH_APPTS}/${id}`, patch);
-  if (data?.ok !== false) {
-    emitAppointmentsChanged({ op: "update", id });
-    fanout();
-  }
-  return data; // { ok:true }
+  const { data } = await apiClient.patch(`${PATH_APPTS}/${id}`, patch);
+  fanout();
+  emitAppointmentsChanged({ action: "update", id });
+  return data;
 };
 
-// Borrar turno
+// Eliminar turno
 apiClient.deleteAppointment = async function (id) {
   const { data } = await apiClient.delete(`${PATH_APPTS}/${id}`);
-  if (data?.ok !== false) {
-    emitAppointmentsChanged({ op: "delete", id });
-    fanout();
-  }
-  return data; // { ok:true }
+  fanout();
+  emitAppointmentsChanged({ action: "delete", id });
+  return data;
 };
 
-
-// KPIs "rápidos" para las cards
-apiClient.getAdminMetrics = async function () {
-  const { data } = await apiClient.get(`${PATH_ADMIN}/metrics`);
-  return data; // { today_scheduled, today_cancelled, today_total, week_income }
+// Confirmar turno
+apiClient.confirmAppointment = async function (id) {
+  const { data } = await apiClient.post(`${PATH_APPTS}/${id}/confirm`);
+  fanout();
+  emitAppointmentsChanged({ action: "confirm", id });
+  return data;
 };
 
-// Dashboard completo (hoy/mañana, por estilista, depósitos, facturación, etc.)
-apiClient.getAdminDashboard = async function ({ from, to } = {}) {
-  const params = {};
-  if (from && to) { params.from = from; params.to = to; } // YYYY-MM-DD
-  const { data } = await apiClient.get(PATH_ADMIN, { params });
-  return data; // { ok:true, data:{ ... } }
-};
-
-// Línea: ingresos por mes del año
-apiClient.getIncomeByMonth = async function (year = new Date().getFullYear()) {
-  const { data } = await apiClient.get(`${PATH_ADMIN}/charts/income-by-month`, { params: { year } });
-  return data; // [{ month:"Ene", income:123 }, ...]
-};
-
-// Barras: servicios más pedidos
-apiClient.getTopServices = async function ({ months = 3, limit = 6 } = {}) {
-  const { data } = await apiClient.get(`${PATH_ADMIN}/charts/top-services`, { params: { months, limit } });
-  return data; // [{ service_name, count }, ...]
-};
-
-// Agenda de HOY
-apiClient.getAgendaToday = async function () {
-  const { data } = await apiClient.get(`${PATH_ADMIN}/agenda/today`);
-  return data; // [{ id, starts_at, status, customer_name, service_name, stylist_name }, ...]
+// Cancelar turno
+apiClient.cancelAppointment = async function (id, reason) {
+  const { data } = await apiClient.post(`${PATH_APPTS}/${id}/cancel`, { reason });
+  fanout();
+  emitAppointmentsChanged({ action: "cancel", id });
+  return data;
 };
 
 // (Opcional) Búsqueda de clientes para Admin
@@ -353,12 +408,12 @@ apiClient.deleteCustomer = async function (id) {
    ========================= */
 apiClient.getDepositConfig = async function () {
   const { data } = await apiClient.get("/api/config/deposit");
-  return data; // { deposit_percentage, hold_minutes, expire_minutes, ... }
+  return data;
 };
 
 apiClient.updateDepositConfig = async function (payload) {
   const { data } = await apiClient.put("/api/config/deposit", payload);
-  return data; // { ok:true }
+  return data;
 };
 
 /* =========================
@@ -373,7 +428,7 @@ apiClient.updateCommission = async function (stylistId, percentage) {
   const { data } = await apiClient.put(`/api/commissions/${stylistId}`, {
     percentage,
   });
-  return data; // { ok:true }
+  return data;
 };
 
 /* =========================
@@ -381,18 +436,17 @@ apiClient.updateCommission = async function (stylistId, percentage) {
    ========================= */
 apiClient.getStylistStats = async function (stylistId) {
   const { data } = await apiClient.get(`/api/stats/${stylistId}`);
-  return data; // { stylist_id, total_cortes, monto_total, porcentaje, comision_ganada, neto_local }
+  return data;
 };
-// Stats resumidas (permite ?from=YYYY-MM-DD&to=YYYY-MM-DD)
+
 apiClient.getStylistStatsRange = async function (stylistId, { from, to } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
   const { data } = await apiClient.get(`/api/stats/${stylistId}`, { params });
-  return data; // { total_cortes, monto_total, porcentaje, comision_ganada, neto_local, daily?, services?, turnos? }
+  return data;
 };
 
-// (Opcional) Turnos crudos para export
 apiClient.getStylistTurns = async function (stylistId, { from, to } = {}) {
   const params = {};
   if (from) params.from = from;
@@ -405,23 +459,21 @@ apiClient.getStylistTurns = async function (stylistId, { from, to } = {}) {
    WORKING HOURS / FRANCOS
    ========================= */
 
-// GET ?stylistId=ID  → [{weekday,start_time,end_time}, ...]
-// === Working hours ===
 apiClient.getWorkingHours = async function (stylistId) {
   const { data } = await apiClient.get("/api/working-hours", { params: { stylistId } });
-  // normalizamos: siempre devolvemos un array
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   return [];
 };
+
 apiClient.setWorkingHour = async function ({ stylistId, weekday, is_open, start_time, end_time }) {
   const { data } = await apiClient.put("/api/working-hours", { stylistId, weekday, is_open, start_time, end_time });
-  return data; // { ok:true }
+  return data;
 };
 
 apiClient.setWorkingHoursBulk = async function ({ stylistId, week }) {
   const { data } = await apiClient.put("/api/working-hours/bulk", { stylistId, week });
-  return data; // { ok:true, updated:n }
+  return data;
 };
 
 // === Días de franco (time_off) ===
@@ -430,27 +482,20 @@ apiClient.listDaysOff = async function ({ stylistId, from, to }) {
   if (from) params.from = from;
   if (to) params.to = to;
   const { data } = await apiClient.get("/api/days-off", { params });
-  return data; // { ok:true, data:[...] }
+  return data;
 };
 
 apiClient.addDayOff = async function ({ stylistId, starts_at, ends_at, reason }) {
   const { data } = await apiClient.post("/api/days-off", { stylistId, starts_at, ends_at, reason });
-  return data; // { ok:true, id }
+  return data;
 };
 
 apiClient.deleteDayOff = async function (id) {
   const { data } = await apiClient.delete(`/api/days-off/${id}`);
-  return data; // { ok:true }
-};
-
-apiClient.getWorkingHours = async function (stylistId) {
-  const { data } = await apiClient.get("/api/working-hours", { params: { stylistId } });
-  // normalizo a array plano
-  return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  return data;
 };
 
 apiClient.saveWorkingHours = async function (stylistId, hours) {
-  // hours: [{ weekday:number, start_time:null|"HH:MM:SS", end_time:null|"HH:MM:SS" }, ...]
   const payload = {
     stylistId: Number(stylistId),
     hours: hours.map(h => ({
@@ -460,45 +505,39 @@ apiClient.saveWorkingHours = async function (stylistId, hours) {
     })),
   };
   const { data } = await apiClient.put("/api/working-hours", payload);
-  return data; // { ok:true }
+  return data;
 };
 
 /* =========================
    NOTIFICACIONES
    ========================= */
 
-// Obtener notificaciones
 apiClient.getNotifications = async function ({ unreadOnly = false } = {}) {
   const params = unreadOnly ? { unreadOnly: 'true' } : {};
   const { data } = await apiClient.get('/api/notifications', { params });
   return Array.isArray(data?.data) ? data.data : [];
 };
 
-// Contar notificaciones no leídas
 apiClient.getUnreadCount = async function () {
   const { data } = await apiClient.get('/api/notifications/count');
   return data?.count || 0;
 };
 
-// Marcar notificación como leída
 apiClient.markNotificationRead = async function (id) {
   const { data } = await apiClient.put(`/api/notifications/${id}/read`);
   return data;
 };
 
-// Marcar todas como leídas
 apiClient.markAllNotificationsRead = async function () {
   const { data } = await apiClient.put('/api/notifications/read-all');
   return data;
 };
 
-// Eliminar notificación
 apiClient.deleteNotification = async function (id) {
   const { data } = await apiClient.delete(`/api/notifications/${id}`);
   return data;
 };
 
-// Crear notificación de prueba (solo admin)
 apiClient.createTestNotification = async function (payload) {
   const { data } = await apiClient.post('/api/notifications/test', payload);
   return data;
@@ -508,42 +547,33 @@ apiClient.createTestNotification = async function (payload) {
    CONFIGURACIÓN
    ========================= */
 
-// Obtener configuración completa
 apiClient.getConfig = async function () {
   const { data } = await apiClient.get('/api/config');
   return data?.data || {};
 };
 
-// Actualizar configuración completa
 apiClient.updateConfig = async function (config) {
   const { data } = await apiClient.put('/api/config', config);
   return data;
 };
 
-// Obtener configuración de una sección
 apiClient.getConfigSection = async function (section) {
   const { data } = await apiClient.get(`/api/config/${section}`);
   return data?.data || {};
 };
 
-// Actualizar configuración de una sección
 apiClient.updateConfigSection = async function (section, updates) {
   const { data } = await apiClient.put(`/api/config/${section}`, updates);
   return data;
 };
 
-// Restablecer configuración
 apiClient.resetConfig = async function (section = null) {
   const { data } = await apiClient.post('/api/config/reset', { section });
   return data;
 };
 
-// --- CONFIG (secciones) ---
-apiClient.getConfigSection = async function (section) {
-  const r = await apiClient.get(`/api/config/${section}`, { withCredentials: true });
-  return r.data || {};
-}
 apiClient.saveConfigSection = async function (section, payload) {
   const r = await apiClient.put(`/api/config/${section}`, payload, { withCredentials: true });
   return r.data || { ok: false };
 }
+

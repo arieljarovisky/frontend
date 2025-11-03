@@ -1,7 +1,7 @@
 // src/main.jsx
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
 import "./calendar-dark.css";
 
@@ -27,8 +27,11 @@ import ConfigPage from "./routes/Admin/ConfigPage.jsx";
 import NotificationsPage from "./routes/NotificationPage.jsx";
 
 const router = createBrowserRouter([
+  { path: "/login", element: <LoginPage /> },
+
+  // 👇 TODA la app del tenant cuelga de /:tenantSlug
   {
-    path: "/",
+    path: "/:tenantSlug",
     element: <AppLayout />,
     children: [
       {
@@ -55,13 +58,7 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-
-      // Turnos (público)
-      { path: "appointments", element: <BookingPage /> },
-
-      // =========================
-      //   RUTAS DE DEPÓSITOS (separadas en el navbar)
-      // =========================
+      { path: "appointments", element: <BookingPage /> }, // público del tenant
       {
         path: "deposits",
         element: (
@@ -78,7 +75,7 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-        {
+      {
         path: "admin/config",
         element: (
           <PrivateRoute roles={["admin"]}>
@@ -86,10 +83,6 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-
-      // =========================
-      //   Otras rutas ADMIN
-      // =========================
       {
         path: "admin/comisiones",
         element: (
@@ -108,7 +101,9 @@ const router = createBrowserRouter([
       },
     ],
   },
-  { path: "login", element: <LoginPage /> },
+
+  // Fallback: fuera de un tenant → al login
+  { path: "*", element: <Navigate to="/login" replace /> },
 ]);
 
 createRoot(document.getElementById("root")).render(

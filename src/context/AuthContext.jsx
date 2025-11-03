@@ -5,9 +5,8 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoaded, setAuthLoaded] = useState(false);
 
-  // Al montar, intenta recuperar la sesión desde localStorage + /auth/me
   useEffect(() => {
     const init = async () => {
       try {
@@ -17,9 +16,9 @@ export function AuthProvider({ children }) {
           if (ok) setUser(user);
         }
       } catch {
-        setAccessToken(null); // si el token no sirve, lo limpiamos
+        setAccessToken(null);
       } finally {
-        setAuthLoading(false);
+        setAuthLoaded(true);
       }
     };
     init();
@@ -27,8 +26,23 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await authApi.login(email, password);
-    if (data?.ok) setUser(data.user);
-    return data;
+    if (data?.ok && data?.access) {
+      setUser(data.user);
+      return { success: true };
+    }
+    if (data?.ok && data?.multiTenant) {
+      return { success: false, multiTenant: true, tenants: data.tenants, email: data.email };
+    }
+    return { success: false, error: data?.error || "Error de login" };
+  };
+
+  const loginTenant = async (email, password, slug) => {
+    const data = await authApi.loginTenant(email, password, slug);
+    if (data?.ok && data?.access) {
+      setUser(data.user);
+      return { success: true };
+    }
+    return { success: false, error: data?.error || "Error de login" };
   };
 
   const logout = async () => {
@@ -37,13 +51,12 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, authLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, authLoaded, login, loginTenant, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Hook personalizado que simplifica el acceso al contexto
 export function useAuth() {
   return useContext(AuthContext);
 }
