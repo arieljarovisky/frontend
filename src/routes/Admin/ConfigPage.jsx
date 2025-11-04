@@ -95,7 +95,6 @@ export default function ConfigPage() {
 
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
-    { id: "deposits", label: "Señas", Icon: DollarSign },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
     { id: "commissions", label: "Comisiones", Icon: Percent },
     { id: "notifications", label: "Notificaciones", Icon: Bell },
@@ -110,12 +109,6 @@ export default function ConfigPage() {
     timeFormat: "24h",
   });
 
-  const [deposits, setDeposits] = useState({
-    percentage: 50,
-    holdMinutes: 30,
-    expirationBeforeStart: 120,
-    autoCancel: true,
-  });
 
   const [notifications, setNotifications] = useState({
     expiringSoon: true,
@@ -136,6 +129,9 @@ export default function ConfigPage() {
     deposit_enabled: false,
     deposit_percentage: 20,
     deposit_amount_fixed: null,
+    // opcionales por si luego agregás límites
+    deposit_min: null,
+    deposit_max: null,
   });
 
   const [mpStatus, setMpStatus] = useState({
@@ -157,9 +153,8 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, d, c, n] = await Promise.all([
+        const [g, c, n] = await Promise.all([
           apiClient.getConfigSection("general"),
-          apiClient.getConfigSection("deposit"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
         ]);
@@ -172,12 +167,6 @@ export default function ConfigPage() {
           timeFormat: g.timeFormat ?? "24h",
         });
 
-        setDeposits({
-          percentage: Number(d["deposit.percentage"] ?? d.percentage ?? 50),
-          holdMinutes: Number(d["deposit.holdMinutes"] ?? d.holdMinutes ?? 30),
-          expirationBeforeStart: Number(d["deposit.expirationBeforeStart"] ?? d.expirationBeforeStart ?? 120),
-          autoCancel: (d["deposit.autoCancel"] ?? d.autoCancel ?? true) === true,
-        });
 
         setCommissions({
           defaultPercentage: Number(c.defaultPercentage ?? 50),
@@ -197,6 +186,24 @@ export default function ConfigPage() {
       }
     })();
   }, []);
+
+  // === Cargar configuración de pagos/señas (payments.*) ===
+  const loadPayments = async () => {
+    try {
+      const r = await apiClient.get("/api/config/payments");
+      const d = r.data?.data || r.data || {};
+      setMpConfig({
+        deposit_enabled: !!d.require_deposit,
+        deposit_percentage: Number(d.deposit_percent ?? 20),
+        deposit_amount_fixed: d.deposit_fixed != null ? Number(d.deposit_fixed) : null,
+        deposit_min: d.deposit_min ?? null,
+        deposit_max: d.deposit_max ?? null,
+      });
+    } catch (e) {
+      console.error("Load payments failed", e);
+    }
+  };
+
 
   // ============================================
   // 💳 MERCADO PAGO - MANEJO DE OAUTH
@@ -230,6 +237,7 @@ export default function ConfigPage() {
   // Cargar estado de MP al montar
   useEffect(() => {
     checkMPStatus();
+    loadPayments();
   }, []);
 
   // Manejar retorno de OAuth (success/error en URL)
@@ -261,7 +269,11 @@ export default function ConfigPage() {
     }
   }, [searchParams, navigate, tenantSlug]);
 
-  // Conectar Mercado Pago
+const handleConnectMPFresh = async () => {
+  setConnectingMP(true);
+  const data = await apiClient.getMPAuthUrl({ fresh: true });
+  window.location.href = data.authUrl;
+};
   const handleConnectMP = async () => {
     try {
       setConnectingMP(true);
@@ -313,21 +325,31 @@ export default function ConfigPage() {
   // ============================================
   // 💾 GUARDAR CONFIGURACIÓN
   // ============================================
+  const savePayments = async () => {
+    const payload = {
+      require_deposit: !!mpConfig.deposit_enabled,
+      deposit_mode: mpConfig.deposit_amount_fixed != null ? "fixed" : "percent",
+      // sólo enviar el campo correspondiente según el modo
+      ...(mpConfig.deposit_amount_fixed == null
+        ? { deposit_percent: Number(mpConfig.deposit_percentage || 0) }
+        : { deposit_fixed: Number(mpConfig.deposit_amount_fixed || 0) }),
+      // opcionales si los usás
+      ...(mpConfig.deposit_min != null ? { deposit_min: Number(mpConfig.deposit_min) } : {}),
+      ...(mpConfig.deposit_max != null ? { deposit_max: Number(mpConfig.deposit_max) } : {}),
+    };
+    await apiClient.put("/api/config/payments", payload);
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     try {
       await Promise.all([
         apiClient.saveConfigSection("general", general),
-        apiClient.saveConfigSection("deposit", {
-          "deposit.percentage": deposits.percentage,
-          "deposit.holdMinutes": deposits.holdMinutes,
-          "deposit.expirationBeforeStart": deposits.expirationBeforeStart,
-          "deposit.autoCancel": deposits.autoCancel,
-        }),
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
-        // Guardar config de MP
-        apiClient.updateConfig(mpConfig),
+        // Guardar payments (seña) solo si MP está conectado
+        mpStatus.connected ? savePayments() : Promise.resolve(),
+
       ]);
       toast.success("Configuración guardada correctamente");
     } catch (error) {
@@ -422,7 +444,7 @@ export default function ConfigPage() {
     setActive(id);
   };
 
-  const depositType = mpConfig.deposit_amount_fixed ? 'fixed' : 'percentage';
+  const depositType = mpConfig.deposit_amount_fixed ? "fixed" : "percentage";
 
   return (
     <div className="space-y-6">
@@ -522,61 +544,6 @@ export default function ConfigPage() {
         </ConfigSection>
       </div>
 
-      {/* DEPOSITS */}
-      <div id="deposits">
-        <ConfigSection
-          title="Configuración de Señas"
-          description="Parámetros para el sistema de depósitos y reservas"
-          icon={DollarSign}
-        >
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
-            <FieldGroup label="Porcentaje de seña (%)" hint="Porcentaje del precio que se cobra como seña">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="5"
-                value={deposits.percentage}
-                onChange={(e) => setDeposits({ ...deposits, percentage: Number(e.target.value) })}
-                className="input w-full"
-              />
-            </FieldGroup>
-
-            <FieldGroup label="Tiempo de hold (minutos)" hint="Tiempo para pagar antes de liberar el turno">
-              <input
-                type="number"
-                min="5"
-                max="120"
-                step="5"
-                value={deposits.holdMinutes}
-                onChange={(e) => setDeposits({ ...deposits, holdMinutes: Number(e.target.value) })}
-                className="input w-full"
-              />
-            </FieldGroup>
-
-            <FieldGroup label="Expiración anticipada (min)" hint="Minutos antes del turno para expirar">
-              <input
-                type="number"
-                min="30"
-                max="1440"
-                step="30"
-                value={deposits.expirationBeforeStart}
-                onChange={(e) => setDeposits({ ...deposits, expirationBeforeStart: Number(e.target.value) })}
-                className="input w-full"
-              />
-            </FieldGroup>
-          </div>
-
-          <div className="space-y-2">
-            <SwitchField
-              label="Cancelación automática"
-              description="Cancelar turnos cuando expira el tiempo de hold"
-              checked={deposits.autoCancel}
-              onChange={(e) => setDeposits({ ...deposits, autoCancel: e.target.checked })}
-            />
-          </div>
-        </ConfigSection>
-      </div>
 
       {/* MERCADO PAGO */}
       <div id="mercadopago">
@@ -818,7 +785,7 @@ export default function ConfigPage() {
                   Conectá tu cuenta de Mercado Pago para empezar a recibir pagos de señas de forma segura.
                 </p>
                 <button
-                  onClick={handleConnectMP}
+                  onClick={handleConnectMPFresh}
                   disabled={connectingMP}
                   className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary-500/30"
                 >

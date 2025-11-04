@@ -424,11 +424,12 @@ apiClient.getPaymentStats = async function ({ from, to } = {}) {
    MERCADO PAGO OAUTH API
 ========================= */
 
-apiClient.getMPAuthUrl = async function () {
-  const { data } = await apiClient.get("/mp/oauth/connect");
+apiClient.getMPAuthUrl = async (opts = {}) => {
+  const { data } = await apiClient.get("/mp/oauth/connect", {
+    params: { fresh: opts.fresh ? 1 : undefined },
+  });
   return data;
 };
-
 apiClient.getMPStatus = async function () {
   const { data } = await apiClient.get("/mp/oauth/status");
   return data;
