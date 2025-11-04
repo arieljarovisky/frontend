@@ -80,13 +80,25 @@ export default function ConfigPage() {
   const [barH, setBarH] = useState(56);
   const barRef = useRef(null);
 
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'mercadopago') {
+      setActive('mercadopago');
+      // opcional: scroll automático a la sección
+      const el = document.getElementById('mercadopago');
+      if (el) {
+        const y = window.scrollY + el.getBoundingClientRect().top - 120;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      }
+    }
+  }, [searchParams]);
+
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
     { id: "deposits", label: "Señas", Icon: DollarSign },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
     { id: "commissions", label: "Comisiones", Icon: Percent },
     { id: "notifications", label: "Notificaciones", Icon: Bell },
-    { id: "stylists", label: "Config. Peluqueros", Icon: Users, external: true },
   ];
 
   // Estados
@@ -205,9 +217,9 @@ export default function ConfigPage() {
       });
     } catch (err) {
       console.error('Error verificando estado MP:', err);
-      setMpStatus({ 
-        connected: false, 
-        userId: null, 
+      setMpStatus({
+        connected: false,
+        userId: null,
         loading: false,
         expiresAt: null,
         isExpired: false,
@@ -224,7 +236,8 @@ export default function ConfigPage() {
   useEffect(() => {
     const success = searchParams.get('success');
     const error = searchParams.get('error');
-
+    const mp = searchParams.get('mp');
+    const desc = searchParams.get('desc');
     if (success === 'true') {
       toast.success('¡Mercado Pago conectado exitosamente!', {
         description: 'Ya podés empezar a recibir pagos de señas'
@@ -242,9 +255,8 @@ export default function ConfigPage() {
         'auth_failed': 'No se pudo autorizar la conexión',
         'server_error': 'Error del servidor',
       };
-      toast.error('Error al conectar', {
-        description: errorMessages[error] || 'Error desconocido'
-      });
+      const extra = desc ? ` (${decodeURIComponent(desc)})` : mp ? ` (${decodeURIComponent(mp)})` : '';
+      toast.error('Error al conectar', { description: (errorMessages[error] || 'Error desconocido') + extra });
       navigate(`/${tenantSlug}/admin/config`, { replace: true });
     }
   }, [searchParams, navigate, tenantSlug]);
@@ -283,9 +295,9 @@ export default function ConfigPage() {
     try {
       const data = await apiClient.disconnectMP();
       if (data.ok) {
-        setMpStatus({ 
-          connected: false, 
-          userId: null, 
+        setMpStatus({
+          connected: false,
+          userId: null,
           loading: false,
           expiresAt: null,
           isExpired: false,
@@ -352,7 +364,7 @@ export default function ConfigPage() {
       ticking = false;
       const refY = (topOffset + barH + 12);
       const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-      
+
       if (nearBottom) {
         setActive(ids[ids.length - 1]);
         return;
@@ -452,7 +464,7 @@ export default function ConfigPage() {
           </div>
         </div>
       </div>
-      
+
       {/* GENERAL */}
       <div id="general">
         <ConfigSection
@@ -653,27 +665,23 @@ export default function ConfigPage() {
                         {/* Porcentaje */}
                         <button
                           onClick={() => setMpConfig({ ...mpConfig, deposit_amount_fixed: null })}
-                          className={`p-6 rounded-xl border-2 transition-all text-left group ${
-                            depositType === 'percentage'
-                              ? 'border-primary-500 bg-primary-500/10'
-                              : 'border-dark-700 bg-dark-900/30 hover:border-dark-600'
-                          }`}
+                          className={`p-6 rounded-xl border-2 transition-all text-left group ${depositType === 'percentage'
+                            ? 'border-primary-500 bg-primary-500/10'
+                            : 'border-dark-700 bg-dark-900/30 hover:border-dark-600'
+                            }`}
                         >
                           <div className="flex items-start justify-between mb-3">
-                            <div className={`p-2 rounded-lg ${
-                              depositType === 'percentage'
-                                ? 'bg-primary-500/20'
-                                : 'bg-dark-700/50 group-hover:bg-dark-700'
-                            }`}>
-                              <Percent className={`w-5 h-5 ${
-                                depositType === 'percentage' ? 'text-primary-400' : 'text-dark-400'
-                              }`} />
+                            <div className={`p-2 rounded-lg ${depositType === 'percentage'
+                              ? 'bg-primary-500/20'
+                              : 'bg-dark-700/50 group-hover:bg-dark-700'
+                              }`}>
+                              <Percent className={`w-5 h-5 ${depositType === 'percentage' ? 'text-primary-400' : 'text-dark-400'
+                                }`} />
                             </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              depositType === 'percentage'
-                                ? 'border-primary-500 bg-primary-500'
-                                : 'border-dark-600'
-                            }`}>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${depositType === 'percentage'
+                              ? 'border-primary-500 bg-primary-500'
+                              : 'border-dark-600'
+                              }`}>
                               {depositType === 'percentage' && (
                                 <div className="w-2 h-2 bg-white rounded-full"></div>
                               )}
@@ -686,27 +694,23 @@ export default function ConfigPage() {
                         {/* Monto Fijo */}
                         <button
                           onClick={() => setMpConfig({ ...mpConfig, deposit_amount_fixed: 1000 })}
-                          className={`p-6 rounded-xl border-2 transition-all text-left group ${
-                            depositType === 'fixed'
-                              ? 'border-accent-500 bg-accent-500/10'
-                              : 'border-dark-700 bg-dark-900/30 hover:border-dark-600'
-                          }`}
+                          className={`p-6 rounded-xl border-2 transition-all text-left group ${depositType === 'fixed'
+                            ? 'border-accent-500 bg-accent-500/10'
+                            : 'border-dark-700 bg-dark-900/30 hover:border-dark-600'
+                            }`}
                         >
                           <div className="flex items-start justify-between mb-3">
-                            <div className={`p-2 rounded-lg ${
-                              depositType === 'fixed'
-                                ? 'bg-accent-500/20'
-                                : 'bg-dark-700/50 group-hover:bg-dark-700'
-                            }`}>
-                              <DollarSign className={`w-5 h-5 ${
-                                depositType === 'fixed' ? 'text-accent-400' : 'text-dark-400'
-                              }`} />
+                            <div className={`p-2 rounded-lg ${depositType === 'fixed'
+                              ? 'bg-accent-500/20'
+                              : 'bg-dark-700/50 group-hover:bg-dark-700'
+                              }`}>
+                              <DollarSign className={`w-5 h-5 ${depositType === 'fixed' ? 'text-accent-400' : 'text-dark-400'
+                                }`} />
                             </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              depositType === 'fixed'
-                                ? 'border-accent-500 bg-accent-500'
-                                : 'border-dark-600'
-                            }`}>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${depositType === 'fixed'
+                              ? 'border-accent-500 bg-accent-500'
+                              : 'border-dark-600'
+                              }`}>
                               {depositType === 'fixed' && (
                                 <div className="w-2 h-2 bg-white rounded-full"></div>
                               )}

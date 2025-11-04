@@ -1,13 +1,21 @@
 // src/api/client.js
 import axios from "axios";
-
+const apiBase = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000",
+  baseURL: apiBase,
   headers: {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
   withCredentials: true, // ✅ Para cookies HttpOnly
 });
+
+let isNgrok = false;
+try {
+  const host = new URL(apiBase).host;
+  isNgrok = /ngrok-free\.dev$/i.test(host);
+} catch { /* ignore */ }
+
 
 function toArray(x) {
   if (Array.isArray(x)) return x;
@@ -85,6 +93,10 @@ apiClient.interceptors.request.use(
     const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Solo agregar para ngrok; en localhost NO
+    if (isNgrok) {
+      config.headers["ngrok-skip-browser-warning"] = "true";
     }
     return config;
   },
