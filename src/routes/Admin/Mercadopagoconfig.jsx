@@ -88,34 +88,32 @@ export default function MercadoPagoConfig() {
         }
     };
 
-    const handleConnectMP = async () => {
+    const handleConnect = async () => {
         try {
-            setConnectingMP(true);
-            setMessage('');
+            setLoading(true);
+            setError("");
 
-            // Verificar que tengamos autenticación
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (!user.tenantId) {
-                setMessage('error');
-                setConnectingMP(false);
-                return;
+            console.log("🔍 [MP Config] Solicitando URL de autorización...");
+
+            const response = await apiClient.getMPAuthUrl();
+
+            console.log("🔍 [MP Config] Respuesta del servidor:", response);
+
+            if (!response?.ok || !response?.authUrl) {
+                throw new Error(response?.error || "No se pudo obtener la URL de autorización");
             }
 
-            const data = await apiClient.getMPAuthUrl();
+            console.log("✅ [MP Config] Redirigiendo a:", response.authUrl);
 
-            if (data.ok && data.authUrl) {
-                window.location.href = data.authUrl;
-            } else {
-                setMessage('error');
-                setConnectingMP(false);
-            }
+            // Redirigir a Mercado Pago
+            window.location.href = response.authUrl;
+
         } catch (err) {
-            console.error('Error conectando MP:', err);
-            setMessage('error');
-            setConnectingMP(false);
+            console.error("❌ [MP Config] Error:", err);
+            setError(err.message || "Error al conectar con Mercado Pago");
+            setLoading(false);
         }
     };
-
     const handleDisconnectMP = async () => {
         if (!confirm('¿Estás seguro de desconectar Mercado Pago?')) return;
 
