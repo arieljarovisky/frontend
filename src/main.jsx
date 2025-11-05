@@ -4,7 +4,6 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
 import "./calendar-dark.css";
-import MercadoPagoConfig from "./routes/Admin/MercadoPagoConfig.jsx";
 
 // Layout y páginas
 import AppLayout from "./routes/AppLayout.jsx";
@@ -110,14 +109,6 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-      {
-        path: "admin/mercadopago",
-        element: (
-          <PrivateRoute roles={["admin"]}>
-            <MercadoPagoConfig />
-          </PrivateRoute>
-        ),
-      }
 
     ],
   },
