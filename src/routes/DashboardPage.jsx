@@ -43,9 +43,9 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color = "primary"
         )}
       </div>
       <div>
-        <p className="text-sm text-dark-600 mb-1">{title}</p>
-        <p className="text-3xl font-bold text-dark-900">{value}</p>
-        {subtitle && <p className="text-xs text-dark-500 mt-2">{subtitle}</p>}
+        <p className="text-sm text-foreground-secondary mb-1">{title}</p>
+        <p className="text-3xl font-bold text-foreground">{value}</p>
+        {subtitle && <p className="text-xs text-foreground-muted mt-2">{subtitle}</p>}
       </div>
     </div>
   );
@@ -71,7 +71,7 @@ const STATUS_CONFIG = {
   deposit_paid: { label: "Seña pagada", color: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30" },
   confirmed: { label: "Confirmado", color: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30" },
   completed: { label: "Completado", color: "bg-blue-600/20 text-blue-400 border-blue-600/30" },
-  cancelled: { label: "Cancelado", color: "bg-dark-200/50 text-dark-600 border-dark-300/50" },
+  cancelled: { label: "Cancelado", color: "bg-background-secondary text-foreground-secondary border-border" },
 };
 
 const asArray = (v) => Array.isArray(v) ? v : Array.isArray(v?.data) ? v.data : [];
@@ -146,10 +146,10 @@ export default function DashboardPage() {
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Dashboard
           </h1>
-          <p className="text-dark-600">
+          <p className="text-foreground-secondary">
             Resumen de actividad y métricas en tiempo real
           </p>
         </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
       <Section
         title="Agenda de Hoy"
         action={
-          <span className="text-sm text-dark-600">
+          <span className="text-sm text-foreground-secondary">
             {agendaArr.length} turnos programados
           </span>
         }
@@ -316,18 +316,18 @@ export default function DashboardPage() {
             </div>
           ) : agendaArr.length === 0 ? (
             <div className="py-12 text-center">
-              <Clock className="w-12 h-12 mx-auto mb-3 text-dark-400" />
-              <p className="text-dark-600">No hay turnos programados para hoy</p>
+              <Clock className="w-12 h-12 mx-auto mb-3 text-foreground-muted" />
+              <p className="text-foreground-secondary">No hay turnos programados para hoy</p>
             </div>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-dark-200/50">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">Hora</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">Cliente</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">Servicio</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">Peluquero</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">Estado</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Hora</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Cliente</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Servicio</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Peluquero</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -336,17 +336,17 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={a.id}
-                      className="border-b border-dark-200/30 hover:bg-dark-200/20 transition-colors"
-                    >
-                      <td className="py-3 px-4 text-sm font-medium text-dark-900">
+                      className="border-b border-border hover:bg-background-secondary transition-colors"
+                      >
+                      <td className="py-3 px-4 text-sm font-medium text-foreground">
                         {new Date(a.starts_at).toLocaleTimeString("es-AR", {
                           hour: "2-digit",
                           minute: "2-digit"
                         })}
                       </td>
-                      <td className="py-3 px-4 text-sm text-dark-800">{a.customer_name}</td>
-                      <td className="py-3 px-4 text-sm text-dark-700">{a.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-dark-700">{a.stylist_name}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{a.customer_name}</td>
+                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.service_name}</td>
+                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.stylist_name}</td>
                       <td className="py-3 px-4">
                         <span className={`badge ${config.color}`}>
                           {config.label}

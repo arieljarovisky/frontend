@@ -9,23 +9,24 @@ export default {
   theme: {
     extend: {
       colors: {
-         slate: {
-          950: '#020617',
+        // Minimalista: Colores base que funcionan en ambos temas
+        background: {
+          DEFAULT: 'rgb(var(--background))',
+          secondary: 'rgb(var(--background-secondary))',
         },
-        // Dark theme colors
-        dark: {
-          50: '#18181b',
-          100: '#27272a',
-          200: '#3f3f46',
-          300: '#52525b',
-          400: '#71717a',
-          500: '#a1a1aa',
-          600: '#d4d4d8',
-          700: '#e4e4e7',
-          800: '#f4f4f5',
-          900: '#fafafa',
+        foreground: {
+          DEFAULT: 'rgb(var(--foreground))',
+          secondary: 'rgb(var(--foreground-secondary))',
+          muted: 'rgb(var(--foreground-muted))',
+        },
+        border: {
+          DEFAULT: 'rgb(var(--border))',
+          hover: 'rgb(var(--border-hover))',
         },
         primary: {
+          DEFAULT: 'rgb(var(--primary))',
+          hover: 'rgb(var(--primary-hover))',
+          light: 'rgb(var(--primary-light))',
           50: '#f0f9ff',
           100: '#e0f2fe',
           200: '#bae6fd',
@@ -38,6 +39,8 @@ export default {
           900: '#0c4a6e',
         },
         accent: {
+          DEFAULT: 'rgb(var(--accent))',
+          hover: 'rgb(var(--accent-hover))',
           50: '#fdf4ff',
           100: '#fae8ff',
           200: '#f5d0fe',
@@ -48,7 +51,20 @@ export default {
           700: '#a21caf',
           800: '#86198f',
           900: '#701a75',
-        }
+        },
+        // Mantener dark para compatibilidad
+        dark: {
+          50: '#18181b',
+          100: '#27272a',
+          200: '#3f3f46',
+          300: '#52525b',
+          400: '#71717a',
+          500: '#a1a1aa',
+          600: '#d4d4d8',
+          700: '#e4e4e7',
+          800: '#f4f4f5',
+          900: '#fafafa',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

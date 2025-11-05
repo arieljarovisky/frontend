@@ -6,6 +6,7 @@ import "./index.css";
 import "./calendar-dark.css";
 
 // Layout y páginas
+import LandingPage from "./routes/LandingPage.jsx";
 import AppLayout from "./routes/AppLayout.jsx";
 import DashboardPage from "./routes/DashboardPage.jsx";
 import CustomersPage from "./routes/CustomersPage.jsx";
@@ -16,6 +17,7 @@ import LoginPage from "./routes/LoginPage.jsx";
 
 // Auth
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
 import PaymentSuccess from "./routes/PaymentSuccess.jsx";
 import PaymentFailure from "./routes/PaymentFailure.jsx";
@@ -27,8 +29,13 @@ import Commissions from "./routes/Admin/Comissions.jsx";
 import StylistStats from "./routes/Admin/StylistStats.jsx";
 import ConfigPage from "./routes/Admin/ConfigPage.jsx";
 import NotificationsPage from "./routes/NotificationPage.jsx";
+import ProductsPage from "./routes/Stock/ProductsPage.jsx";
+import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
+import UsersPage from "./routes/Users/UsersPage.jsx";
 
 const router = createBrowserRouter([
+  // Página principal de marketing/ventas
+  { path: "/", element: <LandingPage /> },
   { path: "/login", element: <LoginPage /> },
 
   // 👇 TODA la app del tenant cuelga de /:tenantSlug
@@ -94,6 +101,30 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "stock/products",
+        element: (
+          <PrivateRoute>
+            <ProductsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "invoicing",
+        element: (
+          <PrivateRoute>
+            <InvoicingPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "users",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <UsersPage />
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "admin/comisiones",
         element: (
           <PrivateRoute roles={["admin"]}>
@@ -113,15 +144,17 @@ const router = createBrowserRouter([
     ],
   },
 
-  // Fallback: fuera de un tenant → al login
-  { path: "*", element: <Navigate to="/login" replace /> },
+  // Fallback: fuera de un tenant → a la landing page
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <NotificationSystem />
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationSystem />
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

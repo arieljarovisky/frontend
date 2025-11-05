@@ -17,9 +17,14 @@ import {
   Loader2,
   LogOut,
   AlertTriangle,
+  Building2,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
+import BusinessTypeConfig from "./BusinessTypeConfig.jsx";
+import { useAuth } from "../../context/AuthContext";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
@@ -29,8 +34,8 @@ function ConfigSection({ title, description, icon: Icon, children }) {
           <Icon className="w-6 h-6 text-primary-400" />
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-dark-900">{title}</h3>
-          <p className="text-sm text-dark-600 mt-1">{description}</p>
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          <p className="text-sm text-foreground-secondary mt-1">{description}</p>
         </div>
       </div>
       {children}
@@ -41,29 +46,29 @@ function ConfigSection({ title, description, icon: Icon, children }) {
 function FieldGroup({ label, hint, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-dark-800 mb-2">
+      <label className="block text-sm font-medium text-foreground mb-2">
         {label}
       </label>
       {children}
-      {hint && <p className="text-xs text-dark-500 mt-1">{hint}</p>}
+      {hint && <p className="text-xs text-foreground-muted mt-1">{hint}</p>}
     </div>
   );
 }
 
 function SwitchField({ label, description, checked, onChange, disabled = false }) {
   return (
-    <label className={`flex items-center gap-3 p-3 rounded-xl bg-dark-200/30 hover:bg-dark-200/50 transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+    <label className={`flex items-center gap-3 p-3 rounded-xl bg-background-secondary hover:bg-border transition-all border border-border ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
         disabled={disabled}
-        className="w-5 h-5 rounded border-dark-300 text-primary-600 focus:ring-primary-500 disabled:cursor-not-allowed"
+        className="w-5 h-5 rounded border-border text-primary focus:ring-primary disabled:cursor-not-allowed"
       />
       <div className="flex-1">
-        <div className="text-sm font-medium text-dark-900">{label}</div>
+        <div className="text-sm font-medium text-foreground">{label}</div>
         {description && (
-          <div className="text-xs text-dark-600 mt-0.5">{description}</div>
+          <div className="text-xs text-foreground-secondary mt-0.5">{description}</div>
         )}
       </div>
     </label>
@@ -74,6 +79,7 @@ export default function ConfigPage() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [active, setActive] = useState("general");
   const [floating, setFloating] = useState(false);
   const [topOffset, setTopOffset] = useState(12);
@@ -95,6 +101,8 @@ export default function ConfigPage() {
 
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
+    { id: "business-type", label: "Tipo de Negocio", Icon: Building2, adminOnly: true },
+    { id: "contact", label: "Contacto", Icon: Phone },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
     { id: "commissions", label: "Comisiones", Icon: Percent },
     { id: "notifications", label: "Notificaciones", Icon: Bell },
@@ -109,6 +117,11 @@ export default function ConfigPage() {
     timeFormat: "24h",
   });
 
+
+  const [contact, setContact] = useState({
+    arca: "",
+    whatsapp: "",
+  });
 
   const [notifications, setNotifications] = useState({
     expiringSoon: true,
@@ -153,14 +166,15 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, c, n] = await Promise.all([
+        const [g, c, n, contactData] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
+          apiClient.getConfigSection("contact").catch(() => ({})), // Si no existe, retornar objeto vacío
         ]);
 
         setGeneral({
-          businessName: g.businessName ?? "Pelu de Barrio",
+          businessName: g.businessName ?? "Mi Negocio",
           timezone: g.timezone ?? "America/Argentina/Buenos_Aires",
           currency: g.currency ?? "ARS",
           dateFormat: g.dateFormat ?? "DD/MM/YYYY",
@@ -180,6 +194,11 @@ export default function ConfigPage() {
           paid: Boolean(n.paid ?? true),
           newAppointment: Boolean(n.newAppointment ?? true),
           cancelled: Boolean(n.cancelled ?? false),
+        });
+
+        setContact({
+          arca: contactData.arca ?? "",
+          whatsapp: contactData.whatsapp ?? "",
         });
       } catch (e) {
         console.error("Load config failed", e);
@@ -345,6 +364,7 @@ const handleConnectMPFresh = async () => {
     try {
       await Promise.all([
         apiClient.saveConfigSection("general", general),
+        apiClient.saveConfigSection("contact", contact),
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
         // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
@@ -545,6 +565,75 @@ const handleConnectMPFresh = async () => {
       </div>
 
 
+      {/* BUSINESS TYPE */}
+      <div id="business-type">
+        <ConfigSection
+          title="Tipo de Negocio"
+          description="Configurá el tipo de negocio y las funcionalidades habilitadas"
+          icon={Building2}
+        >
+          <BusinessTypeConfig />
+        </ConfigSection>
+      </div>
+
+      {/* CONTACT */}
+      <div id="contact">
+        <ConfigSection
+          title="Información de Contacto"
+          description="Configurá ARCA y número de WhatsApp de la empresa"
+          icon={Phone}
+        >
+          <div className="grid md:grid-cols-2 gap-4">
+            <FieldGroup 
+              label="Número ARCA" 
+              hint="Número o código ARCA de la empresa"
+            >
+              <input
+                type="text"
+                value={contact.arca}
+                onChange={(e) => setContact({ ...contact, arca: e.target.value })}
+                className="input w-full"
+                placeholder="Ej: 12345678"
+              />
+            </FieldGroup>
+
+            <FieldGroup 
+              label="WhatsApp de la empresa" 
+              hint="Número de WhatsApp con código de país (ej: +5491123456789)"
+            >
+              <div className="relative">
+                <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                <input
+                  type="text"
+                  value={contact.whatsapp}
+                  onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })}
+                  className="input w-full pl-10"
+                  placeholder="+5491123456789"
+                />
+              </div>
+            </FieldGroup>
+          </div>
+
+          <div className="mt-6 p-4 rounded-xl bg-primary-500/10 backdrop-blur-xl border border-primary-500/30">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="p-2 bg-primary-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-primary-400" />
+                </div>
+              </div>
+              <div className="space-y-2 text-sm text-foreground-secondary">
+                <p className="font-semibold text-foreground">Información importante:</p>
+                <ul className="space-y-1 list-disc list-inside ml-2">
+                  <li>El número ARCA se utiliza para identificación fiscal</li>
+                  <li>El número de WhatsApp debe incluir el código de país (ej: +54 para Argentina)</li>
+                  <li>Estos datos pueden ser utilizados en facturas y comunicaciones</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </ConfigSection>
+      </div>
+
       {/* MERCADO PAGO */}
       <div id="mercadopago">
         <ConfigSection
@@ -601,15 +690,15 @@ const handleConnectMPFresh = async () => {
               {!mpStatus.isExpired && (
                 <div className="space-y-6">
                   {/* Toggle Activar/Desactivar Señas */}
-                  <div className="p-6 border-b border-dark-200/50">
+                  <div className="p-6 border-b border-border">
                     <label className="flex items-center justify-between cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl group-hover:scale-110 transition-transform">
+                        <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-xl group-hover:scale-110 transition-transform">
                           <DollarSign className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-white">Requerir pago de seña</h3>
-                          <p className="text-sm text-dark-400">Los clientes deberán pagar antes de confirmar</p>
+                          <h3 className="text-lg font-semibold text-foreground">Requerir pago de seña</h3>
+                          <p className="text-sm text-foreground-muted">Los clientes deberán pagar antes de confirmar</p>
                         </div>
                       </div>
                       <div className="relative">
@@ -619,7 +708,7 @@ const handleConnectMPFresh = async () => {
                           onChange={e => setMpConfig({ ...mpConfig, deposit_enabled: e.target.checked })}
                           className="sr-only peer"
                         />
-                        <div className="w-14 h-7 bg-dark-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-primary-500 peer-checked:to-accent-600"></div>
+                        <div className="w-14 h-7 bg-background-secondary peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
                       </div>
                     </label>
                   </div>
@@ -633,29 +722,29 @@ const handleConnectMPFresh = async () => {
                         <button
                           onClick={() => setMpConfig({ ...mpConfig, deposit_amount_fixed: null })}
                           className={`p-6 rounded-xl border-2 transition-all text-left group ${depositType === 'percentage'
-                            ? 'border-primary-500 bg-primary-500/10'
-                            : 'border-dark-700 bg-dark-900/30 hover:border-dark-600'
+                            ? 'border-primary bg-primary-light dark:bg-primary/20'
+                            : 'border-border bg-background-secondary hover:border-border-hover'
                             }`}
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className={`p-2 rounded-lg ${depositType === 'percentage'
-                              ? 'bg-primary-500/20'
-                              : 'bg-dark-700/50 group-hover:bg-dark-700'
+                              ? 'bg-primary-light dark:bg-primary/20'
+                              : 'bg-background-secondary group-hover:bg-border'
                               }`}>
                               <Percent className={`w-5 h-5 ${depositType === 'percentage' ? 'text-primary-400' : 'text-dark-400'
                                 }`} />
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${depositType === 'percentage'
-                              ? 'border-primary-500 bg-primary-500'
-                              : 'border-dark-600'
+                              ? 'border-primary bg-primary'
+                              : 'border-border'
                               }`}>
                               {depositType === 'percentage' && (
                                 <div className="w-2 h-2 bg-white rounded-full"></div>
                               )}
                             </div>
                           </div>
-                          <h4 className="font-semibold text-white mb-1">Porcentaje</h4>
-                          <p className="text-sm text-dark-400">Calcula la seña como % del servicio</p>
+                          <h4 className="font-semibold text-foreground mb-1">Porcentaje</h4>
+                          <p className="text-sm text-foreground-muted">Calcula la seña como % del servicio</p>
                         </button>
 
                         {/* Monto Fijo */}
@@ -683,8 +772,8 @@ const handleConnectMPFresh = async () => {
                               )}
                             </div>
                           </div>
-                          <h4 className="font-semibold text-white mb-1">Monto fijo</h4>
-                          <p className="text-sm text-dark-400">Misma seña para todos los servicios</p>
+                          <h4 className="font-semibold text-foreground mb-1">Monto fijo</h4>
+                          <p className="text-sm text-foreground-muted">Misma seña para todos los servicios</p>
                         </button>
                       </div>
 
@@ -692,7 +781,7 @@ const handleConnectMPFresh = async () => {
                       <div className="space-y-2">
                         {depositType === 'percentage' ? (
                           <>
-                            <label className="flex items-center gap-2 text-sm font-medium text-dark-300">
+                            <label className="flex items-center gap-2 text-sm font-medium text-foreground-secondary">
                               <Percent className="w-4 h-4" />
                               Porcentaje de seña
                             </label>
@@ -701,36 +790,36 @@ const handleConnectMPFresh = async () => {
                                 type="number"
                                 value={mpConfig.deposit_percentage || 20}
                                 onChange={(e) => setMpConfig({ ...mpConfig, deposit_percentage: parseFloat(e.target.value) })}
-                                className="w-full px-4 py-3 bg-dark-100/50 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all pr-12"
+                                className="input pr-12"
                                 placeholder="20"
                                 min="1"
                                 max="100"
                               />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-400 font-medium">%</span>
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground-muted font-medium">%</span>
                             </div>
-                            <p className="text-sm text-dark-500">
+                            <p className="text-sm text-foreground-muted">
                               Ejemplo: Servicio $5000 → Seña ${((5000 * (mpConfig.deposit_percentage || 20)) / 100).toFixed(0)}
                             </p>
                           </>
                         ) : (
                           <>
-                            <label className="flex items-center gap-2 text-sm font-medium text-dark-300">
+                            <label className="flex items-center gap-2 text-sm font-medium text-foreground-secondary">
                               <DollarSign className="w-4 h-4" />
                               Monto fijo de seña
                             </label>
                             <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-400 font-medium">$</span>
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted font-medium">$</span>
                               <input
                                 type="number"
                                 value={mpConfig.deposit_amount_fixed || ''}
                                 onChange={(e) => setMpConfig({ ...mpConfig, deposit_amount_fixed: parseFloat(e.target.value) || null })}
-                                className="w-full px-4 py-3 bg-dark-100/50 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all pl-10"
+                                className="input pl-10"
                                 placeholder="1000"
                                 min="0"
                                 step="100"
                               />
                             </div>
-                            <p className="text-sm text-dark-500">
+                            <p className="text-sm text-foreground-muted">
                               Todos los servicios requerirán ${mpConfig.deposit_amount_fixed || 1000} de seña
                             </p>
                           </>
@@ -805,9 +894,9 @@ const handleConnectMPFresh = async () => {
                 </button>
               </div>
 
-              <div className="flex items-start gap-3 p-4 bg-dark-900/50 rounded-xl border border-dark-700">
-                <AlertCircle className="w-5 h-5 text-dark-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-dark-400">
+              <div className="flex items-start gap-3 p-4 bg-background-secondary rounded-xl border border-border">
+                <AlertCircle className="w-5 h-5 text-foreground-muted mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-foreground-muted">
                   <p className="mb-2">Al conectar, Mercado Pago te pedirá autorización para:</p>
                   <ul className="space-y-1 list-disc list-inside ml-2">
                     <li>Crear preferencias de pago</li>

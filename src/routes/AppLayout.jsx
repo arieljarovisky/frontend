@@ -3,6 +3,10 @@ import React, { useState, useEffect } from "react";
 import { apiClient } from "../api/client";
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import ThemeToggle from "../components/ThemeToggle";
+import Logo from "../components/Logo";
+import { useQuery } from "../shared/useQuery";
 import {
   LayoutDashboard,
   Users,
@@ -14,17 +18,81 @@ import {
   Settings,
   Bell,
   Scissors,
-  Building2
+  Building2,
+  Package,
+  FileText
 } from "lucide-react";
+
+// Mapeo de nombres según el tipo de negocio
+const getNavigationLabels = (businessTypeCode) => {
+  const labels = {
+    salon: {
+      appointments: "Turnos",
+      professionals: "Peluqueros",
+      customers: "Clientes",
+      deposits: "Depósitos",
+    },
+    gym: {
+      appointments: "Clases",
+      professionals: "Instructores",
+      customers: "Socios",
+      deposits: "Pagos",
+    },
+    kinesiology: {
+      appointments: "Sesiones",
+      professionals: "Kinesiólogos",
+      customers: "Pacientes",
+      deposits: "Pagos",
+    },
+    pilates: {
+      appointments: "Clases",
+      professionals: "Instructores",
+      customers: "Alumnos",
+      deposits: "Pagos",
+    },
+    spa: {
+      appointments: "Reservas",
+      professionals: "Terapeutas",
+      customers: "Clientes",
+      deposits: "Señas",
+    },
+    other: {
+      appointments: "Turnos",
+      professionals: "Profesionales",
+      customers: "Clientes",
+      deposits: "Depósitos",
+    },
+  };
+
+  return labels[businessTypeCode] || labels.other;
+};
 
 export default function AppLayout() {
   const { pathname } = useLocation();
   const { tenantSlug } = useParams();
   const base = `/${tenantSlug || ""}`;
   const { user, tenant, logout } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Obtener tipo de negocio
+  const { data: businessTypeData } = useQuery(
+    async () => {
+      try {
+        const response = await apiClient.get("/api/business-types/tenant/business-type");
+        return response.data?.data || null;
+      } catch (error) {
+        console.error("Error loading business type:", error);
+        return null;
+      }
+    },
+    []
+  );
+
+  const businessTypeCode = businessTypeData?.code || "salon";
+  const navLabels = getNavigationLabels(businessTypeCode);
 
   const handleLogout = async () => {
     await logout();
@@ -48,183 +116,199 @@ export default function AppLayout() {
 
   const navItems = [
     { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
-    { to: `${base}/appointments`, label: "Calendario", icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
-    { to: `${base}/customers`, label: "Clientes", icon: Users, active: pathname.startsWith(`${base}/customers`) },
-    { to: `${base}/deposits`, label: "Depósitos", icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
+    { to: `${base}/appointments`, label: navLabels.appointments, icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
+    { to: `${base}/customers`, label: navLabels.customers, icon: Users, active: pathname.startsWith(`${base}/customers`) },
+    { to: `${base}/deposits`, label: navLabels.deposits, icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
+    { to: `${base}/stock/products`, label: "Stock", icon: Package, active: pathname.startsWith(`${base}/stock`), module: "stock" },
+    { to: `${base}/invoicing`, label: "Facturación", icon: FileText, active: pathname.startsWith(`${base}/invoicing`), module: "invoicing" },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
-    { to: `${base}/admin/peluqueros`, label: "Peluqueros", icon: Scissors, active: pathname.startsWith(`${base}/admin/peluqueros`), adminOnly: true },
+    { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
+    { to: `${base}/admin/peluqueros`, label: navLabels.professionals, icon: Scissors, active: pathname.startsWith(`${base}/admin/peluqueros`), adminOnly: true },
     { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
   ];
 
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly && user?.role !== "admin") return false;
+    
+    // Verificar permisos por módulo
+    if (item.module) {
+      const permissions = user?.permissions || {};
+      const modulePerms = permissions[item.module] || [];
+      if (user?.role !== "admin" && modulePerms.length === 0) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col ">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass-strong border-b border-dark-200/50" data-appbar>
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-6">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo & Brand */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                <span className="text-white font-bold text-lg">P</span>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-gradient">Pelu Admin</h1>
-                <p className="text-xs text-dark-600">Sistema de Gestión</p>
+    <div className="min-h-screen bg-background">
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50
+          w-64 lg:w-72
+          h-screen
+          bg-background border-r border-border
+          flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Logo Header */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
+          <Logo size="default" showText={true} />
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+            aria-label="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tenant Info */}
+        {tenant && (
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-light dark:bg-primary/20 border border-primary/30">
+              <Building2 className="w-4 h-4 text-primary flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-foreground-muted leading-none">Sucursal</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {tenant.name || tenant.subdomain || `#${tenant.id}`}
+                </p>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {filteredNavItems.map((item) => (
-                <NavButton key={item.to} {...item} />
-              ))}
-            </nav>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-1">
+          {filteredNavItems.map((item) => (
+            <SidebarNavButton
+              key={item.to}
+              {...item}
+              onClick={() => setSidebarOpen(false)}
+            />
+          ))}
+        </nav>
 
-            {/* Right Section */}
-            <div className="flex items-center gap-2">
-              {/* Tenant Indicator */}
-              {tenant && (
-                <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-600/10 border border-primary-600/20">
-                  <Building2 className="w-4 h-4 text-primary-400" />
-                  <div>
-                    <p className="text-xs text-dark-600 leading-none">Sucursal</p>
-                    <p className="text-sm font-medium text-primary-300">
-                      {tenant.name || tenant.subdomain || `#${tenant.id}`}
-                    </p>
-                  </div>
-                </div>
-              )}
+        {/* User Section */}
+        <div className="p-4 border-t border-border space-y-3">
+          {/* Theme Toggle */}
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-background-secondary">
+            <span className="text-sm text-foreground-secondary">Tema</span>
+            <ThemeToggle />
+          </div>
 
-              {/* User Menu */}
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-200/50">
-                <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.email?.[0]?.toUpperCase() || "U"}
-                  </span>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-dark-900 leading-none">
-                    {user?.full_name || user?.email?.split("@")[0]}
-                  </p>
-                  <p className="text-xs text-dark-600">{user?.role}</p>
-                </div>
-              </div>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-xl text-dark-600 hover:text-red-500 hover:bg-red-500/10 transition-all"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-
-              {/* Mobile menu button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-xl text-dark-600 hover:text-dark-900 hover:bg-dark-200/50"
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+          {/* User Info */}
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background-secondary">
+            <div className="w-10 h-10 rounded-lg bg-blue-900 dark:bg-blue-700 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <span className="text-sm font-semibold">
+                {user?.email?.[0]?.toUpperCase() || "U"}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {user?.full_name || user?.email?.split("@")[0]}
+              </p>
+              <p className="text-xs text-foreground-muted capitalize">{user?.role}</p>
             </div>
           </div>
 
-          {/* Mobile Navigation */}
-          {mobileMenuOpen && (
-            <nav className="lg:hidden py-4 border-t border-dark-200/50 animate-slide-down">
-              {/* Tenant info en mobile */}
-              {tenant && (
-                <div className="mb-4 p-3 rounded-xl bg-primary-600/10 border border-primary-600/20 flex items-center gap-3">
-                  <Building2 className="w-5 h-5 text-primary-400" />
-                  <div>
-                    <p className="text-xs text-dark-600">Sucursal activa</p>
-                    <p className="text-sm font-medium text-primary-300">
-                      {tenant.name || tenant.subdomain || `#${tenant.id}`}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-1">
-                {filteredNavItems.map((item) => (
-                  <MobileNavButton
-                    key={item.to}
-                    {...item}
-                    onClick={() => setMobileMenuOpen(false)}
-                  />
-                ))}
-              </div>
-            </nav>
-          )}
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Cerrar sesión</span>
+          </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-[1800px] w-full mx-auto px-4 lg:px-6 py-6 lg:py-8">
-        <div className="animate-fade-in">
-          <Outlet />
-        </div>
-      </main>
+      {/* Main Content Area */}
+      <div className="flex flex-col min-w-0 lg:ml-72 min-h-screen">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border">
+          <div className="flex items-center justify-between h-16 px-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+              aria-label="Abrir menú"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <Logo size="small" showText={true} />
+            <div className="w-10" /> {/* Spacer para centrar */}
+          </div>
+        </header>
 
-      {/* Footer */}
-      <footer className="py-6 border-t border-dark-200/50 text-center text-sm text-zinc-400 bg-slate-950/50">
-        <div className="max-w-[1800px] mx-auto px-4">
-          <p>© 2025 — Pelu de Barrio</p>
-          <p className="text-xs text-zinc-600 mt-1">
-            Sistema de Gestión v2.0 {tenant ? `• ${tenant.name || tenant.subdomain}` : ""}
-          </p>
-        </div>
-      </footer>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-[1800px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            <div className="animate-fade-in">
+              <Outlet />
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="py-4 sm:py-6 border-t border-border text-center text-xs sm:text-sm text-foreground-muted bg-background-secondary">
+          <div className="max-w-[1800px] mx-auto px-4 sm:px-6">
+            <p>© {new Date().getFullYear()} — Agendly ERP</p>
+            <p className="text-[10px] sm:text-xs text-foreground-muted mt-1">
+              Sistema de Gestión v2.0 {tenant ? `• ${tenant.name || tenant.subdomain}` : ""}
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
 
-function NavButton({ to, label, icon: Icon, active, badge }) {
-  return (
-    <NavLink
-      to={to}
-      className={`
-        relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-        ${active
-          ? "bg-gradient-primary text-white shadow-glow"
-          : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
-        }
-      `}
-    >
-      <Icon className="w-4 h-4" />
-      <span>{label}</span>
-      {badge && (
-        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
-          {badge}
-        </span>
-      )}
-    </NavLink>
-  );
-}
+function SidebarNavButton({ to, label, icon: Icon, active, onClick, badge, module }) {
+  // Verificar permisos por módulo
+  const { user } = useAuth();
+  const permissions = user?.permissions || {};
+  const modulePerms = permissions[module] || [];
+  
+  // Si tiene módulo y no es admin, verificar permisos
+  if (module && user?.role !== "admin" && modulePerms.length === 0) {
+    return null;
+  }
 
-function MobileNavButton({ to, label, icon: Icon, active, onClick, badge }) {
   return (
     <NavLink
       to={to}
       onClick={onClick}
       className={`
-        relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+        relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
         ${active
-          ? "bg-gradient-primary text-white shadow-glow"
-          : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
+          ? "bg-blue-900 dark:bg-blue-700 text-white shadow-md"
+          : "text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
         }
       `}
     >
-      <Icon className="w-5 h-5" />
-      <span>{label}</span>
+      <Icon className="w-5 h-5 flex-shrink-0" />
+      <span className="flex-1">{label}</span>
       {badge && (
-        <span className="ml-auto w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
-          {badge}
+        <span className="ml-auto w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold shadow-md">
+          {badge > 9 ? '9+' : badge}
         </span>
+      )}
+      {/* Indicador activo */}
+      {active && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
       )}
     </NavLink>
   );
