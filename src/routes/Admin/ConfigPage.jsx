@@ -347,14 +347,14 @@ const handleConnectMPFresh = async () => {
         apiClient.saveConfigSection("general", general),
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
-        // Guardar payments (seña) solo si MP está conectado
-        mpStatus.connected ? savePayments() : Promise.resolve(),
-
+        // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
+        savePayments(),
       ]);
       toast.success("Configuración guardada correctamente");
     } catch (error) {
       console.error(error);
-      toast.error("❌ Error al guardar la configuración");
+      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
+      toast.error(`❌ Error al guardar la configuración: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
