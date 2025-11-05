@@ -20,6 +20,8 @@ import {
   Building2,
   Phone,
   MessageCircle,
+  Play,
+  TestTube,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -121,6 +123,13 @@ export default function ConfigPage() {
   const [contact, setContact] = useState({
     arca: "",
     whatsapp: "",
+    arca_api_key: "",
+    arca_cuit: "",
+    arca_punto_venta: "1",
+    arca_api_url: "https://api.arca.com.ar/v1",
+    arca_cert_content: "",
+    arca_key_content: "",
+    use_certificates: false,
   });
 
   const [notifications, setNotifications] = useState({
@@ -159,6 +168,9 @@ export default function ConfigPage() {
   const [connectingMP, setConnectingMP] = useState(false);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [testingArca, setTestingArca] = useState(false);
+  const [arcaTestResult, setArcaTestResult] = useState(null);
+  const [arcaConnectionStatus, setArcaConnectionStatus] = useState(null);
 
   // ============================================
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
@@ -199,6 +211,13 @@ export default function ConfigPage() {
         setContact({
           arca: contactData.arca ?? "",
           whatsapp: contactData.whatsapp ?? "",
+          arca_api_key: contactData.arca_api_key ?? "",
+          arca_cuit: contactData.arca_cuit ?? "",
+          arca_punto_venta: contactData.arca_punto_venta ?? "1",
+          arca_api_url: contactData.arca_api_url ?? "https://api.arca.com.ar/v1",
+          arca_cert_content: "",
+          arca_key_content: "",
+          use_certificates: !!(contactData.arca_cert_path && contactData.arca_key_path),
         });
       } catch (e) {
         console.error("Load config failed", e);
@@ -257,7 +276,51 @@ export default function ConfigPage() {
   useEffect(() => {
     checkMPStatus();
     loadPayments();
+    checkArcaConnection();
   }, []);
+
+  // Verificar conexión con ARCA
+  const checkArcaConnection = async () => {
+    try {
+      const response = await apiClient.verifyArcaConnection();
+      setArcaConnectionStatus(response);
+    } catch (error) {
+      console.error("Error verificando ARCA:", error);
+      setArcaConnectionStatus({ 
+        ok: false, 
+        error: error.response?.data?.error || error.message 
+      });
+    }
+  };
+
+  // Generar factura de prueba
+  const testArcaInvoice = async () => {
+    if (!confirm("¿Generar una factura de prueba por $121 (incluye IVA)? Esta factura se emitirá a nombre de tu CUIT.")) {
+      return;
+    }
+
+    setTestingArca(true);
+    setArcaTestResult(null);
+    
+    try {
+      const response = await apiClient.testArcaInvoice();
+      setArcaTestResult({
+        success: true,
+        message: response.message || "Factura generada exitosamente",
+        data: response.data
+      });
+      toast.success("✅ Factura de prueba generada exitosamente");
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.message;
+      setArcaTestResult({
+        success: false,
+        error: errorMsg
+      });
+      toast.error(`❌ Error al generar factura: ${errorMsg}`);
+    } finally {
+      setTestingArca(false);
+    }
+  };
 
   // Manejar retorno de OAuth (success/error en URL)
   useEffect(() => {
@@ -288,18 +351,13 @@ export default function ConfigPage() {
     }
   }, [searchParams, navigate, tenantSlug]);
 
-const handleConnectMPFresh = async () => {
-  setConnectingMP(true);
-  const data = await apiClient.getMPAuthUrl({ fresh: true });
-  window.location.href = data.authUrl;
-};
   const handleConnectMP = async () => {
     try {
       setConnectingMP(true);
       setMessage('');
 
       console.log('🔍 [Frontend] Solicitando URL de autorización...');
-      const data = await apiClient.getMPAuthUrl();
+      const data = await apiClient.getMPAuthUrl({ fresh: true });
       console.log('✅ [Frontend] URL recibida:', data);
 
       if (data.ok && data.authUrl) {
@@ -583,53 +641,261 @@ const handleConnectMPFresh = async () => {
           description="Configurá ARCA y número de WhatsApp de la empresa"
           icon={Phone}
         >
-          <div className="grid md:grid-cols-2 gap-4">
-            <FieldGroup 
-              label="Número ARCA" 
-              hint="Número o código ARCA de la empresa"
-            >
-              <input
-                type="text"
-                value={contact.arca}
-                onChange={(e) => setContact({ ...contact, arca: e.target.value })}
-                className="input w-full"
-                placeholder="Ej: 12345678"
-              />
-            </FieldGroup>
+          <div className="space-y-6">
+            {/* Información básica */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <FieldGroup 
+                label="WhatsApp de la empresa" 
+                hint="Número de WhatsApp con código de país (ej: +5491123456789)"
+              >
+                <div className="relative">
+                  <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                  <input
+                    type="text"
+                    value={contact.whatsapp}
+                    onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })}
+                    className="input w-full pl-10"
+                    placeholder="+5491123456789"
+                  />
+                </div>
+              </FieldGroup>
+            </div>
 
-            <FieldGroup 
-              label="WhatsApp de la empresa" 
-              hint="Número de WhatsApp con código de país (ej: +5491123456789)"
-            >
-              <div className="relative">
-                <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-                <input
-                  type="text"
-                  value={contact.whatsapp}
-                  onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })}
-                  className="input w-full pl-10"
-                  placeholder="+5491123456789"
-                />
+            {/* Facturación Electrónica ARCA */}
+            <div className="border-t border-border pt-6">
+              <h4 className="text-sm font-semibold text-foreground mb-4">Facturación Electrónica ARCA</h4>
+              
+              <div className="mb-4 p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+                <p className="text-sm text-foreground mb-2">
+                  <strong className="text-green-400">✓ Sistema Centralizado</strong>
+                </p>
+                <p className="text-xs text-foreground-secondary">
+                  Solo necesitás tu CUIT. El sistema factura en tu nombre usando certificados centralizados.
+                  No necesitás configurar certificados propios ni hacer trámites en AFIP.
+                </p>
               </div>
-            </FieldGroup>
-          </div>
+              
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <FieldGroup 
+                  label="Tu CUIT" 
+                  hint="Tu CUIT de 11 dígitos (sin guiones). El sistema facturará en tu nombre usando este CUIT."
+                >
+                  <input
+                    type="text"
+                    value={contact.arca_cuit}
+                    onChange={(e) => setContact({ ...contact, arca_cuit: e.target.value.replace(/\D/g, '') })}
+                    className="input w-full"
+                    placeholder="20123456789"
+                    maxLength={11}
+                  />
+                </FieldGroup>
 
-          <div className="mt-6 p-4 rounded-xl bg-primary-500/10 backdrop-blur-xl border border-primary-500/30">
+                <FieldGroup 
+                  label="Punto de Venta (Opcional)" 
+                  hint="Si tenés un punto de venta específico, ingresalo aquí. Si no, el sistema usará el predeterminado."
+                >
+                  <input
+                    type="text"
+                    value={contact.arca_punto_venta}
+                    onChange={(e) => setContact({ ...contact, arca_punto_venta: e.target.value })}
+                    className="input w-full"
+                    placeholder="1"
+                  />
+                </FieldGroup>
+              </div>
+
+              {/* Estado de conexión y test */}
+              <div className="space-y-4 mt-6">
+                  {/* Estado de conexión */}
+                  {arcaConnectionStatus && (
+                    <div className={`p-4 rounded-xl border ${
+                      arcaConnectionStatus.ok 
+                        ? "bg-green-500/10 border-green-500/30" 
+                        : "bg-red-500/10 border-red-500/30"
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        {arcaConnectionStatus.ok ? (
+                          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${
+                            arcaConnectionStatus.ok ? "text-green-400" : "text-red-400"
+                          }`}>
+                            {arcaConnectionStatus.ok ? "Conexión con ARCA OK" : "Error de conexión"}
+                          </p>
+                          <p className="text-xs text-foreground-secondary mt-1">
+                            {arcaConnectionStatus.message || arcaConnectionStatus.error}
+                          </p>
+                          {!arcaConnectionStatus.ok && arcaConnectionStatus.tenantCUIT && (
+                            <p className="text-xs text-amber-400 mt-2">
+                              CUIT configurado: <strong>{arcaConnectionStatus.tenantCUIT}</strong>
+                              <span className="block mt-1 text-red-400">
+                                ⚠️ Falta configurar las credenciales del sistema en el servidor.
+                              </span>
+                            </p>
+                          )}
+                          {!arcaConnectionStatus.ok && arcaConnectionStatus.details && (
+                            <p className="text-xs text-foreground-muted mt-2">
+                              {arcaConnectionStatus.details}
+                            </p>
+                          )}
+                          {!arcaConnectionStatus.ok && (
+                            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                              <p className="text-xs font-medium text-amber-400 mb-2">
+                                ⚙️ Configuración necesaria en el servidor:
+                              </p>
+                              <p className="text-xs text-foreground-secondary mb-2">
+                                El administrador del sistema debe configurar en el archivo <code className="bg-background-secondary px-1 rounded">.env</code> del servidor:
+                              </p>
+                              <div className="space-y-2">
+                                <div className="p-2 rounded bg-background-secondary">
+                                  <p className="text-xs font-medium text-foreground mb-1">Opción A: Servicio Intermediario (API Key)</p>
+                                  <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2">
+                                    <li><code>ARCA_API_KEY</code> - API Key del servicio intermediario</li>
+                                    <li><code>ARCA_CUIT</code> - CUIT del sistema</li>
+                                    <li><code>ARCA_PUNTO_VENTA</code> - Punto de venta</li>
+                                    <li><code>ARCA_API_URL</code> - URL del servicio intermediario</li>
+                                  </ul>
+                                </div>
+                                <div className="p-2 rounded bg-background-secondary">
+                                  <p className="text-xs font-medium text-foreground mb-1">Opción B: Certificados del Sistema</p>
+                                  <p className="text-xs text-foreground-secondary mb-2">
+                                    <strong>1. Colocar los certificados</strong> en la carpeta <code className="bg-background px-1 rounded">backend/src/arca/</code>:
+                                  </p>
+                                  <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2 mb-2">
+                                    <li>El certificado <code>.crt</code> (el sistema busca automáticamente archivos con extensión <code>.crt</code>)</li>
+                                    <li>La clave privada <code>.key</code> (el sistema busca automáticamente archivos con extensión <code>.key</code>)</li>
+                                  </ul>
+                                  <p className="text-xs text-foreground-secondary mb-2">
+                                    <strong>2. Configurar en el archivo</strong> <code className="bg-background px-1 rounded">.env</code> del servidor (en la carpeta <code className="bg-background px-1 rounded">backend/</code>):
+                                  </p>
+                                  <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2">
+                                    <li><code>ARCA_CUIT</code> - CUIT del sistema (requerido)</li>
+                                    <li><code>ARCA_PUNTO_VENTA</code> - Punto de venta (requerido)</li>
+                                    <li><code>ARCA_CERT_PATH</code> - <span className="text-foreground-muted">Opcional:</span> Solo si los certificados están en otra ubicación. Si están en <code>backend/src/arca/</code>, el sistema los detecta automáticamente.</li>
+                                    <li><code>ARCA_KEY_PATH</code> - <span className="text-foreground-muted">Opcional:</span> Solo si los certificados están en otra ubicación.</li>
+                                  </ul>
+                                  <p className="text-xs text-foreground-muted mt-2 italic">
+                                    ✓ Si ya colocaste los certificados en <code>backend/src/arca/</code>, solo necesitás configurar <code>ARCA_CUIT</code> y <code>ARCA_PUNTO_VENTA</code> en el <code>.env</code>.
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-foreground-muted mt-2">
+                                <strong>Nota:</strong> Si usás certificados, los usuarios deben delegar el servicio de facturación a tu empresa en AFIP.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={checkArcaConnection}
+                          className="p-2 rounded-lg bg-background-secondary hover:bg-border transition-colors"
+                          title="Verificar conexión"
+                        >
+                          <RefreshCw className={`w-4 h-4 text-foreground-secondary`} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botón de test */}
+                  <div className="p-4 rounded-xl bg-primary-500/10 border border-primary-500/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          Generar Factura de Prueba
+                        </p>
+                        <p className="text-xs text-foreground-secondary">
+                          Generá una factura de prueba por $121 para verificar que todo funcione correctamente
+                        </p>
+                      </div>
+                      <button
+                        onClick={testArcaInvoice}
+                        disabled={testingArca || !contact.arca_cuit || !arcaConnectionStatus?.ok}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {testingArca ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            Testear
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Resultado del test */}
+                    {arcaTestResult && (
+                      <div className={`mt-4 p-3 rounded-lg border ${
+                        arcaTestResult.success
+                          ? "bg-green-500/10 border-green-500/30"
+                          : "bg-red-500/10 border-red-500/30"
+                      }`}>
+                        {arcaTestResult.success ? (
+                          <div>
+                            <p className="text-sm font-medium text-green-400 mb-2">
+                              ✅ {arcaTestResult.message}
+                            </p>
+                            {arcaTestResult.data && (
+                              <div className="text-xs text-foreground-secondary space-y-1">
+                                {arcaTestResult.data.cae && (
+                                  <p><strong>CAE:</strong> {arcaTestResult.data.cae}</p>
+                                )}
+                                {arcaTestResult.data.numero && (
+                                  <p><strong>Número:</strong> {arcaTestResult.data.numero}</p>
+                                )}
+                                {arcaTestResult.data.punto_venta && (
+                                  <p><strong>Punto de Venta:</strong> {arcaTestResult.data.punto_venta}</p>
+                                )}
+                                {arcaTestResult.data.fecha_emision && (
+                                  <p><strong>Fecha:</strong> {new Date(arcaTestResult.data.fecha_emision).toLocaleString('es-AR')}</p>
+                                )}
+                                {arcaTestResult.data.pdf_url && (
+                                  <a 
+                                    href={arcaTestResult.data.pdf_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                                  >
+                                    Descargar PDF
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-red-400">
+                            ❌ {arcaTestResult.error}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            <div className="mt-6 p-4 rounded-xl bg-primary-500/10 backdrop-blur-xl border border-primary-500/30">
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <div className="p-2 bg-primary-500/20 rounded-lg">
                   <AlertCircle className="w-5 h-5 text-primary-400" />
                 </div>
               </div>
-              <div className="space-y-2 text-sm text-foreground-secondary">
-                <p className="font-semibold text-foreground">Información importante:</p>
+              <div className="text-sm text-foreground-secondary">
+                <p className="font-semibold text-foreground mb-2">Información importante:</p>
                 <ul className="space-y-1 list-disc list-inside ml-2">
-                  <li>El número ARCA se utiliza para identificación fiscal</li>
                   <li>El número de WhatsApp debe incluir el código de país (ej: +54 para Argentina)</li>
+                  <li>El CUIT es necesario para emitir facturas electrónicas</li>
                   <li>Estos datos pueden ser utilizados en facturas y comunicaciones</li>
                 </ul>
               </div>
             </div>
+          </div>
           </div>
         </ConfigSection>
       </div>
@@ -874,7 +1140,7 @@ const handleConnectMPFresh = async () => {
                   Conectá tu cuenta de Mercado Pago para empezar a recibir pagos de señas de forma segura.
                 </p>
                 <button
-                  onClick={handleConnectMPFresh}
+                  onClick={handleConnectMP}
                   disabled={connectingMP}
                   className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-xl hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary-500/30"
                 >

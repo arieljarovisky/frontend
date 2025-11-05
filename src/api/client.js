@@ -604,6 +604,20 @@ apiClient.saveConfigBulk = async function (updates) {
   const { data } = await apiClient.put("/api/config", updates);
   return data?.data ?? data ?? {};
 };
+
+/* =========================
+   ARCA / FACTURACIÓN API
+========================= */
+apiClient.verifyArcaConnection = async function () {
+  const { data } = await apiClient.get("/api/invoicing/arca/verify");
+  return data;
+};
+
+apiClient.testArcaInvoice = async function () {
+  const { data } = await apiClient.post("/api/invoicing/arca/test");
+  return data;
+};
+
 /* =========================
    EXPORT
 ========================= */
