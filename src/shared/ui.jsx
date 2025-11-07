@@ -32,12 +32,7 @@ export function SearchInput({ value, onChange, onSubmit, placeholder = "Buscarâ€
           placeholder={placeholder}
           className="input pl-10 pr-24"
         />
-        <button 
-          type="submit" 
-          className="absolute right-2 top-1/2 -translate-y-1/2 btn-primary text-xs px-3 py-1.5"
-        >
-          Buscar
-        </button>
+        <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
       </div>
     </form>
   );

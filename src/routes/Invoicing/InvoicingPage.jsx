@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { 
@@ -14,7 +14,9 @@ import {
   DollarSign,
   Calendar,
   CheckSquare,
-  ShoppingCart
+  ShoppingCart,
+  Pencil,
+  Undo2
 } from "lucide-react";
 import { toast } from "sonner";
 import "./invoicingModal.css";
@@ -53,12 +55,60 @@ const resolveInvoiceStatus = (invoice = {}) => {
   return "draft";
 };
 
+const createEmptyInvoiceItem = () => ({
+  service_id: "",
+  descripcion: "",
+  cantidad: 1,
+  precio_unitario: 0,
+  alicuota_iva: 21,
+  codigo: null,
+});
+
+const mapInvoiceItemForForm = (item = {}) => ({
+  service_id: item.service_id || "",
+  descripcion: item.descripcion || item.description || "",
+  cantidad: Number(item.cantidad || 1),
+  precio_unitario: Number(item.precio_unitario ?? item.price ?? 0),
+  alicuota_iva: Number(item.alicuota_iva ?? item.iva ?? 21),
+  codigo: item.codigo || null,
+});
+
+const mapInvoiceItemForPayload = (item = {}) => ({
+  service_id: item.service_id || null,
+  descripcion: item.descripcion || "",
+  cantidad: Number(item.cantidad || 1),
+  precio_unitario: Number(item.precio_unitario || 0),
+  alicuota_iva: Number(item.alicuota_iva ?? 21),
+  codigo: item.codigo || null,
+});
+
+const parseInvoiceItems = (invoice = {}) => {
+  const raw = invoice.items;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function InvoicingPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [draftToEdit, setDraftToEdit] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
+  const [creditNoteLoadingId, setCreditNoteLoadingId] = useState(null);
+  const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
+  const [creditNoteTarget, setCreditNoteTarget] = useState(null);
+  const [creditNoteReason, setCreditNoteReason] = useState("");
+  const [creditNoteError, setCreditNoteError] = useState("");
 
   // Cargar facturas
   const { data: rawInvoices = [], loading, error, refetch } = useQuery(
@@ -93,6 +143,68 @@ export default function InvoicingPage() {
       String(invoice.customer_doc || invoice.customer_document || "").toLowerCase().includes(term)
     );
   });
+
+  const canCreateCreditNote = (invoice = {}) => {
+    const status = resolveInvoiceStatus(invoice);
+    const tipoComprobante = Number(invoice.tipo_comprobante || 0);
+    const isCreditNoteType = [3, 8, 13].includes(tipoComprobante);
+    return (
+      status === "approved" &&
+      !isCreditNoteType &&
+      !invoice.original_invoice_id &&
+      invoice.cae && invoice.cae !== "RECHAZADO"
+    );
+  };
+
+  const openCreditNoteModal = (invoice = {}) => {
+    if (!invoice || !invoice.id) return;
+    setCreditNoteTarget(invoice);
+    const formattedNumber = formatInvoiceNumber(invoice.invoice_number);
+    const defaultReason = formattedNumber && formattedNumber !== "-"
+      ? `Nota de crédito sobre ${formattedNumber}`
+      : `Nota de crédito factura #${invoice.id}`;
+    setCreditNoteReason(defaultReason);
+    setCreditNoteError("");
+    setShowCreditNoteModal(true);
+  };
+
+  const closeCreditNoteModal = () => {
+    setShowCreditNoteModal(false);
+    setCreditNoteTarget(null);
+    setCreditNoteReason("");
+    setCreditNoteError("");
+    setCreditNoteLoadingId(null);
+  };
+
+  const handleConfirmCreditNote = async () => {
+    if (!creditNoteTarget?.id) return;
+    const trimmed = creditNoteReason.trim();
+    if (!trimmed) {
+      setCreditNoteError("El motivo no puede estar vacío.");
+      return;
+    }
+
+    try {
+      setCreditNoteLoadingId(creditNoteTarget.id);
+      const parsedItems = parseInvoiceItems(creditNoteTarget);
+      const payload = {
+        invoice_id: creditNoteTarget.id,
+        motivo: trimmed,
+      };
+      if (parsedItems.length > 0) {
+        payload.items = parsedItems;
+      }
+      const response = await apiClient.post("/api/invoicing/arca/nota-credito", payload);
+      toast.success(response.data?.message || "Nota de crédito generada correctamente");
+      closeCreditNoteModal();
+      refetch();
+    } catch (error) {
+      const message = error?.response?.data?.error || "Error al generar la nota de crédito";
+      setCreditNoteError(message);
+      toast.error(message);
+      setCreditNoteLoadingId(null);
+    }
+  };
 
   // Cargar constantes
   const { data: constants } = useQuery(
@@ -233,14 +345,17 @@ export default function InvoicingPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setShowAppointmentsModal(true)}
+          onClick={() => setShowAppointmentsModal(true)}
             className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Facturar Turnos</span>
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setDraftToEdit(null);
+              setShowModal(true);
+            }}
             className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -312,6 +427,29 @@ export default function InvoicingPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 ml-2">
+                    {invoice.__status === 'draft' && (
+                      <button
+                        onClick={() => {
+                          setDraftToEdit(invoice);
+                          setSelectedInvoice(null);
+                          setShowModal(true);
+                        }}
+                        className="p-2 rounded-lg text-foreground-secondary hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-500/10 transition-colors"
+                        title="Editar borrador"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canCreateCreditNote(invoice) && (
+                      <button
+                        onClick={() => openCreditNoteModal(invoice)}
+                        className="p-2 rounded-lg text-foreground-secondary hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Generar nota de crédito"
+                        disabled={creditNoteLoadingId === invoice.id}
+                      >
+                        <Undo2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setSelectedInvoice(invoice)}
                       className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
@@ -461,6 +599,29 @@ export default function InvoicingPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
+                          {invoice.__status === 'draft' && (
+                            <button
+                              onClick={() => {
+                                setDraftToEdit(invoice);
+                                setSelectedInvoice(null);
+                                setShowModal(true);
+                              }}
+                              className="p-2 rounded-lg text-foreground-secondary hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-500/10 transition-colors"
+                              title="Editar borrador"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canCreateCreditNote(invoice) && (
+                            <button
+                              onClick={() => openCreditNoteModal(invoice)}
+                              className="p-2 rounded-lg text-foreground-secondary hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Generar nota de crédito"
+                              disabled={creditNoteLoadingId === invoice.id}
+                            >
+                              <Undo2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => setSelectedInvoice(invoice)}
                             className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
@@ -493,14 +654,35 @@ export default function InvoicingPage() {
       {/* Modal de crear factura */}
       {showModal && (
         <InvoiceModal
+          key={draftToEdit?.id ? `edit-${draftToEdit.id}` : 'new'}
           customers={customers}
           constants={constants}
           services={services}
-          onClose={() => setShowModal(false)}
+          initialInvoice={draftToEdit}
+          onClose={() => {
+            setShowModal(false);
+            setDraftToEdit(null);
+          }}
           onSave={() => {
             refetch();
+            refetchAppointments();
             setShowModal(false);
+            setDraftToEdit(null);
           }}
+          formatInvoiceNumber={formatInvoiceNumber}
+          formatDate={formatDate}
+        />
+      )}
+
+      {showCreditNoteModal && creditNoteTarget && (
+        <CreditNoteModal
+          invoice={creditNoteTarget}
+          reason={creditNoteReason}
+          error={creditNoteError}
+          onReasonChange={setCreditNoteReason}
+          onClose={closeCreditNoteModal}
+          onConfirm={handleConfirmCreditNote}
+          loading={creditNoteLoadingId === creditNoteTarget.id}
         />
       )}
 
@@ -530,66 +712,140 @@ export default function InvoicingPage() {
   );
 }
 
-// Modal para crear factura
-function InvoiceModal({ customers, constants, services, onClose, onSave }) {
+// Modal para crear/editar factura
+function InvoiceModal({ customers, constants, services, onClose, onSave, initialInvoice }) {
+  const defaultInvoiceType = constants?.COMPROBANTE_TIPOS?.FACTURA_B || 6;
+  const invoiceStatus = String(initialInvoice?.status || initialInvoice?.__status || "").toLowerCase();
+  const isEditingDraft = Boolean(initialInvoice?.id && (!invoiceStatus || invoiceStatus === "draft"));
+
   const [formData, setFormData] = useState({
-    tipo_comprobante: constants?.COMPROBANTE_TIPOS?.FACTURA_B || 6,
+    id: null,
+    tipo_comprobante: defaultInvoiceType,
     customer_id: "",
-    items: [{ service_id: "", descripcion: "", cantidad: 1, precio_unitario: 0, alicuota_iva: 21 }],
+    items: [createEmptyInvoiceItem()],
     observaciones: "",
+    punto_venta: "",
+    numero_comprobante: "",
   });
   const [loading, setLoading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [serviceDropdownIndex, setServiceDropdownIndex] = useState(null);
 
+  useEffect(() => {
+    if (isEditingDraft) {
+      let parsedItems = [];
+      if (Array.isArray(initialInvoice?.items)) {
+        parsedItems = initialInvoice.items;
+      } else if (typeof initialInvoice?.items === "string" && initialInvoice.items.trim()) {
+        try {
+          parsedItems = JSON.parse(initialInvoice.items);
+        } catch {
+          parsedItems = [];
+        }
+      }
+
+      const normalizedItems = parsedItems.length > 0
+        ? parsedItems.map(mapInvoiceItemForForm)
+        : [createEmptyInvoiceItem()];
+
+      setFormData({
+        id: initialInvoice.id,
+        tipo_comprobante: Number(initialInvoice.tipo_comprobante || defaultInvoiceType),
+        customer_id: initialInvoice.customer_id ? String(initialInvoice.customer_id) : "",
+        items: normalizedItems,
+        observaciones: initialInvoice.notes || initialInvoice.observaciones || "",
+        punto_venta: initialInvoice.punto_venta ?? "",
+        numero_comprobante: initialInvoice.numero_comprobante ?? "",
+      });
+
+      const customerFromList = initialInvoice.customer_id
+        ? customers.find(c => String(c.id) === String(initialInvoice.customer_id))
+        : null;
+
+      if (customerFromList) {
+        setSelectedCustomer(customerFromList);
+      } else if (initialInvoice.customer_name) {
+        setSelectedCustomer({
+          id: initialInvoice.customer_id ?? null,
+          name: initialInvoice.customer_name,
+          documento: initialInvoice.customer_doc || "",
+          cuit: initialInvoice.customer_cuit || "",
+          address: initialInvoice.customer_address || "",
+          condicion_iva: initialInvoice.condicion_iva || null,
+        });
+      } else {
+        setSelectedCustomer(null);
+      }
+    } else {
+      setFormData({
+        id: null,
+        tipo_comprobante: defaultInvoiceType,
+        customer_id: "",
+        items: [createEmptyInvoiceItem()],
+        observaciones: "",
+        punto_venta: "",
+        numero_comprobante: "",
+      });
+      setSelectedCustomer(null);
+    }
+    setServiceDropdownIndex(null);
+  }, [initialInvoice, customers, defaultInvoiceType, isEditingDraft]);
+
   const handleCustomerChange = (customerId) => {
-    const customer = customers.find(c => c.id === Number(customerId));
-    setSelectedCustomer(customer);
-    setFormData({ ...formData, customer_id: customerId });
+    const numericId = customerId ? Number(customerId) : null;
+    const customer = numericId ? customers.find(c => c.id === numericId) : null;
+    setSelectedCustomer(customer || null);
+    setFormData(prev => ({ ...prev, customer_id: customerId }));
   };
 
   const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [...(formData.items || []), { service_id: "", descripcion: "", cantidad: 1, precio_unitario: 0, alicuota_iva: 21 }]
-    });
+    setFormData(prev => ({
+      ...prev,
+      items: [...(prev.items || []), createEmptyInvoiceItem()],
+    }));
   };
 
   const removeItem = (index) => {
-    setFormData({
-      ...formData,
-      items: (formData.items || []).filter((_, i) => i !== index)
-    });
+    setFormData(prev => ({
+      ...prev,
+      items: (prev.items || []).filter((_, i) => i !== index),
+    }));
   };
 
   const updateItem = (index, field, value) => {
-    const newItems = [...(formData.items || [])];
-    newItems[index][field] = value;
-    setFormData({ ...formData, items: newItems });
+    setFormData(prev => {
+      const newItems = [...(prev.items || [])];
+      newItems[index] = { ...newItems[index], [field]: value };
+      return { ...prev, items: newItems };
+    });
   };
 
   const handleServiceInput = (index, value) => {
     const service = services.find(s => s.name.toLowerCase() === value.toLowerCase());
-    const newItems = [...(formData.items || [])];
-    newItems[index] = {
-      ...newItems[index],
-      service_id: service ? service.id : "",
-      descripcion: value,
-      precio_unitario: service ? Number(service.price_decimal || 0) : Number(newItems[index].precio_unitario || 0),
-    };
-    setFormData({ ...formData, items: newItems });
+    setFormData(prev => {
+      const newItems = [...(prev.items || [])];
+      newItems[index] = {
+        ...newItems[index],
+        service_id: service ? service.id : "",
+        descripcion: value,
+        precio_unitario: service ? Number(service.price_decimal || 0) : Number(newItems[index].precio_unitario || 0),
+      };
+      return { ...prev, items: newItems };
+    });
   };
 
   const handleSelectSuggestion = (index, service) => {
-    const newItems = [...(formData.items || [])];
-    newItems[index] = {
-      ...newItems[index],
-      service_id: service.id,
-      descripcion: service.name,
-      precio_unitario: Number(service.price_decimal || 0),
-    };
-    setFormData({ ...formData, items: newItems });
+    setFormData(prev => {
+      const newItems = [...(prev.items || [])];
+      newItems[index] = {
+        ...newItems[index],
+        service_id: service.id,
+        descripcion: service.name,
+        precio_unitario: Number(service.price_decimal || 0),
+      };
+      return { ...prev, items: newItems };
+    });
     setServiceDropdownIndex(null);
   };
 
@@ -615,28 +871,44 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
     return {
       neto: Math.round(neto * 100) / 100,
       iva: Math.round(iva * 100) / 100,
-      total: Math.round((neto + iva) * 100) / 100
+      total: Math.round((neto + iva) * 100) / 100,
     };
   };
 
   const totals = calculateTotals();
-  const isFormValid =
-    formData.customer_id &&
-    (formData.items || []).length > 0 &&
-    !(formData.items || []).some(item => !item.descripcion || Number(item.precio_unitario || 0) <= 0);
+  const hasValidItems = (formData.items || []).length > 0 && !(formData.items || []).some(item => !item.descripcion || Number(item.precio_unitario || 0) <= 0);
+  const isFormValid = Boolean(formData.customer_id) && hasValidItems;
+
+  const buildDraftPayload = () => {
+    const itemsPayload = (formData.items || []).map(mapInvoiceItemForPayload);
+    return {
+      tipo_comprobante: Number(formData.tipo_comprobante || defaultInvoiceType),
+      customer_id: formData.customer_id ? Number(formData.customer_id) : null,
+      items: itemsPayload,
+      observaciones: formData.observaciones,
+      importe_neto: totals.neto,
+      importe_iva: totals.iva,
+      importe_total: totals.total,
+      cliente_data: selectedCustomer,
+    };
+  };
 
   const handleSaveDraft = async () => {
+    const payload = buildDraftPayload();
+    if (!payload.items.length) {
+      toast.error("Agregá al menos un item antes de guardar");
+      return;
+    }
+
     try {
       setSavingDraft(true);
-      await apiClient.post("/api/invoicing/draft", {
-        ...formData,
-        items: formData.items || [],
-        importe_neto: totals.neto,
-        importe_iva: totals.iva,
-        importe_total: totals.total,
-        cliente_data: selectedCustomer,
-      });
-      toast.success("Borrador guardado");
+      if (isEditingDraft && formData.id) {
+        await apiClient.put(`/api/invoicing/draft/${formData.id}`, payload);
+        toast.success("Borrador actualizado");
+      } else {
+        await apiClient.post("/api/invoicing/draft", payload);
+        toast.success("Borrador guardado");
+      }
       onSave();
       onClose();
     } catch (error) {
@@ -654,7 +926,7 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
       return;
     }
 
-    const tipoSeleccionado = Number(formData.tipo_comprobante);
+    const tipoSeleccionado = Number(formData.tipo_comprobante || defaultInvoiceType);
     const customer = customers.find(c => String(c.id) === String(formData.customer_id));
     const facturaA = constants?.COMPROBANTE_TIPOS?.FACTURA_A;
     const facturaM = constants?.COMPROBANTE_TIPOS?.FACTURA_M;
@@ -667,15 +939,17 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
       }
     }
 
+    const payload = {
+      ...buildDraftPayload(),
+    };
+    if (isEditingDraft && formData.id) {
+      payload.draft_id = formData.id;
+    }
+
     setLoading(true);
 
     try {
-      const response = await apiClient.post("/api/invoicing/arca/generate", {
-        ...formData,
-        importe_neto: totals.neto,
-        importe_iva: totals.iva,
-        importe_total: totals.total,
-      });
+      const response = await apiClient.post("/api/invoicing/arca/generate", payload);
       if (response.data?.duplicate) {
         toast.info(response.data?.message || "Esta factura ya había sido emitida.");
       } else {
@@ -700,8 +974,8 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
       <div className="invoice-modal-container" onClick={(e) => e.stopPropagation()}>
         <header className="invoice-modal-header">
           <div>
-            <h2>Nueva Factura</h2>
-            <p>Completá los datos para emitir la factura electrónica.</p>
+            <h2>{isEditingDraft ? "Editar borrador" : "Nueva Factura"}</h2>
+            <p>{isEditingDraft ? "Actualizá los datos antes de emitir la factura." : "Completá los datos para emitir la factura electrónica."}</p>
           </div>
           <button onClick={onClose} className="invoice-modal-close" aria-label="Cerrar modal">×</button>
         </header>
@@ -712,7 +986,7 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
               <span className="invoice-label">Tipo de comprobante *</span>
               <select
                 value={formData.tipo_comprobante}
-                onChange={(e) => setFormData({ ...formData, tipo_comprobante: Number(e.target.value) })}
+                onChange={(e) => setFormData(prev => ({ ...prev, tipo_comprobante: Number(e.target.value) }))}
                 className="invoice-select"
               >
                 {Object.entries(constants?.COMPROBANTE_TIPOS || {}).map(([label, value]) => (
@@ -876,7 +1150,7 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
             <textarea
               placeholder="Observaciones adicionales..."
               value={formData.observaciones}
-              onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+              onChange={(e) => setFormData(prev => ({ ...prev, observaciones: e.target.value }))}
               rows={3}
               className="invoice-textarea"
             />
@@ -892,7 +1166,7 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
                 className="invoice-button secondary"
                 disabled={savingDraft || loading}
               >
-                {savingDraft ? "Guardando…" : "Guardar borrador"}
+                {savingDraft ? "Guardando…" : isEditingDraft ? "Actualizar borrador" : "Guardar borrador"}
               </button>
               <button type="submit" className="invoice-button primary" disabled={!isFormValid || loading || savingDraft}>
                 {loading ? "Generando..." : "Generar factura"}
@@ -900,6 +1174,167 @@ function InvoiceModal({ customers, constants, services, onClose, onSave }) {
             </div>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function CreditNoteModal({ invoice, reason, error, onReasonChange, onClose, onConfirm, loading, formatInvoiceNumber, formatDate }) {
+  const safeFormatInvoiceNumber = typeof formatInvoiceNumber === 'function'
+    ? formatInvoiceNumber
+    : (value) => (value ? value : '-');
+  const safeFormatDate = typeof formatDate === 'function'
+    ? formatDate
+    : (date) => {
+        if (!date) return '-';
+        return new Date(date).toLocaleDateString('es-AR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      };
+
+  const items = parseInvoiceItems(invoice);
+  const totals = {
+    neto: Number(invoice?.importe_neto || 0),
+    iva: Number(invoice?.importe_iva || 0),
+    total: Number(invoice?.importe_total || 0),
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
+      style={{
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)'
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-background rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col animate-scale-in"
+        style={{
+          border: '1px solid rgb(var(--border))',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="flex items-center justify-between px-6 py-5 border-b"
+          style={{
+            borderColor: 'rgb(var(--border))',
+            background: 'linear-gradient(to right, rgb(var(--background)), rgb(var(--background-secondary)))'
+          }}
+        >
+          <div>
+            <h2 className="text-lg sm:text-2xl font-bold text-foreground">Generar nota de crédito</h2>
+            <p className="text-sm text-foreground-secondary">
+              La nota revertirá la factura {safeFormatInvoiceNumber(invoice?.invoice_number)}.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-background-secondary transition-all duration-200 text-foreground-muted hover:text-foreground"
+            aria-label="Cerrar"
+            disabled={loading}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <div className="card p-4 bg-background-secondary">
+            <h3 className="font-semibold text-sm text-foreground mb-3">Datos de la factura</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-foreground-secondary block text-xs uppercase">Cliente</span>
+                <span className="text-foreground font-medium">{invoice?.customer_name || 'Sin datos'}</span>
+              </div>
+              <div>
+                <span className="text-foreground-secondary block text-xs uppercase">Número</span>
+                <span className="text-foreground font-medium">{safeFormatInvoiceNumber(invoice?.invoice_number)}</span>
+              </div>
+              <div>
+                <span className="text-foreground-secondary block text-xs uppercase">Fecha</span>
+                <span className="text-foreground">{safeFormatDate(invoice?.fecha_emision)}</span>
+              </div>
+              <div>
+                <span className="text-foreground-secondary block text-xs uppercase">Total</span>
+                <span className="text-foreground font-medium">
+                  ${totals.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-4">
+            <h3 className="font-semibold text-sm text-foreground mb-3">Motivo *</h3>
+            <textarea
+              value={reason}
+              onChange={(e) => onReasonChange(e.target.value)}
+              rows={3}
+              className="invoice-textarea"
+              placeholder="Describí el motivo de la nota de crédito..."
+              disabled={loading}
+            />
+            {error && (
+              <p className="text-sm text-red-500 mt-2">{error}</p>
+            )}
+          </div>
+
+          <div className="card p-4">
+            <h3 className="font-semibold text-sm text-foreground mb-3">Items incluidos</h3>
+            {items.length === 0 ? (
+              <p className="text-sm text-foreground-secondary">
+                No se detectaron items asociados. Se generará una nota por el total de la factura.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {items.map((item, index) => {
+                  const cantidad = Number(item.cantidad || 1);
+                  const precio = Number(item.precio_unitario || 0);
+                  return (
+                    <div key={index} className="flex items-start justify-between gap-4 text-sm">
+                      <div>
+                        <p className="font-medium text-foreground">{item.descripcion || `Item ${index + 1}`}</p>
+                        <p className="text-foreground-secondary text-xs">
+                          Cantidad: {cantidad} • Precio: ${precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })} • IVA: {Number(item.alicuota_iva ?? 21)}%
+                        </p>
+                      </div>
+                      <span className="text-foreground font-medium">
+                        ${(cantidad * precio).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t flex justify-end gap-3"
+          style={{ borderColor: 'rgb(var(--border))' }}
+        >
+          <button
+            onClick={onClose}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="btn-primary flex items-center gap-2"
+            disabled={loading}
+          >
+            {loading && (
+              <span className="inline-block h-4 w-4 border-2 border-transparent border-t-current rounded-full animate-spin" />
+            )}
+            Confirmar
+          </button>
+        </div>
       </div>
     </div>
   );
