@@ -21,13 +21,34 @@ import "./invoicingModal.css";
 
 const resolveInvoiceStatus = (invoice = {}) => {
   const explicit = String(invoice.status || "").toLowerCase();
-  if (explicit) return explicit;
+  const STATUS_MAP = {
+    approved: "approved",
+    aprobada: "approved",
+    aprobado: "approved",
+    pendiente: "pending",
+    pending: "pending",
+    borrador: "draft",
+    draft: "draft",
+    rechazada: "rejected",
+    rechazado: "rejected",
+    rejected: "rejected",
+    anulada: "cancelled",
+    cancelada: "cancelled",
+    cancelado: "cancelled",
+    cancelled: "cancelled"
+  };
 
-  const cae = invoice.cae;
+  if (explicit && STATUS_MAP[explicit]) {
+    return STATUS_MAP[explicit];
+  }
+
+  const caeRaw = String(invoice.cae ?? "").trim();
+  const cae = caeRaw.toUpperCase();
   const notes = String(invoice.notes || "").toLowerCase();
 
-  if (cae && cae !== "RECHAZADO") return "approved";
-  if (cae === "RECHAZADO" || notes.includes("rechazada")) return "rejected";
+  if (cae === "RECHAZADO" || notes.includes("rechazad")) return "rejected";
+  const hasNumericCae = /^[0-9]{5,}$/.test(caeRaw);
+  if (hasNumericCae) return "approved";
 
   return "draft";
 };
