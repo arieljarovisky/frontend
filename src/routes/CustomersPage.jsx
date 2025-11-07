@@ -1,6 +1,6 @@
 // src/routes/CustomersPage.jsx
 import React, { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "../shared/useQuery.js";
 import { apiClient } from "../api";
 import { SearchInput, initials, formatPhone } from "../shared/ui.jsx";
@@ -9,6 +9,7 @@ import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 export default function CustomersPage() {
     // 1) Estado local de búsqueda
     const [params, setParams] = useSearchParams();
+    const { tenantSlug } = useParams();
     const initialQ = params.get("q") || "";
     const [q, setQ] = useState(initialQ);
 
@@ -68,7 +69,7 @@ export default function CustomersPage() {
                         {rows.map((r) => (
                             <Link
                                 key={r.id}
-                                to={`/customers/${r.id}`}
+                                to={`/${tenantSlug}/customers/${r.id}`}
                                 className="w-full text-left px-5 py-3 hover:bg-background-secondary grid grid-cols-12 items-center transition-colors"
                             >
                                 <div className="col-span-5 flex items-center gap-3">

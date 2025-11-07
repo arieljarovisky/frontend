@@ -14,6 +14,10 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // ============================================
@@ -110,10 +114,10 @@ function DepositRow({ deposit, onAction, onRefresh }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-dark-800">{deposit.service_name}</div>
+          <div className="text-sm text-dark-800">{deposit.service_name || deposit.service}</div>
           <div className="text-xs text-dark-500 flex items-center gap-2 mt-1">
             <Users className="w-3 h-3" />
-            {deposit.stylist_name}
+            {deposit.stylist_name || deposit.stylist}
           </div>
         </div>
 
@@ -204,6 +208,34 @@ function DepositRow({ deposit, onAction, onRefresh }) {
 export default function DepositsPage() {
   const [includeExpired, setIncludeExpired] = useState(false);
   const [refreshKey, setRefresh] = useState(0);
+  
+  // Filtros y paginado
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", "expired"
+  const [serviceId, setServiceId] = useState("");
+  const [stylistId, setStylistId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Cargar servicios y estilistas para los filtros
+  const { data: services } = useQuery(
+    async () => {
+      const { data } = await apiClient.get("/api/meta/services");
+      return data.data || [];
+    },
+    []
+  );
+
+  const { data: stylists } = useQuery(
+    async () => {
+      const { data } = await apiClient.get("/api/meta/stylists");
+      return data.data || [];
+    },
+    []
+  );
 
   const { data: dashboard, loading: loadingDash } = useQuery(
     async () => {
@@ -213,15 +245,28 @@ export default function DepositsPage() {
     [refreshKey]
   );
 
-  const { data: deposits, loading: loadingDeposits } = useQuery(
+  const { data: depositsData, loading: loadingDeposits } = useQuery(
     async () => {
-      const { data } = await apiClient.get("/api/admin/deposits/pending", {
-        params: { includeExpired: includeExpired ? "true" : "false" },
-      });
-      return data.data;
+      const params = {
+        includeExpired: includeExpired ? "true" : "false",
+        page: page.toString(),
+        limit: limit.toString(),
+        status: statusFilter,
+        ...(search && { search }),
+        ...(serviceId && { serviceId }),
+        ...(stylistId && { stylistId }),
+        ...(fromDate && { fromDate }),
+        ...(toDate && { toDate }),
+      };
+      
+      const { data } = await apiClient.get("/api/admin/deposits/pending", { params });
+      return data;
     },
-    [includeExpired, refreshKey]
+    [includeExpired, refreshKey, page, limit, search, statusFilter, serviceId, stylistId, fromDate, toDate]
   );
+
+  const deposits = depositsData?.data || [];
+  const pagination = depositsData?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 };
 
   const handleAction = async (depositId, action) => {
     const endpoints = {
@@ -264,36 +309,36 @@ export default function DepositsPage() {
         <StatCard
           icon={Clock}
           title="Pendientes activas"
-          value={stats.pendingActive || 0}
+          value={stats.pending_count - (stats.expired_holds || 0) || 0}
           subtitle="En tiempo"
           color="success"
         />
         <StatCard
           icon={AlertTriangle}
           title="Vencidas"
-          value={stats.pendingExpired || 0}
+          value={stats.expired_holds || 0}
           subtitle="Sin pagar"
           color="danger"
         />
         <StatCard
           icon={DollarSign}
           title="Dinero retenido"
-          value={`$${Number(stats.amountHeld || 0).toFixed(0)}`}
+          value={`$${deposits.reduce((sum, d) => sum + Number(d.deposit_decimal || 0), 0).toFixed(0)}`}
           subtitle="En espera"
           color="warning"
         />
         <StatCard
           icon={CheckCircle2}
           title="Pagadas hoy"
-          value={stats.paidToday || 0}
+          value={stats.today_paid || 0}
           subtitle="Últimas 24hs"
           color="primary"
         />
         <StatCard
           icon={XCircle}
-          title="Canceladas hoy"
-          value={stats.cancelledToday || 0}
-          subtitle="Timeout"
+          title="Total pagadas"
+          value={stats.paid_count || 0}
+          subtitle="Historial"
           color="primary"
         />
       </div>
@@ -364,18 +409,214 @@ export default function DepositsPage() {
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-dark-900">
-            Señas pendientes ({deposits?.length || 0})
+            Señas pendientes ({pagination.total || 0})
           </h2>
-          <label className="flex items-center gap-2 text-sm text-dark-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeExpired}
-              onChange={(e) => setIncludeExpired(e.target.checked)}
-              className="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
-            />
-            Incluir vencidas
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-dark-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeExpired}
+                onChange={(e) => {
+                  setIncludeExpired(e.target.checked);
+                  setPage(1);
+                }}
+                className="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+              />
+              Incluir vencidas
+            </label>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="btn-secondary text-xs px-3 py-2 flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filtros
+            </button>
+          </div>
         </div>
+
+        {/* Filtros */}
+        {showFilters && (
+          <div className="mb-6 p-6 rounded-xl border border-border bg-background-secondary space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Búsqueda */}
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Búsqueda
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Cliente, teléfono, servicio..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Estado */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Estado
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="all">Todos</option>
+                  <option value="active">Activas</option>
+                  <option value="expired">Vencidas</option>
+                </select>
+              </div>
+
+              {/* Items por página */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Por página
+                </label>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+
+              {/* Servicio */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Servicio
+                </label>
+                <select
+                  value={serviceId}
+                  onChange={(e) => {
+                    setServiceId(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {services?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Estilista */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Estilista
+                </label>
+                <select
+                  value={stylistId}
+                  onChange={(e) => {
+                    setStylistId(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {stylists?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fecha desde */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Desde
+                </label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                />
+              </div>
+
+              {/* Fecha hasta */}
+              <div>
+                <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                  Hasta
+                </label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            {/* Botón limpiar filtros */}
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                  setServiceId("");
+                  setStylistId("");
+                  setFromDate("");
+                  setToDate("");
+                  setPage(1);
+                }}
+                className="text-sm text-foreground-muted hover:text-foreground transition-colors duration-200 font-medium"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          </div>
+        )}
 
         {loadingDeposits ? (
           <div className="flex items-center justify-center py-12">
@@ -387,16 +628,73 @@ export default function DepositsPage() {
             <p className="text-dark-600">✅ No hay señas pendientes</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {deposits.map((deposit) => (
-              <DepositRow
-                key={deposit.id}
-                deposit={deposit}
-                onAction={handleAction}
-                onRefresh={handleRefresh}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {deposits.map((deposit) => (
+                <DepositRow
+                  key={deposit.id}
+                  deposit={deposit}
+                  onAction={handleAction}
+                  onRefresh={handleRefresh}
+                />
+              ))}
+            </div>
+
+            {/* Paginado */}
+            {pagination.totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-dark-600">
+                  Mostrando {(page - 1) * limit + 1} - {Math.min(page * limit, pagination.total)} de {pagination.total}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-2 rounded-lg bg-dark-200 hover:bg-dark-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            page === pageNum
+                              ? "bg-primary-600 text-white"
+                              : "bg-dark-200 hover:bg-dark-300 text-dark-700"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                    disabled={page === pagination.totalPages}
+                    className="p-2 rounded-lg bg-dark-200 hover:bg-dark-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

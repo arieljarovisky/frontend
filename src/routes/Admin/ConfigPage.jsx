@@ -295,6 +295,14 @@ export default function ConfigPage() {
 
   // Generar factura de prueba
   const testArcaInvoice = async () => {
+    // Validar que el CUIT esté configurado (verificar tanto el estado local como el del backend)
+    const cuitToCheck = contact.arca_cuit || arcaConnectionStatus?.tenantCUIT;
+    
+    if (!cuitToCheck || String(cuitToCheck).replace(/\D/g, '').length !== 11) {
+      toast.error("Por favor, ingresá un CUIT válido de 11 dígitos y guardá los cambios antes de testear.");
+      return;
+    }
+    
     if (!confirm("¿Generar una factura de prueba por $121 (incluye IVA)? Esta factura se emitirá a nombre de tu CUIT.")) {
       return;
     }
@@ -420,6 +428,10 @@ export default function ConfigPage() {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
+      // Log para debug
+      console.log("[handleSaveAll] Contact data a guardar:", contact);
+      console.log("[handleSaveAll] arca_cuit:", contact.arca_cuit);
+      
       await Promise.all([
         apiClient.saveConfigSection("general", general),
         apiClient.saveConfigSection("contact", contact),
@@ -429,6 +441,27 @@ export default function ConfigPage() {
         savePayments(),
       ]);
       toast.success("Configuración guardada correctamente");
+      
+      // Recargar configuración de contacto para asegurar que el estado esté actualizado
+      try {
+        const contactData = await apiClient.getConfigSection("contact");
+        setContact({
+          arca: contactData.arca ?? "",
+          whatsapp: contactData.whatsapp ?? "",
+          arca_api_key: contactData.arca_api_key ?? "",
+          arca_cuit: contactData.arca_cuit ?? "",
+          arca_punto_venta: contactData.arca_punto_venta ?? "1",
+          arca_api_url: contactData.arca_api_url ?? "https://api.arca.com.ar/v1",
+          arca_cert_content: "",
+          arca_key_content: "",
+          use_certificates: !!(contactData.arca_cert_path && contactData.arca_key_path),
+        });
+      } catch (e) {
+        console.error("Error recargando configuración de contacto:", e);
+      }
+      
+      // Recargar conexión ARCA después de guardar
+      checkArcaConnection();
     } catch (error) {
       console.error(error);
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
@@ -760,25 +793,21 @@ export default function ConfigPage() {
                                   </ul>
                                 </div>
                                 <div className="p-2 rounded bg-background-secondary">
-                                  <p className="text-xs font-medium text-foreground mb-1">Opción B: Certificados del Sistema</p>
+                                  <p className="text-xs font-medium text-foreground mb-1">Opción B: Certificados del Sistema (P12)</p>
                                   <p className="text-xs text-foreground-secondary mb-2">
-                                    <strong>1. Colocar los certificados</strong> en la carpeta <code className="bg-background px-1 rounded">backend/src/arca/</code>:
-                                  </p>
-                                  <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2 mb-2">
-                                    <li>El certificado <code>.crt</code> (el sistema busca automáticamente archivos con extensión <code>.crt</code>)</li>
-                                    <li>La clave privada <code>.key</code> (el sistema busca automáticamente archivos con extensión <code>.key</code>)</li>
-                                  </ul>
-                                  <p className="text-xs text-foreground-secondary mb-2">
-                                    <strong>2. Configurar en el archivo</strong> <code className="bg-background px-1 rounded">.env</code> del servidor (en la carpeta <code className="bg-background px-1 rounded">backend/</code>):
+                                    <strong>Configurar en el archivo</strong> <code className="bg-background px-1 rounded">.env</code> del servidor (en la carpeta <code className="bg-background px-1 rounded">backend/</code>):
                                   </p>
                                   <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2">
                                     <li><code>ARCA_CUIT</code> - CUIT del sistema (requerido)</li>
                                     <li><code>ARCA_PUNTO_VENTA</code> - Punto de venta (requerido)</li>
-                                    <li><code>ARCA_CERT_PATH</code> - <span className="text-foreground-muted">Opcional:</span> Solo si los certificados están en otra ubicación. Si están en <code>backend/src/arca/</code>, el sistema los detecta automáticamente.</li>
-                                    <li><code>ARCA_KEY_PATH</code> - <span className="text-foreground-muted">Opcional:</span> Solo si los certificados están en otra ubicación.</li>
+                                    <li><code>P12_PATH</code> - Ruta al archivo certificado P12 (requerido)</li>
+                                    <li><code>P12_PASS</code> - Contraseña del certificado P12 (requerido)</li>
+                                    <li><code>SERVICE</code> - <span className="text-foreground-muted">Opcional:</span> Servicio para WSAA (por defecto: "wsfe")</li>
+                                    <li><code>WSAA_URL</code> - <span className="text-foreground-muted">Opcional:</span> URL del Web Service de Autenticación (WSAA). Si no se especifica, usa las URLs predeterminadas según el environment.</li>
+                                    <li><code>WSFE_URL</code> - <span className="text-foreground-muted">Opcional:</span> URL del Web Service de Facturación (WSFE). Si no se especifica, usa las URLs predeterminadas según el environment.</li>
                                   </ul>
                                   <p className="text-xs text-foreground-muted mt-2 italic">
-                                    ✓ Si ya colocaste los certificados en <code>backend/src/arca/</code>, solo necesitás configurar <code>ARCA_CUIT</code> y <code>ARCA_PUNTO_VENTA</code> en el <code>.env</code>.
+                                    <strong>Alternativa:</strong> También podés usar certificados separados (.crt y .key) colocándolos en <code className="bg-background px-1 rounded">backend/src/arca/</code> y configurando <code>ARCA_CERT_PATH</code> y <code>ARCA_KEY_PATH</code> (opcional si están en la carpeta predeterminada).
                                   </p>
                                 </div>
                               </div>

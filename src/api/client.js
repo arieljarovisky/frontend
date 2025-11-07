@@ -444,11 +444,24 @@ apiClient.disconnectMP = async function () {
    CUSTOMERS API
 ========================= */
 
-apiClient.listCustomers = async function ({ q = "" } = {}) {
+apiClient.listCustomers = async function (q = "", signal) {
   const { data } = await apiClient.get("/api/meta/customers", {
     params: { q },
+    signal,
   });
   return data?.data || [];
+};
+
+apiClient.customerDetail = async function (customerId, signal) {
+  if (!customerId) throw new Error("customerId es requerido");
+  const { data } = await apiClient.get(`/api/customers/${customerId}`, { signal });
+  return data?.data || data || null;
+};
+
+apiClient.updateCustomer = async function (customerId, payload) {
+  if (!customerId) throw new Error("customerId es requerido");
+  const { data } = await apiClient.put(`/api/customers/${customerId}`, payload);
+  return data?.data || data || null;
 };
 
 /* =========================

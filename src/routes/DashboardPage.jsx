@@ -153,13 +153,6 @@ export default function DashboardPage() {
             Resumen de actividad y métricas en tiempo real
           </p>
         </div>
-        <button
-          onClick={() => navigate("/appointments")}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Turno
-        </button>
       </div>
 
       {/* Stats Grid */}
@@ -191,7 +184,6 @@ export default function DashboardPage() {
           subtitle="Señas cobradas"
           icon={DollarSign}
           color="success"
-          trend={12}
         />
       </div>
 
