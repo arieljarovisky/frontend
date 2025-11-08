@@ -35,16 +35,32 @@ export default function LoginPage() {
 
   const goAfterLogin = (resp, fallbackSlug) => {
     const next = safeNextParam(location.search);
-    const slug = resp?.tenant?.slug || fallbackSlug || "default";
-    const dest = next || `/${slug}/dashboard`;
+    const isSuperAdmin = resp?.user?.isSuperAdmin || resp?.user?.is_super_admin;
+    const slug = resp?.tenant?.slug || fallbackSlug || null;
+    const defaultDest = isSuperAdmin
+      ? "/super-admin/tenants"
+      : slug
+      ? `/${slug}/dashboard`
+      : "/login";
+    const dest = next || defaultDest;
     window.location.replace(dest);
   };
 
   useEffect(() => {
-    if (authLoaded && user?.tenant?.slug) {
+    if (!authLoaded || !user) return;
+
+    const isSuperAdmin = user?.isSuperAdmin || user?.is_super_admin;
+    if (isSuperAdmin) {
+      if (!location.pathname.startsWith("/super-admin")) {
+        navigate("/super-admin/tenants", { replace: true });
+      }
+      return;
+    }
+
+    if (user?.tenant?.slug) {
       navigate(`/${user.tenant.slug}/dashboard`, { replace: true });
     }
-  }, [authLoaded, user, navigate]);
+  }, [authLoaded, user, navigate, location.pathname]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -60,7 +76,17 @@ export default function LoginPage() {
       }
 
       if (resp.multiTenant) {
-        setAvailableTenants(resp.tenants || []);
+        const tenants = resp.tenants || [];
+        if (resp.isSuperAdmin) {
+          const systemTenant = tenants.find(
+            (t) => t.is_system || t.slug === "system"
+          );
+          if (systemTenant) {
+            await handleTenantSelect(systemTenant.slug);
+            return;
+          }
+        }
+        setAvailableTenants(tenants);
         setShowTenantSelector(true);
         return;
       }
@@ -128,8 +154,19 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full p-4 text-left rounded-lg border border-border bg-background-secondary hover:bg-border transition-colors disabled:opacity-50"
                 >
-                  <div className="font-medium text-foreground">{tenant.slug}</div>
-                  <div className="text-sm text-foreground-muted">{tenant.role}</div>
+                  <div className="font-medium text-foreground flex items-center gap-2">
+                    {tenant.is_system && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/20 text-primary">
+                        Global
+                      </span>
+                    )}
+                    <span>
+                      {tenant.name || tenant.slug}
+                    </span>
+                  </div>
+                  <div className="text-sm text-foreground-muted">
+                    {tenant.role}
+                  </div>
                 </button>
               ))}
             </div>

@@ -1,7 +1,7 @@
 // src/routes/AppLayout.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { apiClient } from "../api/client";
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
@@ -20,44 +20,61 @@ import {
   Scissors,
   Building2,
   Package,
-  FileText
+  FileText,
+  GraduationCap,
+  Shield
 } from "lucide-react";
+
+const DEFAULT_FEATURES_BY_BUSINESS = {
+  salon: { classes: false },
+  gym: { classes: true },
+  pilates: { classes: true },
+  kinesiology: { classes: false },
+  spa: { classes: false },
+  other: { classes: false },
+};
 
 // Mapeo de nombres según el tipo de negocio
 const getNavigationLabels = (businessTypeCode) => {
   const labels = {
     salon: {
       appointments: "Turnos",
+      classes: "Clases",
       professionals: "Peluqueros",
       customers: "Clientes",
       deposits: "Depósitos",
     },
     gym: {
       appointments: "Clases",
+      classes: "Clases",
       professionals: "Instructores",
       customers: "Socios",
       deposits: "Pagos",
     },
     kinesiology: {
       appointments: "Sesiones",
+      classes: "Clases",
       professionals: "Kinesiólogos",
       customers: "Pacientes",
       deposits: "Pagos",
     },
     pilates: {
       appointments: "Clases",
+      classes: "Clases",
       professionals: "Instructores",
       customers: "Alumnos",
       deposits: "Pagos",
     },
     spa: {
       appointments: "Reservas",
+      classes: "Clases",
       professionals: "Terapeutas",
       customers: "Clientes",
       deposits: "Señas",
     },
     other: {
       appointments: "Turnos",
+      classes: "Clases",
       professionals: "Profesionales",
       customers: "Clientes",
       deposits: "Depósitos",
@@ -94,6 +111,19 @@ export default function AppLayout() {
   const businessTypeCode = businessTypeData?.code || "salon";
   const navLabels = getNavigationLabels(businessTypeCode);
 
+  const rawFeatures = businessTypeData?.features_config ?? businessTypeData?.featuresConfig;
+  const tenantFeatures = useMemo(() => {
+    if (!rawFeatures) return {};
+    if (typeof rawFeatures === "string") {
+      try {
+        return JSON.parse(rawFeatures);
+      } catch {
+        return {};
+      }
+    }
+    return typeof rawFeatures === "object" && rawFeatures != null ? rawFeatures : {};
+  }, [rawFeatures]);
+
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -114,9 +144,18 @@ export default function AppLayout() {
     return () => clearInterval(interval);
   }, []);
 
+  const enabledFeatures = useMemo(
+    () => ({
+      ...(DEFAULT_FEATURES_BY_BUSINESS[businessTypeCode] || {}),
+      ...tenantFeatures,
+    }),
+    [tenantFeatures, businessTypeCode]
+  );
+
   const navItems = [
     { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
     { to: `${base}/appointments`, label: navLabels.appointments, icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
+    { to: `${base}/classes`, label: navLabels.classes, icon: GraduationCap, active: pathname.startsWith(`${base}/classes`), featureKey: "classes" },
     { to: `${base}/customers`, label: navLabels.customers, icon: Users, active: pathname.startsWith(`${base}/customers`) },
     { to: `${base}/deposits`, label: navLabels.deposits, icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
     { to: `${base}/stock/products`, label: "Stock", icon: Package, active: pathname.startsWith(`${base}/stock`), module: "stock" },
@@ -129,6 +168,10 @@ export default function AppLayout() {
 
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly && user?.role !== "admin") return false;
+    
+    if (item.featureKey && !enabledFeatures[item.featureKey]) {
+      return false;
+    }
     
     // Verificar permisos por módulo
     if (item.module) {
@@ -184,7 +227,7 @@ export default function AppLayout() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-foreground-muted leading-none">Sucursal</p>
                 <p className="text-sm font-medium text-foreground truncate">
-                  {tenant.name || tenant.subdomain || `#${tenant.id}`}
+                  {tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain || `#${tenant.id}`}
                 </p>
               </div>
             </div>
@@ -209,6 +252,16 @@ export default function AppLayout() {
             <span className="text-sm text-foreground-secondary">Tema</span>
             <ThemeToggle />
           </div>
+
+          {user?.isSuperAdmin && (
+            <Link
+              to="/super-admin/tenants"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-all"
+            >
+              <Shield className="w-5 h-5" />
+              <span className="text-sm font-medium">Panel del dueño</span>
+            </Link>
+          )}
 
           {/* User Info */}
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background-secondary">
@@ -267,7 +320,8 @@ export default function AppLayout() {
           <div className="max-w-[1800px] mx-auto px-4 sm:px-6">
             <p>© {new Date().getFullYear()} — Agendly ERP</p>
             <p className="text-[10px] sm:text-xs text-foreground-muted mt-1">
-              Sistema de Gestión v2.0 {tenant ? `• ${tenant.name || tenant.subdomain}` : ""}
+              Sistema de Gestión v2.0{" "}
+              {tenant ? `• ${tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain}` : ""}
             </p>
           </div>
         </footer>

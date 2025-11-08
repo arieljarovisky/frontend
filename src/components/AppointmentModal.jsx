@@ -1,18 +1,37 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/UseApp";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
-import { X, Save, Trash2, MessageSquare, DollarSign, Calendar } from "lucide-react";
+import {
+  X,
+  Save,
+  Trash2,
+  MessageSquare,
+  DollarSign,
+  Calendar,
+  Users,
+  CalendarClock,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 
-function formatDateToLocalInput(d) {
-  if (!d) return "";
+const CLASS_STATUS_STYLES = {
+  reserved: "bg-indigo-500/15 text-indigo-200 border-indigo-500/30",
+  attended: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  cancelled: "bg-red-500/15 text-red-200 border-red-500/30",
+  noshow: "bg-amber-500/15 text-amber-200 border-amber-500/30",
+};
+
+function formatDateToLocalInput(value) {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }
 
-// Crea Date en zona local desde "YYYY-MM-DDTHH:mm" (no depende de timezone parsing de string)
 function parseLocalInputToDate(local) {
   if (!local) return null;
   const s = local.includes("T") ? local : local.replace(" ", "T");
@@ -22,47 +41,23 @@ function parseLocalInputToDate(local) {
   return new Date(y, m - 1, d, hh, mm, 0);
 }
 
-// Convierte cualquier ISO (con zona o sin zona) a "YYYY-MM-DDTHH:mm" en hora LOCAL del navegador.
-// - Si la string tiene offset/Z (ej '...Z' o '-03:00'), new Date(iso) convierte correctamente a local.
-// - Si la string NO tiene offset y es "YYYY-MM-DDTHH:mm" o similar, lo tratamos como local directamente.
 function isoToLocalInput(isoOrLocal) {
   if (!isoOrLocal) return "";
   const s = String(isoOrLocal).trim();
-
-  // si contiene Z o +/-HH:MM asumimos zona explícita -> new Date() hará la conversión a local
   if (/[zZ]$|[+\-]\d{2}:\d{2}$/.test(s)) {
     const d = new Date(s);
     return formatDateToLocalInput(d);
   }
-
-  // si es formato "YYYY-MM-DD HH:mm" o "YYYY-MM-DDTHH:mm" sin zona -> tratar como local
   const maybeLocal = s.replace(" ", "T");
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(maybeLocal)) {
     const d = parseLocalInputToDate(maybeLocal);
     return formatDateToLocalInput(d);
   }
-
-  // fallback: intentar new Date() por si viene en otro formato con zona
   const d = new Date(s);
   if (!Number.isNaN(d.getTime())) return formatDateToLocalInput(d);
-
   return "";
 }
 
-/* ===== Helpers extra del original (si los tenías) ===== */
-function toLocalDatetimeValue(isoOrLocal) {
-  if (!isoOrLocal) return "";
-  if (typeof isoOrLocal === "string") {
-    let s = isoOrLocal.trim().replace(" ", "T");
-    if (s.length >= 16) return s.slice(0, 16);
-  }
-  const d = new Date(isoOrLocal);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-/* ===== Componente principal ===== */
 export default function AppointmentModal({ open, onClose, event }) {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -73,8 +68,20 @@ export default function AppointmentModal({ open, onClose, event }) {
 
   const { services = [], stylists = [], updateAppointment, deleteAppointment } = useApp();
   const a = event?.extendedProps || {};
+  const eventType = a.eventType || "appointment";
+  const isClassSession = eventType === "class_session";
+  const classSessionId = useMemo(() => {
+    if (!isClassSession) return null;
+    const raw =
+      a.session_id ??
+      a.id ??
+      (typeof event?.id === "string" && event.id.startsWith("class-")
+        ? event.id.replace(/^class-/, "")
+        : event?.id);
+    const numeric = Number(raw);
+    return Number.isNaN(numeric) ? null : numeric;
+  }, [a, event, isClassSession]);
 
-  /* ===== Inicializar form usando isoToLocalInput (garantiza hora local) ===== */
   const [form, setForm] = useState(() => {
     const _a = event?.extendedProps || {};
     return {
@@ -97,6 +104,26 @@ export default function AppointmentModal({ open, onClose, event }) {
     cancelText: "Cancelar",
     onConfirm: null,
   });
+  const [reprogUI, setReprogUI] = useState({ visible: false, customText: "", autoCancel: true });
+
+  const [classDetail, setClassDetail] = useState(null);
+  const [classLoading, setClassLoading] = useState(false);
+  const [classError, setClassError] = useState("");
+
+  const fetchClassDetail = useCallback(async () => {
+    if (!classSessionId) return;
+    try {
+      setClassLoading(true);
+      setClassError("");
+      const detail = await apiClient.getClassSession(classSessionId);
+      setClassDetail(detail);
+    } catch (err) {
+      console.error("❌ [AppointmentModal] Error cargando clase:", err);
+      setClassError(err?.message || "No se pudo cargar la clase seleccionada.");
+    } finally {
+      setClassLoading(false);
+    }
+  }, [classSessionId]);
 
   const openConfirm = (cfg) => setConfirmUI({ open: true, cancelText: "Cancelar", confirmText: "Confirmar", ...cfg });
   const closeConfirm = () => setConfirmUI((u) => ({ ...u, open: false, onConfirm: null }));
@@ -110,19 +137,11 @@ export default function AppointmentModal({ open, onClose, event }) {
     return () => clearTimeout(t);
   }, [msg, error]);
 
-  const [reprogUI, setReprogUI] = useState({
-    visible: false,
-    customText: "",
-    autoCancel: true,
-  });
-
   useEffect(() => {
     if (!open) return;
+    if (isClassSession) return;
     const _a = event?.extendedProps || {};
     const localInput = isoToLocalInput(event?.start || _a.starts_at || _a.startsAt);
-
-    // DEBUG opcional:
-    // console.debug("DEBUG dates:", { eventStart: event?.start, starts_at: _a.starts_at, localInput });
 
     setForm({
       customerName: _a.customer_name || "",
@@ -144,45 +163,48 @@ export default function AppointmentModal({ open, onClose, event }) {
     setError("");
     setSaving(false);
     setPayUI({ visible: false, method: null });
-  }, [open, event]);
+  }, [open, event, isClassSession]);
 
-  const onChange = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  useEffect(() => {
+    if (!open) {
+      setClassDetail(null);
+      setClassError("");
+      return;
+    }
+    if (!isClassSession) return;
+    fetchClassDetail();
+  }, [open, isClassSession, fetchClassDetail]);
+
+  const onChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const selectedService = useMemo(
     () => (services || []).find((s) => String(s.id) === String(form.serviceId)),
     [services, form.serviceId]
   );
 
-  /* ===== Variables relacionadas al pago - definidas antes del JSX ===== */
   const mpPaymentId = a.mp_payment_id || a.mp_paymentId || a.payment_id || null;
   const mpStatus = a.mp_payment_status || a.payment_status || null;
-  const depositDecimal = a.deposit_decimal ?? a.depositAmount ?? null;
   const isDepositPaid = a.status === "deposit_paid" || a.status === "confirmed" || !!a.deposit_paid_at;
 
-  /* ===== Guardar turno (usa parseLocalInputToDate para evitar offset UTC) ===== */
   const onSave = async () => {
     setSaving(true);
     setError("");
     setMsg("");
     try {
-      const startsAt = form.startsLocal; // string "YYYY-MM-DDTHH:mm" (local)
-
+      const startsAt = form.startsLocal;
       let endsAt = null;
       if (selectedService?.duration_min && form.startsLocal) {
-        const d = parseLocalInputToDate(form.startsLocal); // crea Date en zona local
+        const d = parseLocalInputToDate(form.startsLocal);
         d.setMinutes(d.getMinutes() + Number(selectedService.duration_min));
-        endsAt = formatDateToLocalInput(d) + ":00"; // "YYYY-MM-DDTHH:mm:00"
+        endsAt = `${formatDateToLocalInput(d)}:00`;
       }
-
-      // Si tu backend espera "YYYY-MM-DD HH:mm:ss" convertí startsAt:
-      // const startsAtForDb = startsAt ? startsAt.replace("T", " ") + ":00" : null;
 
       await updateAppointment(a.id, {
         customerName: form.customerName || null,
         customerPhone: form.customerPhone || null,
         serviceId: Number(form.serviceId) || null,
         stylistId: Number(form.stylistId) || null,
-        startsAt, // o startsAtForDb si tu backend lo requiere así
+        startsAt,
         endsAt,
         status: form.status,
       });
@@ -191,8 +213,8 @@ export default function AppointmentModal({ open, onClose, event }) {
         description: `Cliente: ${form.customerName || "Sin nombre"}`,
       });
       setMsg("Turno actualizado correctamente.");
-    } catch (e) {
-      const errorMsg = e?.message || "Error al guardar.";
+    } catch (err) {
+      const errorMsg = err?.message || "Error al guardar.";
       toast.error("Error al actualizar turno", { description: errorMsg });
       setError(errorMsg);
     } finally {
@@ -200,7 +222,6 @@ export default function AppointmentModal({ open, onClose, event }) {
     }
   };
 
-  /* ===== Eliminar turno ===== */
   const onDelete = async () => {
     setSaving(true);
     setError("");
@@ -212,8 +233,8 @@ export default function AppointmentModal({ open, onClose, event }) {
       });
       setMsg("Turno eliminado.");
       onClose?.();
-    } catch (e) {
-      const errorMsg = e?.message || "Error al eliminar.";
+    } catch (err) {
+      const errorMsg = err?.message || "Error al eliminar.";
       toast.error("Error al eliminar turno", { description: errorMsg });
       setError(errorMsg);
     } finally {
@@ -232,14 +253,8 @@ export default function AppointmentModal({ open, onClose, event }) {
       },
     });
 
-  /* ===== Reprogramación (WhatsApp) ===== */
-  const onReprogramOpen = () => {
-    setReprogUI((u) => ({ ...u, visible: true }));
-  };
-
-  const onReprogramCancel = () => {
-    setReprogUI((u) => ({ ...u, visible: false }));
-  };
+  const onReprogramOpen = () => setReprogUI((u) => ({ ...u, visible: true }));
+  const onReprogramCancel = () => setReprogUI((u) => ({ ...u, visible: false }));
 
   const onReprogramSend = async () => {
     setSaving(true);
@@ -257,16 +272,17 @@ export default function AppointmentModal({ open, onClose, event }) {
       toast.success("Mensaje de reprogramación enviado", {
         description: j.cancelled ? "El turno fue cancelado automáticamente" : "WhatsApp enviado exitosamente",
       });
-
-      setMsg(`Mensaje enviado por WhatsApp. ${j.cancelled ? "El turno fue cancelado para liberar el hueco." : ""}`);
+      setMsg(
+        `Mensaje enviado por WhatsApp. ${j.cancelled ? "El turno fue cancelado para liberar el hueco." : ""}`
+      );
       setReprogUI({ visible: false, customText: "", autoCancel: true });
 
       if (j.cancelled) {
         await updateAppointment(a.id, { status: "cancelled" });
         onClose?.();
       }
-    } catch (e) {
-      const errorMsg = e?.message || "Error al reprogramar por WhatsApp.";
+    } catch (err) {
+      const errorMsg = err?.message || "Error al reprogramar por WhatsApp.";
       toast.error("Error al enviar WhatsApp", { description: errorMsg });
       setError(errorMsg);
     } finally {
@@ -285,8 +301,8 @@ export default function AppointmentModal({ open, onClose, event }) {
       });
       setMsg("Turno cancelado.");
       onClose?.();
-    } catch (e) {
-      const errorMsg = e?.message || "Error al cancelar el turno.";
+    } catch (err) {
+      const errorMsg = err?.message || "Error al cancelar el turno.";
       toast.error("Error al cancelar", { description: errorMsg });
       setError(errorMsg);
     } finally {
@@ -305,9 +321,182 @@ export default function AppointmentModal({ open, onClose, event }) {
       },
     });
 
-  if (!open) return null;
+  const renderClassContent = () => {
+    const detail =
+      classDetail || {
+        id: classSessionId,
+        activity_type: a.activity_type,
+        stylist_name: a.stylist_name,
+        starts_at: a.starts_at,
+        ends_at: a.ends_at,
+        notes: a.notes,
+        status: a.status,
+        price_decimal: a.price_decimal,
+        capacity_max: a.capacity_max,
+        enrollments: a.enrollments || [],
+        enrolled_count: a.enrolled_count,
+      };
 
-  // Estilos dinámicos
+    const modalBg = darkMode ? "bg-slate-900" : "bg-white";
+    const borderColor = darkMode ? "border-slate-700" : "border-gray-200";
+    const textColor = darkMode ? "text-slate-100" : "text-gray-900";
+
+    const startLabel = detail.starts_at
+      ? formatDateToLocalInput(detail.starts_at).replace("T", " ")
+      : "—";
+    const occupied =
+      detail.enrolled_count != null
+        ? detail.enrolled_count
+        : (detail.enrollments || []).filter((e) => e.status === "reserved" || e.status === "attended").length;
+    const capacity = detail.capacity_max ?? "∞";
+    const price = new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(Number(detail.price_decimal || 0));
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      >
+        <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border border-indigo-500/20 bg-slate-950 shadow-2xl">
+          <header className="flex items-start justify-between gap-4 border-b border-indigo-500/10 px-6 py-5">
+            <div className="space-y-1">
+              <p className="text-sm text-indigo-300 uppercase tracking-wide font-semibold">Detalle de clase</p>
+              <h2 className="text-2xl font-bold text-white">{detail.activity_type || "Clase grupal"}</h2>
+              {detail.status === "cancelled" && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200">
+                  <AlertTriangle className="h-4 w-4" />
+                  Clase cancelada
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchClassDetail}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-xs text-slate-200 hover:border-indigo-500/40 hover:text-white transition disabled:opacity-50"
+                disabled={classLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${classLoading ? "animate-spin" : ""}`} />
+                Actualizar
+              </button>
+              <button
+                type="button"
+                onClick={() => onClose?.()}
+                className="rounded-full border border-slate-700/60 bg-slate-900/60 p-2 text-slate-300 hover:border-indigo-500/40 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </header>
+
+          {classError && (
+            <div className="px-6 py-4 text-sm text-red-200 border-b border-red-500/20 bg-red-500/10">{classError}</div>
+          )}
+
+          <div className="grid gap-6 overflow-y-auto px-6 py-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <section className="space-y-4">
+              <div className="rounded-2xl border border-indigo-500/20 bg-slate-900/60 p-5 shadow-inner shadow-indigo-500/10 text-slate-200 space-y-4">
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-start gap-3">
+                    <CalendarClock className="mt-1 h-5 w-5 text-indigo-300" />
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Horario</dt>
+                      <dd className="text-sm font-medium">{startLabel}</dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Users className="mt-1 h-5 w-5 text-indigo-300" />
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Profesor</dt>
+                      <dd className="text-sm font-medium">{detail.stylist_name || "Sin asignar"}</dd>
+                      <dd className="text-xs text-slate-400">
+                        Cupo {occupied}/{capacity}
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="mt-1 h-5 w-5 text-indigo-300" />
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Precio</dt>
+                      <dd className="text-sm font-medium">{price}</dd>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Calendar className="mt-1 h-5 w-5 text-indigo-300" />
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Estado</dt>
+                      <dd className="text-sm font-medium capitalize">{detail.status || "scheduled"}</dd>
+                    </div>
+                  </div>
+                </dl>
+
+                {detail.notes && (
+                  <div className="rounded-xl border border-slate-700/40 bg-slate-900/80 p-4 text-sm text-slate-200">
+                    <p className="font-semibold text-indigo-200">Notas</p>
+                    <p className="mt-1 leading-relaxed whitespace-pre-line">{detail.notes}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-200">Inscriptos</h3>
+                <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs text-indigo-200">
+                  {occupied}/{capacity} lugares ocupados
+                </span>
+              </div>
+
+              {classLoading ? (
+                <div className="flex items-center gap-3 text-indigo-200 text-sm">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Cargando información…
+                </div>
+              ) : detail.enrollments?.length ? (
+                <ul className="space-y-3">
+                  {detail.enrollments.map((enrollment) => {
+                    const badgeClass = CLASS_STATUS_STYLES[enrollment.status] || CLASS_STATUS_STYLES.reserved;
+                    return (
+                      <li
+                        key={enrollment.id}
+                        className="rounded-2xl border border-slate-700/40 bg-slate-900/80 p-4 text-sm text-slate-200"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-slate-100">{enrollment.customer_name || "Cliente sin nombre"}</p>
+                            <p className="text-xs text-slate-400">{enrollment.customer_phone || "Sin teléfono"}</p>
+                          </div>
+                          <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${badgeClass}`}>
+                            {enrollment.status || "reserved"}
+                          </span>
+                        </div>
+                        {enrollment.notes && (
+                          <p className="mt-2 text-xs text-slate-400 leading-relaxed whitespace-pre-line">{enrollment.notes}</p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="rounded-2xl border border-slate-700/40 bg-slate-900/80 p-6 text-center text-sm text-slate-300">
+                  No hay alumnos inscriptos todavía.
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!open) return null;
+  if (isClassSession) return renderClassContent();
+
   const modalBg = darkMode ? "bg-slate-900" : "bg-white";
   const borderColor = darkMode ? "border-slate-700" : "border-gray-200";
   const textColor = darkMode ? "text-slate-100" : "text-gray-900";
@@ -336,7 +525,6 @@ export default function AppointmentModal({ open, onClose, event }) {
         className={`${modalBg} ${borderColor} border rounded-2xl shadow-2xl`}
         style={{ width: 620, maxWidth: "95vw", maxHeight: "90vh", overflow: "auto", padding: 24 }}
       >
-        {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className={`text-xl font-bold tracking-tight ${textColor} flex items-center gap-2`}>
@@ -356,7 +544,6 @@ export default function AppointmentModal({ open, onClose, event }) {
           </button>
         </div>
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-2 mb-4">
           {isDepositPaid && (
             <span className="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200">
@@ -380,7 +567,6 @@ export default function AppointmentModal({ open, onClose, event }) {
           )}
         </div>
 
-        {/* Form */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${textColor}`}>Cliente</label>

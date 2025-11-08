@@ -1,7 +1,7 @@
 // src/components/TenantSelector.jsx - Para super admins que gestionan múltiples tenants
 import { useState, useEffect } from "react";
 import { Building2, Check } from "lucide-react";
-import { http, setTenantId } from "../api/client";
+import { apiClient, setTenantId } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
 export function TenantSelector() {
@@ -11,16 +11,38 @@ export function TenantSelector() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Solo mostrar si es super admin
-  if (!user?.is_super_admin) return null;
+  const isSuperAdmin = user?.isSuperAdmin || user?.is_super_admin;
+  if (!isSuperAdmin) return null;
+
+  const canSwitchTenants = Boolean(
+    user?.permissions?.superAdmin?.includes("tenants.switch") || user?.canSwitchTenants
+  );
 
   useEffect(() => {
+    if (!canSwitchTenants) {
+      return;
+    }
     loadTenants();
   }, []);
 
   const loadTenants = async () => {
     try {
-      const { data } = await http.get("/api/admin/tenants");
-      setTenants(data?.data || []);
+      const response = await apiClient.superAdmin.listTenants({
+        limit: 100,
+        mode: "compact",
+      });
+      const list = Array.isArray(response?.data) ? response.data : [];
+      const normalized = list
+        .map((item) => ({
+          ...item,
+          displayName: item.is_system ? "Panel Global" : item.name || item.subdomain || `#${item.id}`,
+        }))
+        .sort((a, b) => {
+          if (a.is_system && !b.is_system) return -1;
+          if (!a.is_system && b.is_system) return 1;
+          return String(a.displayName || "").localeCompare(String(b.displayName || ""));
+        });
+      setTenants(normalized);
     } catch (error) {
       console.error("Error loading tenants:", error);
     }
@@ -41,6 +63,14 @@ export function TenantSelector() {
     }
   };
 
+  if (!canSwitchTenants) {
+    return (
+      <div className="px-3 py-2 rounded-xl bg-purple-600/10 border border-purple-600/20 text-sm text-purple-200">
+        Panel Global
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <button
@@ -52,7 +82,7 @@ export function TenantSelector() {
         <div className="text-left">
           <p className="text-xs text-dark-600 leading-none">Sucursal activa</p>
           <p className="text-sm font-medium text-purple-300">
-            {tenant?.name || "Seleccionar"}
+            {tenant?.is_system ? "Panel Global" : tenant?.name || "Seleccionar"}
           </p>
         </div>
       </button>
@@ -68,9 +98,10 @@ export function TenantSelector() {
           {/* Dropdown */}
           <div className="absolute right-0 mt-2 w-64 rounded-xl border border-dark-300 bg-dark-100 shadow-xl z-50 max-h-96 overflow-auto">
             <div className="p-2">
-              <p className="text-xs text-dark-600 px-2 py-1 font-medium">
-                Cambiar de sucursal
-              </p>
+              <div className="flex items-center justify-between px-2 py-1 text-xs text-dark-600 font-medium">
+                <span>Cambiar de sucursal</span>
+                <span className="text-dark-500">{tenants.length}</span>
+              </div>
               {tenants.map((t) => (
                 <button
                   key={t.id}
@@ -89,8 +120,12 @@ export function TenantSelector() {
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     <div>
-                      <p className="text-sm font-medium">{t.name}</p>
-                      <p className="text-xs text-dark-600">{t.subdomain}</p>
+                      <p className="text-sm font-medium">
+                        {t.displayName}
+                      </p>
+                      <p className="text-xs text-dark-600">
+                        {t.is_system ? "Global" : t.subdomain}
+                      </p>
                     </div>
                   </div>
                   {t.id === tenant?.id && (

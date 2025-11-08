@@ -9,6 +9,15 @@ import React, {
 } from "react";
 import { apiClient } from "../api/client";
 
+const BUSINESS_TYPE_DEFAULT_FEATURES = {
+  salon: { classes: false },
+  gym: { classes: true },
+  pilates: { classes: true },
+  kinesiology: { classes: false },
+  spa: { classes: false },
+  other: { classes: false },
+};
+
 export const AppContext = createContext(null);
 
 export function AppProvider({ children, pollMs = 15000 }) {
@@ -70,6 +79,11 @@ export function AppProvider({ children, pollMs = 15000 }) {
     error: "",
   });
 
+  // --- Tenant features ---
+  const [tenantInfo, setTenantInfo] = useState(null);
+  const [features, setFeatures] = useState({});
+  const classesEnabled = useMemo(() => features?.classes !== false, [features]);
+
   // ============================================
   // 🧰 Helper: Local MySQL datetime
   // ============================================
@@ -112,6 +126,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     (async () => {
       try {
         setMetaLoading(true);
+        setMetaError("");
 
         const [srv, sty] = await Promise.all([
           apiClient.listServices(),
@@ -127,6 +142,39 @@ export function AppProvider({ children, pollMs = 15000 }) {
         setMetaLoading(false);
       }
     })();
+  }, [tenantInfo?.business_type_id]);
+
+  // ============================================
+  // 🏢 Cargar información del tenant (features)
+  // ============================================
+  useEffect(() => {
+    (async () => {
+      try {
+        const info = await apiClient.getTenantBusinessInfo();
+        setTenantInfo(info);
+        const raw = info?.features_config ?? info?.featuresConfig;
+        let parsed = {};
+        if (typeof raw === "string") {
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            parsed = {};
+          }
+        } else if (typeof raw === "object" && raw != null) {
+          parsed = raw;
+        }
+        const defaults = BUSINESS_TYPE_DEFAULT_FEATURES[info?.code] || {};
+        setFeatures({
+          ...defaults,
+          ...parsed,
+        });
+      } catch (e) {
+        console.warn("⚠️ [AppProvider] No se pudo obtener features del tenant:", e?.message || e);
+        setFeatures((prev) =>
+          Object.keys(prev || {}).length ? prev : { classes: false }
+        );
+      }
+    })();
   }, []);
 
   // ============================================
@@ -138,23 +186,57 @@ export function AppProvider({ children, pollMs = 15000 }) {
     try {
       setEventsLoading(true);
       setEventsError("");
-     const data = await apiClient.listAppointments({ from: fromIso, to: toIso });
-      const evs = (data?.appointments ?? data ?? []).map((a) => ({
+
+      const appointmentsPromise = apiClient.listAppointments({ from: fromIso, to: toIso });
+      const classesPromise = classesEnabled
+        ? apiClient.listClassSessions({ from: fromIso, to: toIso })
+        : Promise.resolve([]);
+
+      const [appointmentsData, sessionsData] = await Promise.all([appointmentsPromise, classesPromise]);
+
+      const appointmentEvents = (appointmentsData?.appointments ?? appointmentsData ?? []).map((a) => ({
         id: String(a.id),
         title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,
         start: a.starts_at,
         end: a.ends_at,
         backgroundColor: a.color_hex || undefined,
         borderColor: a.color_hex || undefined,
-        extendedProps: a,
+        extendedProps: {
+          ...a,
+          eventType: "appointment",
+        },
       }));
-      setEvents(evs);
+
+      const classEvents = (Array.isArray(sessionsData) ? sessionsData : []).map((session) => ({
+        id: `class-${session.id}`,
+        title: session.activity_type || "Clase",
+        start: session.starts_at,
+        end: session.ends_at,
+        backgroundColor: "#7c3aed",
+        borderColor: "#7c3aed",
+        extendedProps: {
+          ...session,
+          eventType: "class_session",
+          session_id: session.id,
+          stylist_id: session.stylist_id,
+          stylist_name: session.stylist_name,
+          enrolled_count: session.enrolled_count ?? 0,
+          capacity_max: session.capacity_max ?? null,
+        },
+      }));
+
+      const combined = [...appointmentEvents, ...classEvents].sort(
+        (a, b) => new Date(a.start) - new Date(b.start)
+      );
+
+      setEvents(combined);
     } catch (e) {
       setEventsError(String(e.message || e));
+      setEvents([]);
     } finally {
       setEventsLoading(false);
     }
-  }, []); // 👈 ya no depende de `range`
+  }, [classesEnabled]);
 
   // 🔔 Debounce cuando cambia el rango visible (navegación)
   useEffect(() => {
@@ -364,6 +446,10 @@ export function AppProvider({ children, pollMs = 15000 }) {
       loadEvents,
       updateAppointment,
       deleteAppointment,
+      // Tenant features
+      tenantInfo,
+      features,
+      classesEnabled,
     }),
     [
       services,
@@ -383,6 +469,9 @@ export function AppProvider({ children, pollMs = 15000 }) {
       updateAppointment,
       deleteAppointment,
       setRangeSafe,
+      tenantInfo,
+      features,
+      classesEnabled,
     ]
   );
 

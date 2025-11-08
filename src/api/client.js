@@ -425,9 +425,10 @@ apiClient.getPaymentStats = async function ({ from, to } = {}) {
 ========================= */
 
 apiClient.getMPAuthUrl = async (opts = {}) => {
-  const { data } = await apiClient.get("/mp/oauth/connect", {
-    params: { fresh: opts.fresh ? 1 : undefined },
-  });
+  const params = {};
+  if (opts.fresh) params.fresh = 1;
+  if (opts.returnTo) params.return_to = opts.returnTo;
+  const { data } = await apiClient.get("/mp/oauth/connect", { params });
   return data;
 };
 apiClient.getMPStatus = async function () {
@@ -616,6 +617,194 @@ apiClient.getAllConfig = async function () {
 apiClient.saveConfigBulk = async function (updates) {
   const { data } = await apiClient.put("/api/config", updates);
   return data?.data ?? data ?? {};
+};
+
+/* =========================
+   TENANT / FEATURES API
+========================= */
+
+apiClient.getTenantBusinessInfo = async function () {
+  const { data } = await apiClient.get("/api/business-types/tenant/business-type");
+  return data?.data ?? data ?? null;
+};
+
+/* =========================
+   CLASSES API
+========================= */
+
+apiClient.listClassTemplates = async function () {
+  const { data } = await apiClient.get("/api/classes/templates");
+  if (Array.isArray(data)) return data;
+  return data?.data ?? data ?? [];
+};
+
+apiClient.createClassTemplate = async function (payload) {
+  const { data } = await apiClient.post("/api/classes/templates", payload);
+  return data;
+};
+
+apiClient.updateClassTemplate = async function (id, payload) {
+  const { data } = await apiClient.put(`/api/classes/templates/${id}`, payload);
+  return data;
+};
+
+apiClient.listClassSessions = async function ({ from, to, status } = {}) {
+  const params = {};
+  if (from) params.from = from;
+  if (to) params.to = to;
+  if (status) params.status = status;
+  const { data } = await apiClient.get("/api/classes/sessions", { params });
+  if (Array.isArray(data)) return data;
+  return data?.data ?? data ?? [];
+};
+
+apiClient.createClassSession = async function (payload) {
+  const { data } = await apiClient.post("/api/classes/sessions", payload);
+  return data;
+};
+
+apiClient.getClassSession = async function (id) {
+  const { data } = await apiClient.get(`/api/classes/sessions/${id}`);
+  return data?.data ?? data ?? null;
+};
+
+apiClient.updateClassSession = async function (id, payload) {
+  const { data } = await apiClient.patch(`/api/classes/sessions/${id}`, payload);
+  return data;
+};
+
+apiClient.cancelClassSession = async function (id) {
+  const { data } = await apiClient.delete(`/api/classes/sessions/${id}`);
+  return data;
+};
+
+apiClient.createClassEnrollment = async function (sessionId, payload) {
+  const { data } = await apiClient.post(`/api/classes/sessions/${sessionId}/enrollments`, payload);
+  return data;
+};
+
+apiClient.updateClassEnrollment = async function (sessionId, enrollmentId, payload) {
+  const { data } = await apiClient.patch(
+    `/api/classes/sessions/${sessionId}/enrollments/${enrollmentId}`,
+    payload
+  );
+  return data;
+};
+
+apiClient.deleteClassEnrollment = async function (sessionId, enrollmentId) {
+  const { data } = await apiClient.delete(
+    `/api/classes/sessions/${sessionId}/enrollments/${enrollmentId}`
+  );
+  return data;
+};
+
+apiClient.cancelClassSeries = async function (seriesId) {
+  const { data } = await apiClient.post(`/api/classes/series/${encodeURIComponent(seriesId)}/cancel`);
+  return data;
+};
+
+/* =========================
+   SUPER ADMIN API
+========================= */
+
+apiClient.superAdmin = {
+  async listTenants(params = {}, options = {}) {
+    const { data } = await apiClient.get("/api/super-admin/tenants", {
+      params,
+      signal: options.signal,
+    });
+    return data;
+  },
+
+  async getTenant(id, params = {}, options = {}) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.get(`/api/super-admin/tenants/${id}`, {
+      params,
+      signal: options.signal,
+    });
+    return data;
+  },
+
+  async createTenant(payload) {
+    if (!payload || typeof payload !== "object") {
+      throw new Error("payload es requerido");
+    }
+    const { data } = await apiClient.post("/api/super-admin/tenants", payload);
+    return data;
+  },
+
+  async updateTenant(id, payload) {
+    if (!id) throw new Error("tenantId es requerido");
+    if (!payload || typeof payload !== "object") {
+      throw new Error("payload es requerido");
+    }
+    const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}`, payload);
+    return data;
+  },
+};
+
+/* =========================
+   ONBOARDING PUBLIC API
+========================= */
+
+apiClient.onboarding = {
+  async start(payload) {
+    const { data } = await apiClient.post("/public/onboarding/start", payload);
+    return data;
+  },
+
+  async saveBusiness(sessionId, payload) {
+    const { data } = await apiClient.patch(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/business`,
+      payload
+    );
+    return data;
+  },
+
+  async saveBranding(sessionId, payload) {
+    const { data } = await apiClient.patch(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/branding`,
+      payload
+    );
+    return data;
+  },
+
+  async recommendPlan(sessionId) {
+    const { data } = await apiClient.post(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/recommend-plan`
+    );
+    return data;
+  },
+
+  async checkSubdomain(slug) {
+    const { data } = await apiClient.get("/public/onboarding/check-subdomain", {
+      params: { slug },
+    });
+    return data;
+  },
+
+  async finish(sessionId, payload) {
+    const { data } = await apiClient.post(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/finish`,
+      payload
+    );
+    return data;
+  },
+
+  async createSubscription(sessionId, payload = {}) {
+    const { data } = await apiClient.post(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/create-subscription`,
+      payload
+    );
+    return data;
+  },
+
+  async subscriptionStatus(sessionId) {
+    const { data } = await apiClient.get(
+      `/public/onboarding/${encodeURIComponent(sessionId)}/subscription-status`
+    );
+    return data;
+  },
 };
 
 /* =========================

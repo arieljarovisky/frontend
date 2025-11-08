@@ -179,7 +179,7 @@ export default function LandingPage() {
                 Iniciar Sesión
               </button>
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/onboarding")}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
               >
                 Comenzar Gratis
@@ -226,7 +226,7 @@ export default function LandingPage() {
               </div>
               <button
                 onClick={() => {
-                  navigate("/login");
+                  navigate("/onboarding");
                   setMobileMenuOpen(false);
                 }}
                 className="w-full mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
@@ -272,7 +272,7 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/onboarding")}
                 className="px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-lg"
               >
                 Comenzar Gratis

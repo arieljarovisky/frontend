@@ -54,18 +54,37 @@ function useCalendarEvents(events, stylistColors) {
   return useMemo(
     () =>
       (Array.isArray(events) ? events : []).map((ev) => {
+        const type = ev.extendedProps?.eventType || "appointment";
         const st = ev.extendedProps?.status;
         const sid = ev.extendedProps?.stylist_id ?? ev.extendedProps?.stylistId;
-        const base = ev.extendedProps?.color_hex || stylistColors[sid] || "#6B7280";
+        const baseColor = ev.backgroundColor || ev.extendedProps?.color_hex || stylistColors[sid] || "#6B7280";
+        const baseBorder = ev.borderColor || baseColor;
 
-        let bg = base, border = base, opacity = 1;
-        if (st === "pending_deposit") opacity = 0.85;
-        if (st === "cancelled") { bg = "#475569"; border = "#64748B"; opacity = 0.6; }
+        let bg = baseColor;
+        let border = baseBorder;
+        let opacity = 1;
+
+        if (type !== "class_session") {
+          if (st === "pending_deposit") opacity = 0.85;
+          if (st === "cancelled") {
+            bg = "#475569";
+            border = "#64748B";
+            opacity = 0.6;
+          }
+        } else if (st === "cancelled") {
+          opacity = 0.7;
+        }
+
+        let resourceId = undefined;
+        if (sid) {
+          resourceId = String(sid);
+        } else if (type === "class_session" || type === "appointment") {
+          resourceId = "unassigned";
+        }
 
         return {
           ...ev,
-          // ➜ clave para que el evento caiga en la columna del peluquero
-          resourceId: sid ? String(sid) : undefined,
+          resourceId,
           backgroundColor: bg,
           borderColor: border,
           textColor: "#fff",
@@ -79,13 +98,41 @@ function useCalendarEvents(events, stylistColors) {
 export default function CalendarView() {
   const { events, eventsLoading, eventsError, setRange, loadEvents, stylists } = useApp();
   const [stylistFilter, setStylistFilter] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const calendarRef = useRef(null);
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
 
   const stylistColors = useMemo(() => buildStylistColorMap(stylists), [stylists]);
+
+  const resources = useMemo(() => {
+    const map = new Map();
+    (stylists || []).forEach((s, idx) => {
+      map.set(String(s.id), {
+        id: String(s.id),
+        title: s.name,
+        color_hex: s.color_hex?.trim() || colorByIndex(idx),
+      });
+    });
+
+    let needsUnassigned = false;
+    (events || []).forEach((ev) => {
+      const ep = ev.extendedProps || {};
+      const sid = ep.stylist_id ?? ep.stylistId;
+      if (!sid) needsUnassigned = true;
+    });
+
+    if (needsUnassigned) {
+      map.set("unassigned", { id: "unassigned", title: "Sin asignar", color_hex: "#6B7280" });
+    }
+
+    if (map.size === 0) {
+      map.set("unassigned", { id: "unassigned", title: "Sin asignar", color_hex: "#6B7280" });
+    }
+
+    return Array.from(map.values());
+  }, [stylists, events]);
   const filtered = useMemo(() => {
     let list = Array.isArray(events) ? events : [];
     if (stylistFilter) {
@@ -163,7 +210,12 @@ export default function CalendarView() {
   // Render elegante del evento
   const eventContent = useCallback((arg) => {
     const ep = arg.event.extendedProps || {};
+    const type = ep.eventType || "appointment";
     const status = ep.status;
+    const occupancy =
+      type === "class_session" && ep.enrolled_count != null && ep.capacity_max != null
+        ? `${ep.enrolled_count}/${ep.capacity_max}`
+        : null;
     return (
       <div className="flex flex-col gap-1 p-1">
         <div className="text-xs font-semibold leading-tight line-clamp-1">{arg.event.title}</div>
@@ -179,11 +231,16 @@ export default function CalendarView() {
               {ep.stylist_name}
             </span>
           )}
-          {status === "pending_deposit" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/25 text-amber-200">Seña pendiente</span>
+          {occupancy && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-50">
+              {occupancy} alumnos
+            </span>
           )}
-          {status === "deposit_paid" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/25 text-emerald-200">Seña pagada</span>
+          {type !== "class_session" && status === "pending_deposit" && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-100">Seña pendiente</span>
+          )}
+          {type !== "class_session" && status === "deposit_paid" && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-100">Seña pagada</span>
           )}
           {status === "cancelled" && (
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-500/25 text-slate-300">Cancelado</span>
@@ -221,7 +278,7 @@ export default function CalendarView() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">
-                📅 Calendario de Turnos
+                📅 Calendario general
               </h2>
             </div>
 
@@ -232,6 +289,7 @@ export default function CalendarView() {
                 <select
                   value={stylistFilter}
                   onChange={(e) => setStylistFilter(e.target.value)}
+                  disabled={Array.isArray(stylists) && stylists.length === 0}
                   className="
                     relative w-full pl-10 pr-4 py-2.5
                     rounded-xl
@@ -245,10 +303,13 @@ export default function CalendarView() {
                     focus:border-indigo-500/30
                     transition-all duration-200
                     hover:border-slate-500/50
+                    disabled:opacity-50 disabled:cursor-not-allowed
                   "
                 >
                   <option className="bg-slate-900" value="">
-                    Todos los estilistas
+                    {Array.isArray(stylists) && stylists.length > 0
+                      ? "Todos los profesionales"
+                      : "Sin filtro de profesional"}
                   </option>
                   {(stylists || []).map((s) => (
                     <option key={s.id} className="bg-slate-900" value={s.id}>
@@ -295,21 +356,26 @@ export default function CalendarView() {
                 <div className="animate-pulse text-slate-300 font-medium">Actualizando calendario…</div>
               </div>
             )}
+            {!eventsLoading && fullEvents.length === 0 && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/50 bg-slate-950/40 text-center text-sm text-slate-300 z-10 px-6">
+                <div className="pointer-events-auto">
+                  <p>No hay eventos en este rango.</p>
+                  <p className="text-xs text-slate-500">
+                    Programá una nueva clase o turno para que aparezca acá.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="calendar-dark w-full min-w-0 overflow-visible rounded-2xl">
               <FullCalendar
                 ref={calendarRef}
-                licenseKey="GPL-My-Project-Is-Open-Source"
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
                 locale={esLocale}
                 headerToolbar={headerToolbar}
                 initialView="resourceTimeGridDay"
                 windowResize={handleWindowResize}
-                resources={(stylists || []).map((s, idx) => ({
-                  id: String(s.id),
-                  title: s.name,
-                  color_hex: s.color_hex?.trim() || colorByIndex(idx),
-                }))}
+                resources={resources}
                 buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día", list: "Agenda" }}
                 dayHeaderContent={dayHeaderContent}
                 allDaySlot={false}
@@ -354,7 +420,6 @@ export default function CalendarView() {
             </div>
           </div>
 
-          {/* Modal */}
           <AppointmentModal
             open={modalOpen}
             event={selectedEvent}
@@ -368,3 +433,4 @@ export default function CalendarView() {
     </div>
   );
 }
+

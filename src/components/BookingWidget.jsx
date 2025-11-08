@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, User, Phone, CheckCircle2, Scissors } from "lucide-react";
+import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users } from "lucide-react";
+import ClassEnrollForm from "./ClassEnrollForm";
 
 function Section({ title, children, right, icon: Icon }) {
   return (
@@ -47,6 +48,7 @@ export default function BookingWidget() {
     loadAvailability,
     bookingSave,
     createAppointment,
+    classesEnabled,
   } = useApp();
 
   const selectedService = useMemo(
@@ -307,6 +309,15 @@ export default function BookingWidget() {
             )}
           </div>
         </div>
+      )}
+
+      {classesEnabled && (
+        <Section title="Inscribir en clase (opcional)" icon={Users}>
+          <ClassEnrollForm
+            defaultName={booking.customerName}
+            defaultPhone={booking.customerPhone}
+          />
+        </Section>
       )}
     </div>
   );

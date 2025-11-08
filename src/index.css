@@ -284,3 +284,6 @@
   background-color: rgb(var(--primary)) !important;
   color: white !important;
 }
+.fc-license-message{
+  display: none !important;
+}

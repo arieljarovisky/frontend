@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authApi, getAccessToken, setAccessToken } from "../api/client";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
 
   // Inicializa la sesión si hay token
@@ -20,17 +21,20 @@ export function AuthProvider({ children }) {
         }
 
         // Validar token con el backend
-        const { ok, user } = await authApi.me();
+        const { ok, user: userData, tenant: tenantData } = await authApi.me();
 
-        if (ok && user) {
-          setUser(user);
+        if (ok && userData) {
+          setUser(userData);
+          setTenant(tenantData || null);
         } else {
           // Token inválido, limpiar
           setAccessToken(null);
+          setTenant(null);
         }
       } catch (err) {
         console.error("[AuthContext] Error inicializando sesión:", err);
         setAccessToken(null);
+        setTenant(null);
       } finally {
         setAuthLoaded(true);
       }
@@ -44,6 +48,7 @@ export function AuthProvider({ children }) {
     const data = await authApi.login(email, password);
     if (data?.ok && data?.access) {
       setUser(data.user);
+      setTenant(data.tenant || null);
       return { success: true, data };
     }
     if (data?.ok && data?.multiTenant) {
@@ -61,6 +66,7 @@ export function AuthProvider({ children }) {
     const data = await authApi.loginTenant(email, password, slug);
     if (data?.ok && data?.access) {
       setUser(data.user);
+      setTenant(data.tenant || null);
       return { success: true, data };
     }
     return { success: false, error: data?.error || "Error de login" };
@@ -74,17 +80,41 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setAccessToken(null);
+      setTenant(null);
     }
   };
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const { ok, user: userData, tenant: tenantData } = await authApi.me();
+      if (ok && userData) {
+        setUser(userData);
+        setTenant(tenantData || null);
+        return { ok: true };
+      }
+      setUser(null);
+      setTenant(null);
+      setAccessToken(null);
+      return { ok: false };
+    } catch (err) {
+      console.error("[AuthContext] refreshSession error:", err);
+      setUser(null);
+      setTenant(null);
+      setAccessToken(null);
+      return { ok: false, error: err?.message || "Error" };
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        tenant,
         authLoaded,
         login,
         loginTenant,
         logout,
+        refreshSession,
       }}
     >
       {children}

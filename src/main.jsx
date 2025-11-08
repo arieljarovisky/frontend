@@ -14,6 +14,7 @@ import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
 import BookingPage from "./routes/BookingPage.jsx";
 import DepositsPage from "./routes/Depositspage.jsx";
 import LoginPage from "./routes/LoginPage.jsx";
+import ClassesPage from "./routes/ClassesPage.jsx";
 
 // Auth
 import { AuthProvider } from "./context/AuthContext.jsx";
@@ -32,11 +33,20 @@ import NotificationsPage from "./routes/NotificationPage.jsx";
 import ProductsPage from "./routes/Stock/ProductsPage.jsx";
 import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
 import UsersPage from "./routes/Users/UsersPage.jsx";
+import SuperAdminLayout from "./routes/SuperAdmin/SuperAdminLayout.jsx";
+import SuperAdminTenantsPage from "./routes/SuperAdmin/SuperAdminTenantsPage.jsx";
+import SuperAdminRoute from "./components/SuperAdminRoute.jsx";
+import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
+import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
+import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <LoginPage /> },
+  { path: "/onboarding", element: <OnboardingPage /> },
+  { path: "/onboarding/payment", element: <PaymentSetupPage /> },
+  { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },
 
   // 👇 TODA la app del tenant cuelga de /:tenantSlug
   {
@@ -81,6 +91,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <DepositsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "classes",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <ClassesPage />
           </PrivateRoute>
         ),
       },
@@ -141,6 +159,26 @@ const router = createBrowserRouter([
         ),
       },
 
+    ],
+  },
+
+  // Panel dueño del sistema
+  {
+    path: "/super-admin",
+    element: (
+      <SuperAdminRoute>
+        <SuperAdminLayout />
+      </SuperAdminRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="tenants" replace />,
+      },
+      {
+        path: "tenants",
+        element: <SuperAdminTenantsPage />,
+      },
     ],
   },
 

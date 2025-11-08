@@ -55,6 +55,30 @@ const resolveInvoiceStatus = (invoice = {}) => {
   return "draft";
 };
 
+const resolveInvoiceDate = (invoice = {}) => {
+  return (
+    invoice.fecha_emision ||
+    invoice.fecha ||
+    invoice.fechaEmision ||
+    invoice.created_at ||
+    invoice.createdAt ||
+    invoice.updated_at ||
+    invoice.updatedAt ||
+    null
+  );
+};
+
+const CREDIT_NOTE_TYPES = [3, 8, 13];
+
+const isCreditNoteComprobante = (invoice = {}) => {
+  const tipo = Number(invoice.tipo_comprobante || 0);
+  if (CREDIT_NOTE_TYPES.includes(tipo)) return true;
+  const category = String(invoice.comprobante_categoria || "").toLowerCase();
+  if (category === "credit_note") return true;
+  if (Number(invoice.is_credit_note) === 1) return true;
+  return false;
+};
+
 const createEmptyInvoiceItem = () => ({
   service_id: "",
   descripcion: "",
@@ -124,12 +148,40 @@ export default function InvoicingPage() {
 
   const invoicesSource = Array.isArray(rawInvoices) ? rawInvoices : (rawInvoices ? [rawInvoices] : []);
 
-  const invoicesWithStatus = invoicesSource.map((invoice) => ({
-    ...invoice,
-    __status: resolveInvoiceStatus(invoice),
-  }));
+  const invoicesWithStatus = invoicesSource.map((invoice) => {
+    const status = resolveInvoiceStatus(invoice);
+    const isCreditNote = isCreditNoteComprobante(invoice);
+    return {
+      ...invoice,
+      __status: status,
+      __isCreditNote: isCreditNote,
+    };
+  });
 
-  const filteredByStatus = invoicesWithStatus.filter((invoice) => {
+  const creditNoteOriginalIds = new Set();
+  invoicesWithStatus.forEach((invoice) => {
+    if (!invoice.__isCreditNote) return;
+    const originalId = Number(invoice.original_invoice_id || 0);
+    if (!originalId) return;
+    const rawStatus = String(invoice.status || "").toLowerCase();
+    const hasBlockingStatus =
+      ["approved", "pending"].includes(invoice.__status) ||
+      ["approved", "processing", "pending"].includes(rawStatus);
+    if (hasBlockingStatus) {
+      creditNoteOriginalIds.add(originalId);
+    }
+  });
+
+  const invoicesAnnotated = invoicesWithStatus.map((invoice) => {
+    const invoiceId = Number(invoice.id || 0);
+    const hasCreditNote = invoiceId ? creditNoteOriginalIds.has(invoiceId) : false;
+    return {
+      ...invoice,
+      has_credit_note: hasCreditNote,
+    };
+  });
+
+  const filteredByStatus = invoicesAnnotated.filter((invoice) => {
     if (!statusFilter) return true;
     return invoice.__status === statusFilter.toLowerCase();
   });
@@ -144,16 +196,19 @@ export default function InvoicingPage() {
     );
   });
 
+  const canShowCreditNoteButton = (invoice = {}) => {
+    const status = invoice.__status ?? resolveInvoiceStatus(invoice);
+    if (status !== "approved") return false;
+    if (isCreditNoteComprobante(invoice)) return false;
+    if (invoice.original_invoice_id) return false;
+    if (!invoice.cae || invoice.cae === "RECHAZADO") return false;
+    return true;
+  };
+
   const canCreateCreditNote = (invoice = {}) => {
-    const status = resolveInvoiceStatus(invoice);
-    const tipoComprobante = Number(invoice.tipo_comprobante || 0);
-    const isCreditNoteType = [3, 8, 13].includes(tipoComprobante);
-    return (
-      status === "approved" &&
-      !isCreditNoteType &&
-      !invoice.original_invoice_id &&
-      invoice.cae && invoice.cae !== "RECHAZADO"
-    );
+    if (!canShowCreditNoteButton(invoice)) return false;
+    if (invoice.has_credit_note) return false;
+    return true;
   };
 
   const openCreditNoteModal = (invoice = {}) => {
@@ -417,14 +472,35 @@ export default function InvoicingPage() {
         <>
           {/* Vista de cards en mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-4">
-            {(invoices || []).map((invoice) => (
-              <div key={invoice.id} className="card p-4">
+          {(invoices || []).map((invoice) => {
+            const showCreditNoteButton = canShowCreditNoteButton(invoice);
+            const creditNoteEnabled = canCreateCreditNote(invoice);
+            const creditNoteIsLoading = creditNoteLoadingId === invoice.id;
+            const creditNoteDisabled = !creditNoteEnabled || creditNoteIsLoading;
+            const creditNoteTitle = !creditNoteEnabled && invoice.has_credit_note
+              ? "Esta factura ya tiene una nota de crédito emitida"
+              : "Generar nota de crédito";
+
+            return (
+            <div key={invoice.id} className="card p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground truncate">{invoice.customer_name}</h3>
-                    <p className="text-xs text-foreground-muted mt-1">
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-foreground-muted">
                       {formatInvoiceNumber(invoice.invoice_number)}
                     </p>
+                    {invoice.__isCreditNote && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wide">
+                        <Undo2 className="w-3 h-3" /> NC
+                      </span>
+                    )}
+                    {invoice.has_credit_note && !invoice.__isCreditNote && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wide">
+                        <Undo2 className="w-3 h-3" /> NC emitida
+                      </span>
+                    )}
+                  </div>
                   </div>
                   <div className="flex items-center gap-2 ml-2">
                     {invoice.__status === 'draft' && (
@@ -440,12 +516,12 @@ export default function InvoicingPage() {
                         <Pencil className="w-4 h-4" />
                       </button>
                     )}
-                    {canCreateCreditNote(invoice) && (
+                    {showCreditNoteButton && (
                       <button
                         onClick={() => openCreditNoteModal(invoice)}
                         className="p-2 rounded-lg text-foreground-secondary hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Generar nota de crédito"
-                        disabled={creditNoteLoadingId === invoice.id}
+                        title={creditNoteTitle}
+                        disabled={creditNoteDisabled}
                       >
                         <Undo2 className="w-4 h-4" />
                       </button>
@@ -473,7 +549,7 @@ export default function InvoicingPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-foreground-secondary">Fecha:</span>
-                    <span className="text-foreground">{formatDate(invoice.fecha_emision)}</span>
+                    <span className="text-foreground">{formatDate(resolveInvoiceDate(invoice))}</span>
                   </div>
                   {invoice.punto_venta && (
                     <div className="flex items-center justify-between">
@@ -523,7 +599,8 @@ export default function InvoicingPage() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
 
           {/* Vista de tabla en desktop */}
@@ -542,16 +619,39 @@ export default function InvoicingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(invoices || []).map((invoice) => (
+                  {(invoices || []).map((invoice) => {
+                    const showCreditNoteButton = canShowCreditNoteButton(invoice);
+                    const creditNoteEnabled = canCreateCreditNote(invoice);
+                    const creditNoteIsLoading = creditNoteLoadingId === invoice.id;
+                    const creditNoteDisabled = !creditNoteEnabled || creditNoteIsLoading;
+                    const creditNoteTitle = !creditNoteEnabled && invoice.has_credit_note
+                      ? "Esta factura ya tiene una nota de crédito emitida"
+                      : "Generar nota de crédito";
+
+                    return (
                     <tr
                       key={invoice.id}
                       className="border-b border-border hover:bg-background-secondary transition-colors"
                     >
                       <td className="py-3 px-4 font-medium text-foreground">
-                        <div>{formatInvoiceNumber(invoice.invoice_number)}</div>
-                        {invoice.punto_venta && (
-                          <div className="text-xs text-foreground-muted">PV: {invoice.punto_venta}</div>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          <span>{formatInvoiceNumber(invoice.invoice_number)}</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {invoice.punto_venta && (
+                              <span className="text-xs text-foreground-muted">PV: {invoice.punto_venta}</span>
+                            )}
+                            {invoice.__isCreditNote && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wide">
+                                <Undo2 className="w-3 h-3" /> Nota de crédito
+                              </span>
+                            )}
+                            {invoice.has_credit_note && !invoice.__isCreditNote && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wide">
+                                <Undo2 className="w-3 h-3" /> NC emitida
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm text-foreground font-medium">{invoice.customer_name}</div>
@@ -567,7 +667,7 @@ export default function InvoicingPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-sm text-foreground-secondary">
-                        <div>{formatDate(invoice.fecha_emision)}</div>
+                        <div>{formatDate(resolveInvoiceDate(invoice))}</div>
                         {invoice.vto_cae && (
                           <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
                             Vto: {new Date(invoice.vto_cae).toLocaleDateString('es-AR')}
@@ -612,12 +712,12 @@ export default function InvoicingPage() {
                               <Pencil className="w-4 h-4" />
                             </button>
                           )}
-                          {canCreateCreditNote(invoice) && (
+                          {showCreditNoteButton && (
                             <button
                               onClick={() => openCreditNoteModal(invoice)}
                               className="p-2 rounded-lg text-foreground-secondary hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Generar nota de crédito"
-                              disabled={creditNoteLoadingId === invoice.id}
+                              title={creditNoteTitle}
+                              disabled={creditNoteDisabled}
                             >
                               <Undo2 className="w-4 h-4" />
                             </button>
@@ -643,7 +743,8 @@ export default function InvoicingPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
