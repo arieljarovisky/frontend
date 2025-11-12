@@ -205,7 +205,7 @@ export default function PaymentSetupPage() {
                   </h2>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-slate-300">
                     <li>Presioná el botón “Suscribirme ahora”.</li>
-                    <li>Ingresá con la cuenta de Mercado Pago con la que vas a abonar Agendly.</li>
+                    <li>Ingresá con la cuenta de Mercado Pago con la que vas a abonar ARJA ERP.</li>
                     <li>Confirmá la suscripción mensual del plan seleccionado.</li>
                     <li>Al finalizar te devolvemos a esta pantalla y activamos tu sistema.</li>
                   </ol>

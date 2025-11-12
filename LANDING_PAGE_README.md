@@ -2,7 +2,7 @@
 
 ## 📋 Descripción
 
-Página principal de marketing/ventas para promocionar el sistema de gestión de turnos para peluquerías. Diseñada para convertir visitantes en clientes.
+Página principal de marketing/ventas para promocionar el sistema de gestión de reservas para negocios de servicios (academias, estudios, centros de bienestar, etc.). Diseñada para convertir visitantes en clientes.
 
 ## 🎯 Características
 

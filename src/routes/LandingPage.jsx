@@ -107,7 +107,7 @@ export default function LandingPage() {
   const testimonials = [
     {
       name: "María González",
-      role: "Dueña de Peluquería Elegance",
+      role: "Directora de Studio Balance",
       content: "Desde que uso el sistema, mis turnos están organizados y no tengo más problemas con las faltas. ¡Totalmente recomendado!",
       rating: 5
     },
@@ -134,106 +134,109 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 glass-strong border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className="landing-nav">
+        <div className="landing-nav__container">
+          <div className="landing-nav__brand">
             <Logo size="default" showText={true} />
+          </div>
 
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center space-x-6">
-              <a 
-                href="#features" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-foreground-secondary hover:text-foreground transition-colors"
-              >
-                Características
-              </a>
-              <a 
-                href="#pricing"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-foreground-secondary hover:text-foreground transition-colors"
-              >
-                Precios
-              </a>
-              <a 
-                href="#testimonials"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("testimonials")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-foreground-secondary hover:text-foreground transition-colors"
-              >
-                Testimonios
-              </a>
+          <div className="landing-nav__links">
+            <a
+              href="#features"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="landing-nav__link"
+            >
+              Características
+            </a>
+            <a
+              href="#pricing"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="landing-nav__link"
+            >
+              Precios
+            </a>
+            <a
+              href="#testimonials"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("testimonials")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="landing-nav__link"
+            >
+              Testimonios
+            </a>
+            <div className="landing-nav__auth">
               <ThemeToggle />
               <button
                 onClick={() => navigate("/login")}
-                className="px-4 py-2 text-foreground-secondary hover:text-foreground transition-colors"
+                className="btn-ghost btn--compact"
               >
                 Iniciar Sesión
               </button>
               <button
                 onClick={() => navigate("/onboarding")}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                className="btn-primary btn--compact"
               >
                 Comenzar Gratis
               </button>
             </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden text-foreground-secondary hover:text-foreground"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
+
+          <button
+            className="landing-nav__toggle"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
         </div>
 
-            {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-background-secondary border-t border-border">
-            <div className="px-4 pt-2 pb-4 space-y-2">
-              <a
-                href="#features"
-                className="block px-3 py-2 text-foreground-secondary hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Características
-              </a>
-              <a
-                href="#pricing"
-                className="block px-3 py-2 text-foreground-secondary hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Precios
-              </a>
-              <a
-                href="#testimonials"
-                className="block px-3 py-2 text-foreground-secondary hover:text-foreground transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Testimonios
-              </a>
-              <div className="px-3 py-2">
-                <ThemeToggle />
-              </div>
-              <button
-                onClick={() => {
-                  navigate("/onboarding");
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-              >
-                Comenzar Gratis
-              </button>
+          <div className="landing-nav__mobile">
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Características
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Precios
+            </a>
+            <a
+              href="#testimonials"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Testimonios
+            </a>
+            <div className="landing-nav__mobile-theme">
+              <ThemeToggle />
             </div>
+            <button
+              onClick={() => {
+                navigate("/login");
+                setMobileMenuOpen(false);
+              }}
+              className="btn-ghost w-full"
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={() => {
+                navigate("/onboarding");
+                setMobileMenuOpen(false);
+              }}
+              className="btn-primary w-full"
+            >
+              Comenzar Gratis
+            </button>
           </div>
         )}
       </nav>
@@ -325,7 +328,7 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="card p-6 hover:shadow-lg transition-all"
+                  className="card card--space-lg"
                 >
                   <div className="w-12 h-12 bg-primary-light dark:bg-primary/20 rounded-lg flex items-center justify-center mb-4">
                     <Icon className="w-6 h-6 text-primary" />
@@ -449,7 +452,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="card p-6"
+                className="card card--space-lg"
               >
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
@@ -475,7 +478,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="card p-12 text-center"
+            className="card card--space-xl card--no-hover text-center"
           >
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               ¿Listo para transformar tu negocio?
@@ -541,7 +544,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-border pt-8 text-center text-sm text-foreground-secondary">
-            <p>&copy; {new Date().getFullYear()} Agendly ERP. Todos los derechos reservados.</p>
+            <p>&copy; {new Date().getFullYear()} ARJA ERP. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>

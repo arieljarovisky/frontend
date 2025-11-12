@@ -63,7 +63,7 @@ export default function UsersPage() {
   const getRoleBadge = (role) => {
     const configs = {
       admin: { color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400", label: "Administrador", icon: Shield },
-      staff: { color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400", label: "Empleado", icon: UserCheck },
+      staff: { color: "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary/80", label: "Empleado", icon: UserCheck },
       user: { color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300", label: "Usuario", icon: Users },
     };
     const config = configs[role] || configs.user;
@@ -104,31 +104,33 @@ export default function UsersPage() {
       </div>
 
       {/* Filtros */}
-      <div className="card p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+      <div className="card card--space-sm">
+        <div className="input-group">
+          <span className="input-group__icon">
+            <Search />
+          </span>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por email..."
-            className="input pl-10"
+            className="input input--with-icon"
           />
         </div>
       </div>
 
       {/* Lista de usuarios */}
       {loading ? (
-        <div className="card p-12 text-center">
+        <div className="card card--space-xl card--no-hover text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-foreground-secondary mt-4">Cargando usuarios...</p>
         </div>
       ) : error ? (
-        <div className="card p-6 text-center text-red-500">
+        <div className="card card--space-lg card--no-hover text-center text-red-500">
           {error}
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="card p-12 text-center">
+        <div className="card card--space-xl card--no-hover text-center">
           <Users className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
           <p className="text-foreground-secondary">No hay usuarios</p>
           <button
@@ -141,7 +143,7 @@ export default function UsersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(filteredUsers || []).map((user) => (
-            <div key={user.id} className="card p-6">
+            <div key={user.id} className="card card--space-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
@@ -458,7 +460,7 @@ function UserModal({ user, permissions, rolesData, onClose, onSave }) {
                 const hasAdmin = modulePermsArray.includes(`${module}.admin`);
                 
                 return (
-                  <div key={module} className="card p-3 sm:p-4">
+                  <div key={module} className="card card--space-sm">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
                       <h4 className="font-medium text-foreground capitalize text-sm sm:text-base">{module}</h4>
                       <label className="flex items-center gap-2 cursor-pointer">

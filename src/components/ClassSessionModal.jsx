@@ -157,7 +157,7 @@ export default function ClassSessionModal({ open, sessionId, onClose }) {
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Profesor</dt>
                       <dd className="text-sm font-medium text-slate-100">
-                        {session.stylist_name || "Sin asignar"}
+                        {session.instructor_name || "Sin asignar"}
                       </dd>
                       <dd className="text-xs text-slate-400">
                         Cupo {occupancy.enrolled}/{occupancy.capacity || "—"}

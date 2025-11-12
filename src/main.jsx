@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
 import "./calendar-dark.css";
+import "./styles/arja-theme.css";
 
 // Layout y páginas
 import LandingPage from "./routes/LandingPage.jsx";
@@ -27,7 +28,7 @@ import PaymentFailure from "./routes/PaymentFailure.jsx";
 import { NotificationSystem } from "./components/notifications/NotificationSystem.jsx";
 import DepositsConfig from "./routes/Admin/DepositsConfig.jsx";
 import Commissions from "./routes/Admin/Comissions.jsx";
-import StylistStats from "./routes/Admin/StylistStats.jsx";
+import InstructorStats from "./routes/Admin/InstructorStats.jsx";
 import ConfigPage from "./routes/Admin/ConfigPage.jsx";
 import NotificationsPage from "./routes/NotificationPage.jsx";
 import ProductsPage from "./routes/Stock/ProductsPage.jsx";
@@ -39,6 +40,9 @@ import SuperAdminRoute from "./components/SuperAdminRoute.jsx";
 import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
 import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
 import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
+import InstructorsPage from "./routes/Admin/InstructorsPage.jsx";
+import FeatureGate from "./components/FeatureGate.jsx";
+import { AppProvider } from "./context/AppProvider.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -51,7 +55,11 @@ const router = createBrowserRouter([
   // 👇 TODA la app del tenant cuelga de /:tenantSlug
   {
     path: "/:tenantSlug",
-    element: <AppLayout />,
+    element: (
+      <AppProvider>
+        <AppLayout />
+      </AppProvider>
+    ),
     children: [
       // Redirección del index a dashboard
       {
@@ -122,7 +130,9 @@ const router = createBrowserRouter([
         path: "stock/products",
         element: (
           <PrivateRoute>
-            <ProductsPage />
+            <FeatureGate featureKey="stock">
+              <ProductsPage />
+            </FeatureGate>
           </PrivateRoute>
         ),
       },
@@ -130,7 +140,9 @@ const router = createBrowserRouter([
         path: "invoicing",
         element: (
           <PrivateRoute>
-            <InvoicingPage />
+            <FeatureGate featureKey="invoicing">
+              <InvoicingPage />
+            </FeatureGate>
           </PrivateRoute>
         ),
       },
@@ -151,10 +163,18 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "admin/peluqueros",
+        path: "admin/instructores",
         element: (
           <PrivateRoute roles={["admin"]}>
-            <StylistStats />
+            <InstructorsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/instructores/estadisticas",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <InstructorStats />
           </PrivateRoute>
         ),
       },

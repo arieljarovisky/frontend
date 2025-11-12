@@ -9,10 +9,19 @@ import {
   Shield,
   Users,
   CalendarCheck,
+  Building2,
+  Rocket,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { useQuery } from "../../shared/useQuery.js";
 import { useDebouncedValue } from "../../shared/useDebouncedValue.js";
+
+const FEATURE_KEYS = ["appointments", "stock", "invoicing"];
+const FEATURE_LABELS = {
+  appointments: "Turnos",
+  stock: "Gestión de stock",
+  invoicing: "Facturación",
+};
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos" },
@@ -76,7 +85,7 @@ export default function SuperAdminTenantsPage() {
         ...tenant,
         displayName: tenant.is_system
           ? "Panel Global"
-          : tenant.name || tenant.subdomain || `#${tenant.id}`,
+          : (tenant.name || tenant.subdomain || `#${tenant.id}`).replace(/\u0000+$/g, ""),
       })),
     [tenants]
   );
@@ -334,7 +343,7 @@ function StatusBadge({ status }) {
     status === "active"
       ? "bg-emerald-500/20 text-emerald-500"
       : status === "trial"
-      ? "bg-blue-500/20 text-blue-500"
+      ? "bg-primary/20 text-primary"
       : status === "paused"
       ? "bg-amber-500/20 text-amber-500"
       : status === "suspended"
@@ -509,7 +518,7 @@ function TenantFormModal({ tenant, onClose, onSubmit }) {
                 className="input"
                 value={formData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                placeholder="Ej: Peluquería Centro"
+                placeholder="Ej: Studio Centro"
               />
             </div>
             <div>
@@ -518,7 +527,7 @@ function TenantFormModal({ tenant, onClose, onSubmit }) {
                 className="input"
                 value={formData.subdomain}
                 onChange={(event) => setFormData({ ...formData, subdomain: event.target.value })}
-                placeholder="Ej: pelu-centro"
+                placeholder="Ej: studio-centro"
                 disabled={isEdit}
                 required={!isEdit}
               />
@@ -598,6 +607,29 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState("");
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [businessForm, setBusinessForm] = useState({ business_type_id: "" });
+  const [businessTypes, setBusinessTypes] = useState([]);
+  const [featuresOverrides, setFeaturesOverrides] = useState(() =>
+    FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: null }), {})
+  );
+  const [planCode, setPlanCode] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    apiClient.superAdmin
+      .listBusinessTypes()
+      .then((items) => {
+        if (mounted) {
+          setBusinessTypes(items);
+        }
+      })
+      .catch(() => setBusinessTypes([]));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -607,7 +639,34 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
     apiClient.superAdmin
       .getTenant(tenantId, {}, { signal: controller.signal })
       .then((response) => {
-        setDetail(response?.data || null);
+        const payload = response?.data || null;
+        setDetail(payload);
+        let parsedFeatures = {};
+        if (payload?.business?.features_config) {
+          if (typeof payload.business.features_config === "string") {
+            try {
+              parsedFeatures = JSON.parse(payload.business.features_config);
+            } catch {
+              parsedFeatures = {};
+            }
+          } else {
+            parsedFeatures = payload.business.features_config;
+          }
+        }
+        setBusinessForm({
+          business_type_id: payload?.business?.business_type_id || "",
+        });
+        setFeaturesOverrides(
+          FEATURE_KEYS.reduce((acc, key) => {
+            if (Object.prototype.hasOwnProperty.call(parsedFeatures, key)) {
+              acc[key] = Boolean(parsedFeatures[key]);
+            } else {
+              acc[key] = null;
+            }
+            return acc;
+          }, {})
+        );
+        setPlanCode(payload?.plan?.code || "");
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
@@ -704,21 +763,200 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
               />
             </section>
 
-            {detail.subscription && (
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="border border-border rounded-xl p-4 bg-background-secondary/40 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm text-foreground">Tipo de negocio y funcionalidades</h4>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Tipo de negocio</label>
+                    <select
+                      className="input"
+                      value={businessForm.business_type_id}
+                      onChange={(event) =>
+                        setBusinessForm((prev) => ({
+                          ...prev,
+                          business_type_id: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Seleccionar tipo…</option>
+                      {businessTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name} ({type.code})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-foreground-muted mt-1">
+                      Elegí un tipo de negocio para aplicar sus valores por defecto.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="label">Overrides de funcionalidades</label>
+                    {FEATURE_KEYS.map((key) => {
+                      const planValue = detail.planFeatures?.[key];
+                      const override = featuresOverrides[key];
+                      const value = override === null ? "inherit" : override ? "true" : "false";
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-3 border border-border rounded-lg px-3 py-2 bg-background"
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-foreground">
+                              {FEATURE_LABELS[key]}
+                            </div>
+                            <div className="text-[11px] text-foreground-muted">
+                              Incluido por el plan: <strong>{planValue === false ? "No" : "Sí"}</strong>
+                            </div>
+                          </div>
+                          <select
+                            className="input w-40"
+                            value={value}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              setFeaturesOverrides((prev) => ({
+                                ...prev,
+                                [key]:
+                                  nextValue === "inherit"
+                                    ? null
+                                    : nextValue === "true"
+                                    ? true
+                                    : false,
+                              }));
+                            }}
+                          >
+                            <option value="inherit">Según plan</option>
+                            <option value="true">Forzar habilitado</option>
+                            <option value="false">Forzar deshabilitado</option>
+                          </select>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[11px] text-foreground-muted">
+                      Seleccioná “Según plan” para respetar el plan contratado. Usá los overrides
+                      solo cuando quieras habilitar o deshabilitar manualmente un módulo.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        setSavingBusiness(true);
+                        const payload = {
+                          business_type_id: businessForm.business_type_id
+                            ? Number(businessForm.business_type_id)
+                            : undefined,
+                          features_config: FEATURE_KEYS.reduce((acc, featureKey) => {
+                            const val = featuresOverrides[featureKey];
+                            if (val !== null) acc[featureKey] = val;
+                            return acc;
+                          }, {}),
+                        };
+                        if (payload.features_config && !Object.keys(payload.features_config).length) {
+                          delete payload.features_config;
+                        }
+                        await apiClient.superAdmin.updateTenantBusiness(detail.tenant.id, payload);
+                        toast.success("Configuración de negocio actualizada");
+                      } catch (err) {
+                        toast.error(err?.response?.data?.error || err?.message || "Error al actualizar");
+                      } finally {
+                        setSavingBusiness(false);
+                      }
+                    }}
+                    className="btn-secondary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={savingBusiness}
+                  >
+                    {savingBusiness ? "Guardando…" : "Aplicar cambios"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-xl p-4 bg-background-secondary/40 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Rocket className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm text-foreground">Plan comercial</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-2">
+                    <label className="label">Plan vigente</label>
+                    <select
+                      className="input"
+                      value={planCode}
+                      onChange={(event) => setPlanCode(event.target.value)}
+                    >
+                      <option value="">Seleccionar plan…</option>
+                      {(detail.availablePlans || []).map((plan) => (
+                        <option key={plan.code} value={plan.code}>
+                          {plan.label} — ${plan.amount} {plan.currency}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-foreground-muted">
+                      Plan actual: {detail.plan?.label || "Sin plan"} ({detail.plan?.status || "—"})
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!planCode) {
+                        toast.error("Seleccioná un plan antes de guardar");
+                        return;
+                      }
+                      try {
+                        setSavingPlan(true);
+                        await apiClient.superAdmin.updateTenantPlan(detail.tenant.id, { plan_code: planCode });
+                        toast.success("Plan actualizado correctamente");
+                      } catch (err) {
+                        toast.error(err?.response?.data?.error || err?.message || "Error al actualizar plan");
+                      } finally {
+                        setSavingPlan(false);
+                      }
+                    }}
+                    className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={savingPlan}
+                  >
+                    {savingPlan ? "Guardando…" : "Actualizar plan"}
+                  </button>
+                  {detail.plan ? (
+                    <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground-secondary space-y-1">
+                      <p>
+                        Estado actual: <strong>{detail.plan.status || "—"}</strong>
+                      </p>
+                      {detail.plan.activated_at ? (
+                        <p>
+                          Activado el{" "}
+                          {new Date(detail.plan.activated_at).toLocaleDateString("es-AR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </p>
+                      ) : null}
+                      <p>
+                        Próximo cobro:{" "}
+                        {detail.plan.next_charge_at
+                          ? new Date(detail.plan.next_charge_at).toLocaleString("es-AR")
+                          : "Sin fecha registrada"}
+                      </p>
+                      <p>Payer email: {detail.plan.payer_email || "—"}</p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+
+            {detail.planFeatures ? (
               <InfoCard
-                title="Suscripción"
-                items={[
-                  { label: "Estado", value: detail.subscription?.status || "—" },
-                  { label: "Plan", value: detail.subscription?.plan_id ? `#${detail.subscription.plan_id}` : "—" },
-                  {
-                    label: "Periodo actual",
-                    value: detail.subscription?.current_period_end
-                      ? new Date(detail.subscription.current_period_end).toLocaleDateString("es-AR")
-                      : "—",
-                  },
-                ]}
+                title="Funcionalidades del plan"
+                items={FEATURE_KEYS.map((key) => ({
+                  label: FEATURE_LABELS[key],
+                  value: detail.planFeatures[key] ? "Incluido" : "No incluido",
+                }))}
               />
-            )}
+            ) : null}
           </div>
         )}
       </div>

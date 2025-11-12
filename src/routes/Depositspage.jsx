@@ -117,7 +117,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
           <div className="text-sm text-dark-800">{deposit.service_name || deposit.service}</div>
           <div className="text-xs text-dark-500 flex items-center gap-2 mt-1">
             <Users className="w-3 h-3" />
-            {deposit.stylist_name || deposit.stylist}
+            {deposit.instructor_name || deposit.instructor}
           </div>
         </div>
 
@@ -215,7 +215,7 @@ export default function DepositsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", "expired"
   const [serviceId, setServiceId] = useState("");
-  const [stylistId, setStylistId] = useState("");
+  const [instructorId, setInstructorId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -229,9 +229,9 @@ export default function DepositsPage() {
     []
   );
 
-  const { data: stylists } = useQuery(
+  const { data: instructors } = useQuery(
     async () => {
-      const { data } = await apiClient.get("/api/meta/stylists");
+      const { data } = await apiClient.get("/api/meta/instructors");
       return data.data || [];
     },
     []
@@ -254,7 +254,7 @@ export default function DepositsPage() {
         status: statusFilter,
         ...(search && { search }),
         ...(serviceId && { serviceId }),
-        ...(stylistId && { stylistId }),
+        ...(instructorId && { instructorId }),
         ...(fromDate && { fromDate }),
         ...(toDate && { toDate }),
       };
@@ -262,7 +262,7 @@ export default function DepositsPage() {
       const { data } = await apiClient.get("/api/admin/deposits/pending", { params });
       return data;
     },
-    [includeExpired, refreshKey, page, limit, search, statusFilter, serviceId, stylistId, fromDate, toDate]
+    [includeExpired, refreshKey, page, limit, search, statusFilter, serviceId, instructorId, fromDate, toDate]
   );
 
   const deposits = depositsData?.data || [];
@@ -543,9 +543,9 @@ export default function DepositsPage() {
                   Estilista
                 </label>
                 <select
-                  value={stylistId}
+                  value={instructorId}
                   onChange={(e) => {
-                    setStylistId(e.target.value);
+                    setInstructorId(e.target.value);
                     setPage(1);
                   }}
                   className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
@@ -557,7 +557,7 @@ export default function DepositsPage() {
                   }}
                 >
                   <option value="">Todos</option>
-                  {stylists?.map((s) => (
+                  {instructors?.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
@@ -605,7 +605,7 @@ export default function DepositsPage() {
                   setSearch("");
                   setStatusFilter("all");
                   setServiceId("");
-                  setStylistId("");
+                  setInstructorId("");
                   setFromDate("");
                   setToDate("");
                   setPage(1);

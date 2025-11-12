@@ -7,6 +7,7 @@ import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import { useQuery } from "../shared/useQuery";
+import { useApp } from "../context/UseApp.js";
 import {
   LayoutDashboard,
   Users,
@@ -17,7 +18,7 @@ import {
   X,
   Settings,
   Bell,
-  Scissors,
+  UserRound,
   Building2,
   Package,
   FileText,
@@ -40,7 +41,7 @@ const getNavigationLabels = (businessTypeCode) => {
     salon: {
       appointments: "Turnos",
       classes: "Clases",
-      professionals: "Peluqueros",
+      professionals: "Instructores",
       customers: "Clientes",
       deposits: "Depósitos",
     },
@@ -93,6 +94,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { features } = useApp();
 
   // Obtener tipo de negocio
   const { data: businessTypeData } = useQuery(
@@ -144,12 +146,13 @@ export default function AppLayout() {
     return () => clearInterval(interval);
   }, []);
 
-  const enabledFeatures = useMemo(
+  const featureFlags = useMemo(
     () => ({
       ...(DEFAULT_FEATURES_BY_BUSINESS[businessTypeCode] || {}),
       ...tenantFeatures,
+      ...features,
     }),
-    [tenantFeatures, businessTypeCode]
+    [tenantFeatures, businessTypeCode, features]
   );
 
   const navItems = [
@@ -158,18 +161,32 @@ export default function AppLayout() {
     { to: `${base}/classes`, label: navLabels.classes, icon: GraduationCap, active: pathname.startsWith(`${base}/classes`), featureKey: "classes" },
     { to: `${base}/customers`, label: navLabels.customers, icon: Users, active: pathname.startsWith(`${base}/customers`) },
     { to: `${base}/deposits`, label: navLabels.deposits, icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
-    { to: `${base}/stock/products`, label: "Stock", icon: Package, active: pathname.startsWith(`${base}/stock`), module: "stock" },
-    { to: `${base}/invoicing`, label: "Facturación", icon: FileText, active: pathname.startsWith(`${base}/invoicing`), module: "invoicing" },
+    {
+      to: `${base}/stock/products`,
+      label: "Stock",
+      icon: Package,
+      active: pathname.startsWith(`${base}/stock`),
+      module: "stock",
+      featureKey: "stock",
+    },
+    {
+      to: `${base}/invoicing`,
+      label: "Facturación",
+      icon: FileText,
+      active: pathname.startsWith(`${base}/invoicing`),
+      module: "invoicing",
+      featureKey: "invoicing",
+    },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
     { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
-    { to: `${base}/admin/peluqueros`, label: navLabels.professionals, icon: Scissors, active: pathname.startsWith(`${base}/admin/peluqueros`), adminOnly: true },
+    { to: `${base}/admin/instructores`, label: navLabels.professionals, icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
     { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
   ];
 
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly && user?.role !== "admin") return false;
     
-    if (item.featureKey && !enabledFeatures[item.featureKey]) {
+    if (item.featureKey && featureFlags?.[item.featureKey] === false) {
       return false;
     }
     
@@ -186,7 +203,7 @@ export default function AppLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="arja-shell">
       {/* Overlay para mobile */}
       {sidebarOpen && (
         <div
@@ -196,37 +213,30 @@ export default function AppLayout() {
       )}
 
       {/* Sidebar */}
-      <aside
-        className={`
-          fixed inset-y-0 left-0 z-50
-          w-64 lg:w-72
-          h-screen
-          bg-background border-r border-border
-          flex flex-col
-          transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-      >
+      <aside className={`arja-sidebar ${sidebarOpen ? "is-open" : ""}`}>
         {/* Logo Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
+        <div className="arja-sidebar__section arja-sidebar__header">
           <Logo size="default" showText={true} />
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+            type="button"
+            className="arja-sidebar__close"
             aria-label="Cerrar menú"
           >
-            <X className="w-5 h-5" />
+            <X />
           </button>
         </div>
 
         {/* Tenant Info */}
         {tenant && (
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-light dark:bg-primary/20 border border-primary/30">
-              <Building2 className="w-4 h-4 text-primary flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-foreground-muted leading-none">Sucursal</p>
-                <p className="text-sm font-medium text-foreground truncate">
+          <div className="arja-sidebar__section">
+            <div className="arja-tenant-card">
+              <span className="arja-tenant-card__icon">
+                <Building2 />
+              </span>
+              <div className="arja-tenant-card__body">
+                <p className="arja-tenant-card__title">Sucursal</p>
+                <p className="arja-tenant-card__value">
                   {tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain || `#${tenant.id}`}
                 </p>
               </div>
@@ -235,7 +245,7 @@ export default function AppLayout() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-1">
+        <nav className="arja-nav">
           {filteredNavItems.map((item) => (
             <SidebarNavButton
               key={item.to}
@@ -246,57 +256,58 @@ export default function AppLayout() {
         </nav>
 
         {/* User Section */}
-        <div className="p-4 border-t border-border space-y-3">
+        <div className="arja-sidebar__footer">
           {/* Theme Toggle */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-background-secondary">
-            <span className="text-sm text-foreground-secondary">Tema</span>
+          <div className="arja-sidebar__theme">
+            <span>Tema</span>
             <ThemeToggle />
           </div>
 
           {user?.isSuperAdmin && (
             <Link
               to="/super-admin/tenants"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-all"
+              className="arja-sidebar__superadmin"
             >
-              <Shield className="w-5 h-5" />
-              <span className="text-sm font-medium">Panel del dueño</span>
+              <Shield />
+              <span>Panel del dueño</span>
             </Link>
           )}
 
           {/* User Info */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background-secondary">
-            <div className="w-10 h-10 rounded-lg bg-blue-900 dark:bg-blue-700 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-              <span className="text-sm font-semibold">
+          <div className="arja-user-card">
+            <div className="arja-user-card__avatar">
+              <span>
                 {user?.email?.[0]?.toUpperCase() || "U"}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
+            <div className="arja-user-card__info">
+              <p className="arja-user-card__name">
                 {user?.full_name || user?.email?.split("@")[0]}
               </p>
-              <p className="text-xs text-foreground-muted capitalize">{user?.role}</p>
+              <p className="arja-user-card__role">{user?.role}</p>
             </div>
           </div>
 
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+            className="arja-sidebar__logout"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">Cerrar sesión</span>
+            <LogOut />
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-col min-w-0 lg:ml-72 min-h-screen">
+      <div className="arja-main">
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border">
-          <div className="flex items-center justify-between h-16 px-4">
+        <header className="arja-main__header arja-main__header--mobile">
+          <div className="arja-main__header-inner">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+              type="button"
+              className="arja-main__menu"
               aria-label="Abrir menú"
             >
               <Menu className="w-6 h-6" />
@@ -307,8 +318,8 @@ export default function AppLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1800px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <main className="arja-main__content">
+          <div className="arja-main__content-inner">
             <div className="animate-fade-in">
               <Outlet />
             </div>
@@ -316,14 +327,12 @@ export default function AppLayout() {
         </main>
 
         {/* Footer */}
-        <footer className="py-4 sm:py-6 border-t border-border text-center text-xs sm:text-sm text-foreground-muted bg-background-secondary">
-          <div className="max-w-[1800px] mx-auto px-4 sm:px-6">
-            <p>© {new Date().getFullYear()} — Agendly ERP</p>
-            <p className="text-[10px] sm:text-xs text-foreground-muted mt-1">
-              Sistema de Gestión v2.0{" "}
-              {tenant ? `• ${tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain}` : ""}
-            </p>
-          </div>
+        <footer className="arja-main__footer">
+          © {new Date().getFullYear()} — ARJA ERP
+          <small>
+            Sistema de Gestión v2.0{" "}
+            {tenant ? `• ${tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain}` : ""}
+          </small>
         </footer>
       </div>
     </div>
@@ -345,24 +354,14 @@ function SidebarNavButton({ to, label, icon: Icon, active, onClick, badge, modul
     <NavLink
       to={to}
       onClick={onClick}
-      className={`
-        relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-        ${active
-          ? "bg-blue-900 dark:bg-blue-700 text-white shadow-md"
-          : "text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
-        }
-      `}
+      className={`arja-nav-link ${active ? "is-active" : ""}`}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      <span className="flex-1">{label}</span>
+      <Icon />
+      <span>{label}</span>
       {badge && (
-        <span className="ml-auto w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold shadow-md">
+        <span className="arja-nav-link__badge">
           {badge > 9 ? '9+' : badge}
         </span>
-      )}
-      {/* Indicador activo */}
-      {active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
       )}
     </NavLink>
   );

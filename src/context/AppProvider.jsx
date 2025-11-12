@@ -23,7 +23,7 @@ export const AppContext = createContext(null);
 export function AppProvider({ children, pollMs = 15000 }) {
   // --- Meta ---
   const [services, setServices] = useState([]);
-  const [stylists, setStylists] = useState([]);
+  const [instructors, setInstructors] = useState([]);
   const [metaLoading, setMetaLoading] = useState(true);
   const [metaError, setMetaError] = useState("");
 
@@ -38,11 +38,14 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // --- Booking form ---
   const [booking, setBooking] = useState({
     serviceId: "",
-    stylistId: "",
+    instructorId: "",
     date: "",
     selectedSlot: "",
     customerName: "",
     customerPhone: "",
+    repeatEnabled: false,
+    repeatCount: 4,
+    repeatUntil: "",
   });
   const updateBooking = (patch) => setBooking((b) => ({ ...b, ...patch }));
 
@@ -82,6 +85,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // --- Tenant features ---
   const [tenantInfo, setTenantInfo] = useState(null);
   const [features, setFeatures] = useState({});
+  const [featuresLoading, setFeaturesLoading] = useState(false);
   const classesEnabled = useMemo(() => features?.classes !== false, [features]);
 
   // ============================================
@@ -130,11 +134,11 @@ export function AppProvider({ children, pollMs = 15000 }) {
 
         const [srv, sty] = await Promise.all([
           apiClient.listServices(),
-          apiClient.listStylists(),
+          apiClient.listInstructors(),
         ]);
 
         setServices(srv);
-        setStylists(sty);
+        setInstructors(sty);
       } catch (e) {
         console.error("❌ Error cargando metadata:", e);
         setMetaError(String(e.message || e));
@@ -147,35 +151,49 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // ============================================
   // 🏢 Cargar información del tenant (features)
   // ============================================
-  useEffect(() => {
-    (async () => {
-      try {
-        const info = await apiClient.getTenantBusinessInfo();
-        setTenantInfo(info);
-        const raw = info?.features_config ?? info?.featuresConfig;
-        let parsed = {};
-        if (typeof raw === "string") {
-          try {
-            parsed = JSON.parse(raw);
-          } catch {
-            parsed = {};
-          }
-        } else if (typeof raw === "object" && raw != null) {
-          parsed = raw;
+  const refreshFeatures = useCallback(async () => {
+    setFeaturesLoading(true);
+    try {
+      const info = await apiClient.getTenantBusinessInfo();
+      setTenantInfo(info);
+      const raw = info?.features_config ?? info?.featuresConfig;
+      let parsed = {};
+      if (typeof raw === "string") {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          parsed = {};
         }
-        const defaults = BUSINESS_TYPE_DEFAULT_FEATURES[info?.code] || {};
-        setFeatures({
-          ...defaults,
-          ...parsed,
-        });
-      } catch (e) {
-        console.warn("⚠️ [AppProvider] No se pudo obtener features del tenant:", e?.message || e);
-        setFeatures((prev) =>
-          Object.keys(prev || {}).length ? prev : { classes: false }
-        );
+      } else if (typeof raw === "object" && raw != null) {
+        parsed = raw;
       }
-    })();
+      const defaults = BUSINESS_TYPE_DEFAULT_FEATURES[info?.code] || {};
+      const planFeatures = info?.plan?.features || {};
+      const merged = {
+        ...defaults,
+        ...parsed,
+      };
+      Object.entries(planFeatures).forEach(([key, value]) => {
+        if (value === false) {
+          merged[key] = false;
+        } else if (value === true && merged[key] === undefined) {
+          merged[key] = true;
+        }
+      });
+      setFeatures(merged);
+    } catch (e) {
+      console.warn("⚠️ [AppProvider] No se pudo obtener features del tenant:", e?.message || e);
+      setFeatures((prev) =>
+        Object.keys(prev || {}).length ? prev : { classes: false }
+      );
+    } finally {
+      setFeaturesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshFeatures();
+  }, [refreshFeatures]);
 
   // ============================================
   // 📅 Cargar eventos — función ESTABLE
@@ -218,8 +236,8 @@ export function AppProvider({ children, pollMs = 15000 }) {
           ...session,
           eventType: "class_session",
           session_id: session.id,
-          stylist_id: session.stylist_id,
-          stylist_name: session.stylist_name,
+          instructor_id: session.instructor_id,
+          instructor_name: session.instructor_name,
           enrolled_count: session.enrolled_count ?? 0,
           capacity_max: session.capacity_max ?? null,
         },
@@ -262,8 +280,8 @@ export function AppProvider({ children, pollMs = 15000 }) {
   // 🔍 Cargar disponibilidad
   // ============================================
   const loadAvailability = useCallback(async () => {
-    const { serviceId, stylistId, date } = booking;
-    if (!serviceId || !stylistId || !date) return;
+    const { serviceId, instructorId, date } = booking;
+    if (!serviceId || !instructorId || !date) return;
 
     const selectedDate = new Date(date + "T00:00:00");
     const today = new Date();
@@ -284,7 +302,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
 
       const resp = await apiClient.getAvailability({
         serviceId,
-        stylistId,
+        instructorId,
         date,
         stepMin: 20,
       });
@@ -335,13 +353,20 @@ export function AppProvider({ children, pollMs = 15000 }) {
       const customerPhone = overrideData.customerPhone || booking.customerPhone;
       const customerName =
         overrideData.customerName !== undefined ? overrideData.customerName : booking.customerName;
-      const { selectedSlot, serviceId, stylistId } = booking;
+      const repeatEnabled =
+        overrideData.repeatEnabled !== undefined ? overrideData.repeatEnabled : booking.repeatEnabled;
+      const repeatCount =
+        overrideData.repeatCount !== undefined ? overrideData.repeatCount : booking.repeatCount;
+      const repeatUntil =
+        overrideData.repeatUntil !== undefined ? overrideData.repeatUntil : booking.repeatUntil;
+
+      const { selectedSlot, serviceId, instructorId } = booking;
 
       if (!customerPhone) {
         setBookingSave({ saving: false, ok: false, error: "⚠️ Ingresá tu teléfono de WhatsApp" });
         return;
       }
-      if (!selectedSlot || !serviceId || !stylistId) {
+      if (!selectedSlot || !serviceId || !instructorId) {
         setBookingSave({
           saving: false,
           ok: false,
@@ -366,24 +391,43 @@ export function AppProvider({ children, pollMs = 15000 }) {
         const durationMin = srv?.duration_min ?? srv?.durationMin ?? undefined;
         const startsAt = toLocalMySQL(selectedSlot);
 
-        const payload = {
+        const basePayload = {
           customerPhone: customerPhone.trim(),
           customerName: customerName ? customerName.trim() : undefined,
-          stylistId: Number(stylistId),
+          instructorId: Number(instructorId),
           serviceId: Number(serviceId),
           startsAt,
           durationMin,
           status: "scheduled",
         };
 
-        const res = await apiClient.createAppointment(payload);
-        if (!res?.ok && !res?.id) throw new Error(res?.error || "No se pudo crear el turno");
+        if (repeatEnabled) {
+          const repeat = { frequency: "weekly", interval: 1 };
+          if (repeatUntil) {
+            repeat.until = repeatUntil;
+          } else {
+            const numericCount = Number.parseInt(repeatCount, 10);
+            repeat.count = Number.isFinite(numericCount) && numericCount > 1 ? numericCount : 4;
+          }
+
+          const res = await apiClient.createRecurringAppointments({
+            ...basePayload,
+            repeat,
+          });
+
+          if (!res?.ok) throw new Error(res?.error || "No se pudo crear la serie de turnos");
+        } else {
+          const res = await apiClient.createAppointment(basePayload);
+          if (!res?.ok && !res?.id) throw new Error(res?.error || "No se pudo crear el turno");
+        }
 
         setBookingSave({ saving: false, ok: true, error: "" });
-        await loadEvents(); // estable
+        await loadEvents();
         setTimeout(() => setBookingSave({ saving: false, ok: false, error: "" }), 3000);
       } catch (e) {
-        setBookingSave({ saving: false, ok: false, error: String(e.message || e) });
+        const message =
+          e?.response?.data?.error || e?.message || "No se pudo confirmar el turno. Verificá la cuota.";
+        setBookingSave({ saving: false, ok: false, error: message });
       }
     },
     [booking, services, toLocalMySQL, loadEvents]
@@ -397,11 +441,15 @@ export function AppProvider({ children, pollMs = 15000 }) {
           startsAt: patch.startsAt ? toLocalMySQL(patch.startsAt) : undefined,
           endsAt: patch.endsAt ? toLocalMySQL(patch.endsAt) : undefined,
         };
+        if (patch.applySeries) {
+          body.applySeries = patch.applySeries;
+        }
         await apiClient.updateAppointment(id, body);
         await loadEvents();
         return { ok: true };
       } catch (e) {
-        return { ok: false, error: String(e.message || e) };
+        const message = e?.response?.data?.error || String(e.message || e);
+        return { ok: false, error: message };
       }
     },
     [toLocalMySQL, loadEvents]
@@ -414,7 +462,22 @@ export function AppProvider({ children, pollMs = 15000 }) {
         await loadEvents();
         return { ok: true };
       } catch (e) {
-        return { ok: false, error: String(e.message || e) };
+        const message = e?.response?.data?.error || String(e.message || e);
+        return { ok: false, error: message };
+      }
+    },
+    [loadEvents]
+  );
+
+  const cancelAppointmentSeries = useCallback(
+    async (seriesId, options = {}) => {
+      try {
+        const data = await apiClient.cancelAppointmentSeries(seriesId, options);
+        await loadEvents();
+        return { ok: true, data };
+      } catch (e) {
+        const message = e?.response?.data?.error || String(e.message || e);
+        return { ok: false, error: message };
       }
     },
     [loadEvents]
@@ -427,7 +490,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
     () => ({
       // Meta
       services,
-      stylists,
+      instructors,
       metaLoading,
       metaError,
       // Booking + availability
@@ -446,14 +509,17 @@ export function AppProvider({ children, pollMs = 15000 }) {
       loadEvents,
       updateAppointment,
       deleteAppointment,
+      cancelAppointmentSeries,
       // Tenant features
       tenantInfo,
       features,
+      featuresLoading,
       classesEnabled,
+      refreshFeatures,
     }),
     [
       services,
-      stylists,
+      instructors,
       metaLoading,
       metaError,
       booking,
@@ -468,10 +534,13 @@ export function AppProvider({ children, pollMs = 15000 }) {
       loadEvents,
       updateAppointment,
       deleteAppointment,
+      cancelAppointmentSeries,
       setRangeSafe,
       tenantInfo,
       features,
+      featuresLoading,
       classesEnabled,
+      refreshFeatures,
     ]
   );
 

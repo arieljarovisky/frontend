@@ -66,7 +66,7 @@ export default function StatusControl({ appt, onReload }) {
         <span className={`px-2 py-1 rounded-full text-xs
           ${localStatus==='scheduled' ? 'bg-green-100 text-green-700' :
             localStatus==='pending_deposit' ? 'bg-amber-100 text-amber-700' :
-            localStatus==='completed' ? 'bg-blue-100 text-blue-700' :
+            localStatus==='completed' ? 'bg-primary/10 text-primary' :
             'bg-gray-100 text-gray-600'}`}>
           {LABELS[localStatus] || localStatus}
         </span>
@@ -103,7 +103,7 @@ export default function StatusControl({ appt, onReload }) {
         {canComplete && (
           <button disabled={pending || localStatus==='completed'} onClick={() => updateStatus("completed")}
                   className={`px-3 py-1.5 rounded-lg text-white text-sm disabled:opacity-50
-                    ${localStatus==='completed' ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                    ${localStatus==='completed' ? 'bg-primary/60' : 'bg-primary hover:bg-primary-hover'}`}>
             {localStatus === "completed" ? "Completado ✓" : "Marcar como completado"}
           </button>
         )}

@@ -1,7 +1,7 @@
-// src/components/StylistSelect.jsx - Versión mejorada modo oscuro
+// src/components/InstructorSelect.jsx - Versión mejorada modo oscuro
 import { User } from "lucide-react";
 
-export default function StylistSelect({ stylists, value, onChange }) {
+export default function InstructorSelect({ instructors, value, onChange }) {
   return (
     <div className="relative">
       <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -18,8 +18,8 @@ export default function StylistSelect({ stylists, value, onChange }) {
           backgroundSize: '1.25rem',
         }}
       >
-        <option value="" disabled>Elegí peluquero/a</option>
-        {stylists.map((st) => (
+        <option value="" disabled>Elegí instructor/a</option>
+        {instructors.map((st) => (
           <option key={st.id} value={st.id}>
             {st.name}
           </option>

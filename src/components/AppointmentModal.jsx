@@ -13,6 +13,8 @@ import {
   CalendarClock,
   RefreshCw,
   AlertTriangle,
+  Repeat,
+  ShieldAlert,
 } from "lucide-react";
 
 const CLASS_STATUS_STYLES = {
@@ -66,7 +68,13 @@ export default function AppointmentModal({ open, onClose, event }) {
     return saved ? JSON.parse(saved) : true;
   });
 
-  const { services = [], stylists = [], updateAppointment, deleteAppointment } = useApp();
+  const {
+    services = [],
+    instructors = [],
+    updateAppointment,
+    deleteAppointment,
+    cancelAppointmentSeries,
+  } = useApp();
   const a = event?.extendedProps || {};
   const eventType = a.eventType || "appointment";
   const isClassSession = eventType === "class_session";
@@ -88,7 +96,7 @@ export default function AppointmentModal({ open, onClose, event }) {
       customerName: _a.customer_name || "",
       customerPhone: _a.phone_e164 || _a.customer_phone || "",
       serviceId: _a.service_id || _a.serviceId || "",
-      stylistId: _a.stylist_id || _a.stylistId || "",
+      instructorId: _a.instructor_id || _a.instructorId || "",
       startsLocal: isoToLocalInput(event?.start || _a.starts_at || _a.startsAt),
       status: _a.status || "scheduled",
     };
@@ -109,6 +117,10 @@ export default function AppointmentModal({ open, onClose, event }) {
   const [classDetail, setClassDetail] = useState(null);
   const [classLoading, setClassLoading] = useState(false);
   const [classError, setClassError] = useState("");
+
+  const seriesId = a.series_id || a.seriesId || null;
+  const isSeries = Boolean(seriesId);
+  const [applySeries, setApplySeries] = useState(isSeries ? "future" : "none");
 
   const fetchClassDetail = useCallback(async () => {
     if (!classSessionId) return;
@@ -147,10 +159,12 @@ export default function AppointmentModal({ open, onClose, event }) {
       customerName: _a.customer_name || "",
       customerPhone: _a.phone_e164 || _a.customer_phone || "",
       serviceId: _a.service_id || _a.serviceId || "",
-      stylistId: _a.stylist_id || _a.stylistId || "",
+      instructorId: _a.instructor_id || _a.instructorId || "",
       startsLocal: localInput,
       status: _a.status || "scheduled",
     });
+
+    setApplySeries(seriesId ? "future" : "none");
 
     const name = _a.customer_name ? ` ${_a.customer_name}` : "";
     setReprogUI({
@@ -199,15 +213,19 @@ export default function AppointmentModal({ open, onClose, event }) {
         endsAt = `${formatDateToLocalInput(d)}:00`;
       }
 
-      await updateAppointment(a.id, {
+      const result = await updateAppointment(a.id, {
         customerName: form.customerName || null,
         customerPhone: form.customerPhone || null,
         serviceId: Number(form.serviceId) || null,
-        stylistId: Number(form.stylistId) || null,
+        instructorId: Number(form.instructorId) || null,
         startsAt,
         endsAt,
         status: form.status,
+        applySeries: seriesId ? applySeries : undefined,
       });
+      if (!result?.ok) {
+        throw new Error(result?.error || "No se pudo guardar el turno");
+      }
 
       toast.success("Turno actualizado correctamente", {
         description: `Cliente: ${form.customerName || "Sin nombre"}`,
@@ -321,12 +339,41 @@ export default function AppointmentModal({ open, onClose, event }) {
       },
     });
 
+  const askCancelSeries = () => {
+    if (!seriesId) return;
+    openConfirm({
+      title: "Cancelar serie completa",
+      message:
+        "¿Querés cancelar todos los turnos pendientes de esta serie? Los turnos futuros se marcarán como cancelados.",
+      confirmText: "Cancelar serie",
+      onConfirm: async () => {
+        closeConfirm();
+        setSaving(true);
+        try {
+          const result = await cancelAppointmentSeries(seriesId, { includePast: false, notify: true });
+          if (!result?.ok) throw new Error(result?.error || "No se pudo cancelar la serie");
+          toast.success("Serie cancelada", {
+            description: "Los turnos futuros fueron cancelados y el cliente será notificado.",
+          });
+          setMsg("Serie cancelada correctamente.");
+          onClose?.();
+        } catch (err) {
+          const message = err?.message || "Error al cancelar la serie.";
+          toast.error("Error al cancelar la serie", { description: message });
+          setError(message);
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
+  };
+
   const renderClassContent = () => {
     const detail =
       classDetail || {
         id: classSessionId,
         activity_type: a.activity_type,
-        stylist_name: a.stylist_name,
+        instructor_name: a.instructor_name,
         starts_at: a.starts_at,
         ends_at: a.ends_at,
         notes: a.notes,
@@ -357,45 +404,41 @@ export default function AppointmentModal({ open, onClose, event }) {
 
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+        className="arja-modal"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose?.();
         }}
       >
-        <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border border-indigo-500/20 bg-slate-950 shadow-2xl">
-          <header className="flex items-start justify-between gap-4 border-b border-indigo-500/10 px-6 py-5">
-            <div className="space-y-1">
-              <p className="text-sm text-indigo-300 uppercase tracking-wide font-semibold">Detalle de clase</p>
-              <h2 className="text-2xl font-bold text-white">{detail.activity_type || "Clase grupal"}</h2>
+        <div className="arja-modal__panel">
+          <header className="arja-modal__header">
+            <div>
+              <p className="arja-modal__subtitle">Detalle de clase</p>
+              <h2 className="arja-modal__title">{detail.activity_type || "Clase grupal"}</h2>
               {detail.status === "cancelled" && (
-                <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200">
-                  <AlertTriangle className="h-4 w-4" />
+                <div className="badge badge-danger">
+                  <AlertTriangle />
                   Clase cancelada
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="arja-modal__header-actions">
               <button
                 type="button"
                 onClick={fetchClassDetail}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-xs text-slate-200 hover:border-indigo-500/40 hover:text-white transition disabled:opacity-50"
+                className="btn-secondary btn--compact"
                 disabled={classLoading}
               >
-                <RefreshCw className={`h-4 w-4 ${classLoading ? "animate-spin" : ""}`} />
+                <RefreshCw className={classLoading ? "animate-spin" : ""} />
                 Actualizar
               </button>
-              <button
-                type="button"
-                onClick={() => onClose?.()}
-                className="rounded-full border border-slate-700/60 bg-slate-900/60 p-2 text-slate-300 hover:border-indigo-500/40 hover:text-white transition"
-              >
-                <X className="h-5 w-5" />
+              <button type="button" onClick={() => onClose?.()} className="arja-modal__close">
+                <X />
               </button>
             </div>
           </header>
 
           {classError && (
-            <div className="px-6 py-4 text-sm text-red-200 border-b border-red-500/20 bg-red-500/10">{classError}</div>
+            <div className="arja-modal__alert arja-modal__alert--danger">{classError}</div>
           )}
 
           <div className="grid gap-6 overflow-y-auto px-6 py-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
@@ -413,7 +456,7 @@ export default function AppointmentModal({ open, onClose, event }) {
                     <Users className="mt-1 h-5 w-5 text-indigo-300" />
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-indigo-200/80">Profesor</dt>
-                      <dd className="text-sm font-medium">{detail.stylist_name || "Sin asignar"}</dd>
+                      <dd className="text-sm font-medium">{detail.instructor_name || "Sin asignar"}</dd>
                       <dd className="text-xs text-slate-400">
                         Cupo {occupied}/{capacity}
                       </dd>
@@ -551,18 +594,24 @@ export default function AppointmentModal({ open, onClose, event }) {
             </span>
           )}
           {mpPaymentId && (
-            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 border border-blue-200">
+            <span className="px-2 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">
               MP ID: {mpPaymentId}
             </span>
           )}
           {mpStatus && (
-            <span className="px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-700 border border-indigo-200">
+            <span className="px-2 py-1 rounded-full text-xs bg-primary-light text-primary border border-primary/20">
               MP: {String(mpStatus).toUpperCase()}
             </span>
           )}
           {!isDepositPaid && (
             <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 border border-amber-200">
               ⏳ Seña pendiente
+            </span>
+          )}
+          {isSeries && (
+            <span className="px-2 py-1 rounded-full text-xs bg-primary-light text-primary border border-primary/20 flex items-center gap-1">
+              <Repeat className="w-3 h-3" />
+              Serie semanal
             </span>
           )}
         </div>
@@ -599,10 +648,10 @@ export default function AppointmentModal({ open, onClose, event }) {
             </select>
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1 ${textColor}`}>Peluquero/a</label>
-            <select className={`w-full rounded-xl border px-3 py-2 text-sm ${inputBg}`} value={form.stylistId} onChange={onChange("stylistId")}>
+            <label className={`block text-sm font-medium mb-1 ${textColor}`}>Instructor/a</label>
+            <select className={`w-full rounded-xl border px-3 py-2 text-sm ${inputBg}`} value={form.instructorId} onChange={onChange("instructorId")}>
               <option value="">Seleccioná…</option>
-              {(stylists || []).map((s) => (
+              {(instructors || []).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -631,6 +680,24 @@ export default function AppointmentModal({ open, onClose, event }) {
               <option value="cancelled">Cancelado</option>
             </select>
           </div>
+
+          {isSeries && (
+            <div className="col-span-2">
+              <label className={`block text-sm font-medium mb-1 ${textColor}`}>Aplicar cambios a</label>
+              <select
+                className={`w-full rounded-xl border px-3 py-2 text-sm ${inputBg}`}
+                value={applySeries}
+                onChange={(e) => setApplySeries(e.target.value)}
+              >
+                <option value="none">Solo este turno</option>
+                <option value="future">Este y los siguientes</option>
+                <option value="all">Todos los turnos de la serie</option>
+              </select>
+              <p className={`mt-2 text-xs ${subtextColor}`}>
+                Elegí si querés modificar únicamente este turno o toda la serie recurrente.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Reprogramación */}
@@ -697,6 +764,16 @@ export default function AppointmentModal({ open, onClose, event }) {
 
         {/* Footer */}
         <div className="flex flex-wrap gap-2 pt-4 border-t" style={{ borderColor: darkMode ? "#334155" : "#e5e7eb" }}>
+          {isSeries && (
+            <button
+              onClick={askCancelSeries}
+              disabled={saving}
+              className="px-3 py-2 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 text-sm flex items-center gap-2"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Cancelar serie
+            </button>
+          )}
           <button
             onClick={askDelete}
             disabled={saving}

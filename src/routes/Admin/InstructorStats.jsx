@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  TrendingUp, Scissors, Coins, PiggyBank, Download,
+  TrendingUp, CalendarCheck, Coins, PiggyBank, Download,
   Calendar, Loader2, AlertTriangle, Save, RotateCw, Clock, X, Trash2
 } from "lucide-react";
 import { apiClient } from "../../api/client";
@@ -43,7 +43,7 @@ const Btn = ({ children, className = "", ...props }) => (
 );
 
 /* ===== Editor horarios / francos ===== */
-function WorkingHoursEditor({ stylistId }) {
+function WorkingHoursEditor({ instructorId }) {
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -51,10 +51,10 @@ function WorkingHoursEditor({ stylistId }) {
   const week = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const load = useCallback(async () => {
-    if (!stylistId) return;
+    if (!instructorId) return;
     setErr("");
     try {
-      const server = await apiClient.getWorkingHours({ stylistId });
+      const server = await apiClient.getWorkingHours({ instructorId });
       const byWd = new Map((server || []).map(x => [Number(x.weekday), x]));
       const full = Array.from({ length: 7 }, (_, d) => {
         const r = byWd.get(d);
@@ -69,17 +69,17 @@ function WorkingHoursEditor({ stylistId }) {
       setErr("No pude cargar horarios.");
       console.error(e);
     }
-  }, [stylistId]);
+  }, [instructorId]);
 
   const loadBlocks = useCallback(async () => {
-    if (!stylistId) return;
+    if (!instructorId) return;
     try {
       const today = new Date();
       const futureDate = new Date();
       futureDate.setDate(today.getDate() + 90); // próximos 90 días
       
       const res = await apiClient.listDaysOff({
-        stylistId,
+        instructorId,
         from: today.toISOString().split('T')[0],
         to: futureDate.toISOString().split('T')[0],
       });
@@ -87,7 +87,7 @@ function WorkingHoursEditor({ stylistId }) {
     } catch (e) {
       console.error("Error cargando bloqueos:", e);
     }
-  }, [stylistId]);
+  }, [instructorId]);
 
   useEffect(() => { 
     load();
@@ -104,7 +104,7 @@ function WorkingHoursEditor({ stylistId }) {
   };
 
   const save = async () => {
-    if (!stylistId) return;
+    if (!instructorId) return;
     setSaving(true);
     setErr("");
     try {
@@ -119,7 +119,7 @@ function WorkingHoursEditor({ stylistId }) {
         };
       });
 
-      await apiClient.saveWorkingHours({ stylistId, hours });
+      await apiClient.saveWorkingHours({ instructorId, hours });
       toast.success("Horarios guardados correctamente");
     } catch (e) {
       setErr(e?.response?.data?.error || e.message || "No pude guardar horarios.");
@@ -142,7 +142,7 @@ function WorkingHoursEditor({ stylistId }) {
     }
   };
 
-  if (!stylistId) return null;
+  if (!instructorId) return null;
 
   return (
     <div className="mt-10 space-y-6">
@@ -207,7 +207,7 @@ function WorkingHoursEditor({ stylistId }) {
 
       {/* Bloqueos de tiempo */}
       <TimeBlocksSection
-        stylistId={stylistId}
+        instructorId={instructorId}
         blocks={blocks}
         onRefresh={loadBlocks}
         onDelete={deleteBlock}
@@ -217,7 +217,7 @@ function WorkingHoursEditor({ stylistId }) {
 }
 
 /* ===== Sección de bloqueos de tiempo ===== */
-function TimeBlocksSection({ stylistId, blocks, onRefresh, onDelete }) {
+function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: "",
@@ -246,7 +246,7 @@ function TimeBlocksSection({ stylistId, blocks, onRefresh, onDelete }) {
       const ends_at = `${formData.date}T${formData.endTime}:00`;
 
       await apiClient.addDayOff({
-        stylistId,
+        instructorId,
         starts_at,
         ends_at,
         reason: formData.reason || "Bloqueo de tiempo",
@@ -411,9 +411,9 @@ function BlockItem({ block, onDelete }) {
         <div className={`p-2 rounded-lg ${
           isToday 
             ? "bg-amber-500/20 border border-amber-500/30" 
-            : "bg-blue-500/20 border border-blue-500/30"
+            : "bg-primary/20 border border-primary/30"
         }`}>
-          <Clock className={`size-4 ${isToday ? "text-amber-400" : "text-blue-400"}`} />
+          <Clock className={`size-4 ${isToday ? "text-amber-400" : "text-primary"}`} />
         </div>
         <div>
           <div className="flex items-center gap-2">
@@ -452,8 +452,8 @@ function BlockItem({ block, onDelete }) {
 }
 
 /* ===== Página principal ===== */
-export default function StylistStatsPage() {
-  const [stylists, setStylists] = useState([]);
+export default function InstructorStatsPage() {
+  const [instructors, setInstructors] = useState([]);
   const [selected, setSelected] = useState("");
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -470,9 +470,9 @@ export default function StylistStatsPage() {
     setLoading(true);
     setErr("");
     try {
-       const data = await apiClient.getStylistStatsRange({ stylistId: selected, from, to });
+       const data = await apiClient.getInstructorStatsRange({ instructorId: selected, from, to });
       setStats({
-        total_cortes: data.total_cortes ?? 0,
+        totalReservas: data.total_reservas ?? data.total_cortes ?? 0,
         monto_total: data.monto_total ?? 0,
         porcentaje: data.porcentaje ?? data.percentage ?? null,
         comision_ganada: data.comision_ganada ?? data.comision ?? 0,
@@ -500,30 +500,30 @@ export default function StylistStatsPage() {
     return () => clearTimeout(timer);
   }, [selected, from, to]);
 
-  // Cargar peluqueros al inicio
+  // Cargar instructores al inicio
   useEffect(() => {
     (async () => {
       try {
         let list = await apiClient.getCommissions();
         if (!Array.isArray(list) || !list.length) {
-          const s = await apiClient.getStylists();
+          const s = await apiClient.getInstructors();
           list = (s || []).map(x => ({
             id: x.id,
             name: x.name,
             percentage: x.percentage ?? x.commission ?? null
           }));
         }
-        setStylists(list);
+        setInstructors(list);
         if (list?.length) setSelected(String(list[0].id));
       } catch (e) {
-        setErr("No pude traer la lista de peluqueros.");
+        setErr("No pude traer la lista de instructores.");
         console.error(e);
       }
     })();
   }, []);
 
-  const stylist = stylists.find(s => String(s.id) === String(selected));
-  const percent = useMemo(() => (stats?.porcentaje ?? stylist?.percentage ?? 0), [stats, stylist]);
+  const instructor = instructors.find(s => String(s.id) === String(selected));
+  const percent = useMemo(() => (stats?.porcentaje ?? instructor?.percentage ?? 0), [stats, instructor]);
 
   const dailySeries = useMemo(() => {
     if (!stats) return [];
@@ -533,9 +533,9 @@ export default function StylistStatsPage() {
       for (const t of stats.turnos) {
         const d = String((t.starts_at || t.date || "").slice(0, 10));
         if (!d) continue;
-        const m = map.get(d) || { date: d, amount: 0, cortes: 0 };
+        const m = map.get(d) || { date: d, amount: 0, reservas: 0 };
         m.amount += Number(t.price_decimal ?? t.amount ?? 0);
-        m.cortes += 1;
+        m.reservas += 1;
         map.set(d, m);
       }
       return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
@@ -563,7 +563,7 @@ export default function StylistStatsPage() {
   const doExport = async () => {
     try {
       let rows = stats?.turnos;
-      if (!rows) rows = await apiClient.getStylistTurns(selected, { from, to });
+      if (!rows) rows = await apiClient.getInstructorTurns(selected, { from, to });
       if (!Array.isArray(rows) || !rows.length) return;
       const mapped = rows.map(t => ({
         fecha: (t.starts_at || "").replace("T", " ").slice(0, 16),
@@ -571,7 +571,7 @@ export default function StylistStatsPage() {
         precio: Number(t.price_decimal ?? 0),
         estado: t.status,
         cliente: t.customer_name ?? "",
-        peluquero: t.stylist_name ?? "",
+        instructor: t.instructor_name ?? "",
       }));
       const blob = new Blob([csv(mapped)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -599,19 +599,19 @@ export default function StylistStatsPage() {
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Estadísticas por Peluquero</h1>
-            <p className="text-zinc-400 mt-1">Cortes, facturación, comisión y configuración de horarios.</p>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Estadísticas por Instructor</h1>
+            <p className="text-zinc-400 mt-1">Clases, facturación, comisión y configuración de horarios.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Selector peluquero */}
+            {/* Selector instructor */}
             <div className="relative">
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
                 className="appearance-none rounded-xl bg-slate-800 border border-white/10 px-3 py-2 pr-8 text-sm"
               >
-                {stylists.map((s) => (
+                {instructors.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} {s.percentage != null ? `(${s.percentage}% comisión)` : ""}
                   </option>
@@ -668,7 +668,7 @@ export default function StylistStatsPage() {
         ) : stats ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPI icon={Scissors} label="Cortes" value={stats?.total_cortes ?? 0} sublabel="Turnos facturables" />
+              <KPI icon={CalendarCheck} label="Reservas" value={stats?.totalReservas ?? 0} sublabel="Eventos facturables" />
               <KPI icon={Coins} label="Monto total" value={money(stats?.monto_total ?? 0)} />
               <KPI icon={TrendingUp} label={`Comisión (${percent}%)`} value={money(stats?.comision_ganada ?? 0)} />
               <KPI icon={PiggyBank} label="Neto para el local" value={money(stats?.neto_local ?? 0)} />
@@ -703,7 +703,7 @@ export default function StylistStatsPage() {
                     <thead className="text-zinc-400">
                       <tr>
                         <th className="text-left py-2 pr-4">Servicio</th>
-                        <th className="text-right py-2 pr-4">Cortes</th>
+                        <th className="text-right py-2 pr-4">Reservas</th>
                         <th className="text-right py-2">Monto</th>
                       </tr>
                     </thead>
@@ -724,7 +724,7 @@ export default function StylistStatsPage() {
             </div>
 
             {/* Editor de horarios / francos / bloqueos */}
-            <WorkingHoursEditor stylistId={selected} />
+            <WorkingHoursEditor instructorId={selected} />
           </>
         ) : (
           <Empty />

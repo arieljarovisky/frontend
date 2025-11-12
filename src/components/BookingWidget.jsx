@@ -2,7 +2,7 @@
 import { useMemo, useEffect, useRef } from "react";
 import { useApp } from "../context/UseApp";
 import ServiceSelect from "./ServiceSelect";
-import StylistSelect from "./StylistSelect";
+import InstructorSelect from "./InstructorSelect";
 import DatePicker from "./DatePicker";
 import SlotGrid from "./SlotGrid";
 import Button from "./ui/Button";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users } from "lucide-react";
+import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat } from "lucide-react";
 import ClassEnrollForm from "./ClassEnrollForm";
 
 function Section({ title, children, right, icon: Icon }) {
@@ -39,7 +39,7 @@ const schema = z.object({
 export default function BookingWidget() {
   const {
     services = [],
-    stylists = [],
+    instructors = [],
     metaLoading,
     metaError,
     booking,
@@ -56,9 +56,9 @@ export default function BookingWidget() {
     [services, booking.serviceId]
   );
   
-  const selectedStylist = useMemo(
-    () => (Array.isArray(stylists) ? stylists : []).find((s) => String(s.id) === String(booking.stylistId)),
-    [stylists, booking.stylistId]
+  const selectedInstructor = useMemo(
+    () => (Array.isArray(instructors) ? instructors : []).find((s) => String(s.id) === String(booking.instructorId)),
+    [instructors, booking.instructorId]
   );
 
   const lastSuccessRef = useRef(false);
@@ -75,8 +75,11 @@ export default function BookingWidget() {
   useEffect(() => {
     if (bookingSave.ok && !lastSuccessRef.current) {
       lastSuccessRef.current = true;
-      toast.success("¡Turno confirmado! 🎉", {
-        description: "Te va a llegar la confirmación por WhatsApp",
+      const wasRecurring = booking.repeatEnabled;
+      toast.success(wasRecurring ? "¡Serie de turnos reservada! 🎉" : "¡Turno confirmado! 🎉", {
+        description: wasRecurring
+          ? "Registramos tus turnos semanales y te enviamos el detalle por WhatsApp."
+          : "Te va a llegar la confirmación por WhatsApp.",
       });
       reset({
         customerName: "",
@@ -86,12 +89,15 @@ export default function BookingWidget() {
         selectedSlot: "",
         customerName: "",
         customerPhone: "",
+        repeatEnabled: false,
+        repeatCount: 4,
+        repeatUntil: "",
       });
     }
     if (!bookingSave.ok && lastSuccessRef.current) {
       lastSuccessRef.current = false;
     }
-  }, [bookingSave.ok, reset, updateBooking]);
+  }, [bookingSave.ok, booking.repeatEnabled, reset, updateBooking]);
 
   useEffect(() => {
     if (bookingSave.error && bookingSave.error !== lastErrorRef.current) {
@@ -113,6 +119,9 @@ export default function BookingWidget() {
       await createAppointment({
         customerName: data.customerName || "",
         customerPhone: data.customerPhone,
+        repeatEnabled: booking.repeatEnabled,
+        repeatCount: booking.repeatCount,
+        repeatUntil: booking.repeatUntil || undefined,
       });
     } catch (error) {
       console.error("❌ Error:", error);
@@ -184,10 +193,10 @@ export default function BookingWidget() {
             value={booking.serviceId} 
             onChange={(v) => updateBooking({ serviceId: v })} 
           />
-          <StylistSelect 
-            stylists={stylists} 
-            value={booking.stylistId} 
-            onChange={(v) => updateBooking({ stylistId: v })} 
+          <InstructorSelect 
+            instructors={instructors} 
+            value={booking.instructorId} 
+            onChange={(v) => updateBooking({ instructorId: v })} 
           />
         </div>
       </Section>
@@ -201,7 +210,7 @@ export default function BookingWidget() {
           />
           <Button
             onClick={loadAvailability}
-            disabled={!booking.serviceId || !booking.stylistId || !booking.date || availability.loading}
+            disabled={!booking.serviceId || !booking.instructorId || !booking.date || availability.loading}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:opacity-50"
           >
             {availability.loading ? (
@@ -269,9 +278,78 @@ export default function BookingWidget() {
             </div>
           </Field>
 
+          <div className="rounded-xl border border-slate-700/40 bg-slate-800/50 px-4 py-4">
+            <label className="flex items-center justify-between text-sm font-medium text-slate-300">
+              <span className="flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-indigo-400" />
+                Repetir este turno todas las semanas
+              </span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500"
+                checked={!!booking.repeatEnabled}
+                onChange={(e) =>
+                  updateBooking({
+                    repeatEnabled: e.target.checked,
+                    repeatCount: e.target.checked ? booking.repeatCount || 4 : booking.repeatCount,
+                  })
+                }
+              />
+            </label>
+
+            {booking.repeatEnabled && (
+              <div className="mt-4 space-y-3 text-sm text-slate-200">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                      Cantidad de turnos
+                    </label>
+                    <input
+                      type="number"
+                      min={2}
+                      max={26}
+                      value={booking.repeatCount ?? 4}
+                      onChange={(e) =>
+                        updateBooking({
+                          repeatCount: e.target.value ? Number(e.target.value) : "",
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Máximo 26 turnos. Si usás fecha límite, se ignora este número.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                      Fecha límite (opcional)
+                    </label>
+                    <input
+                      type="date"
+                      value={booking.repeatUntil || ""}
+                      onChange={(e) =>
+                        updateBooking({
+                          repeatUntil: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Reservaremos todos los turnos hasta este día inclusive.
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-slate-900/60 border border-slate-700/40 px-3 py-2 text-xs text-slate-300 leading-relaxed">
+                  Crearemos turnos semanales con el mismo servicio, profesional y horario. Vas a recibir
+                  un resumen por WhatsApp.
+                </div>
+              </div>
+            )}
+          </div>
+
           <Button
             type="submit"
-            disabled={bookingSave.saving || !booking.selectedSlot || !booking.serviceId || !booking.stylistId}
+            disabled={bookingSave.saving || !booking.selectedSlot || !booking.serviceId || !booking.instructorId}
             className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-700 disabled:to-slate-700 disabled:opacity-50 text-white font-semibold py-4 text-base shadow-lg"
           >
             {bookingSave.saving ? (
@@ -290,7 +368,7 @@ export default function BookingWidget() {
       </Section>
 
       {/* Resumen */}
-      {(selectedService || selectedStylist) && (
+      {(selectedService || selectedInstructor) && (
         <div className="mt-4 px-4 py-3 rounded-xl bg-slate-800/30 border border-slate-700/30">
           <div className="text-xs text-slate-400 mb-2">Resumen de tu reserva:</div>
           <div className="flex flex-wrap gap-4 text-sm">
@@ -301,10 +379,21 @@ export default function BookingWidget() {
                 <span className="text-slate-500">• {selectedService.duration_min}min</span>
               </div>
             )}
-            {selectedStylist && (
+            {selectedInstructor && (
               <div className="flex items-center gap-2">
                 <span className="text-slate-500">Estilista:</span>
-                <span className="font-semibold text-slate-200">{selectedStylist.name}</span>
+                <span className="font-semibold text-slate-200">{selectedInstructor.name}</span>
+              </div>
+            )}
+            {booking.repeatEnabled && (
+              <div className="flex items-center gap-2 text-indigo-300">
+                <Repeat className="w-4 h-4" />
+                <span>
+                  Turno semanal •{" "}
+                  {booking.repeatUntil
+                    ? `Hasta ${booking.repeatUntil}`
+                    : `${booking.repeatCount ?? 4} repeticiones`}
+                </span>
               </div>
             )}
           </div>

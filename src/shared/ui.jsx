@@ -21,18 +21,22 @@ export function SearchInput({ value, onChange, onSubmit, placeholder = "Buscarâ€
         e.preventDefault();
         onSubmit?.(value);
       }}
-      className="relative"
+      className="input-search"
       style={{ width }}
     >
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+      <div className="input-group">
+        <span className="input-group__icon">
+          <Search />
+        </span>
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="input pl-10 pr-24"
+          className="input input--with-icon input--with-icon-right"
         />
-        <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+        <button type="submit" className="input-group__action" aria-label="Buscar">
+          <Search />
+        </button>
       </div>
     </form>
   );

@@ -39,9 +39,9 @@ function hexToRgba(hex, alpha = 0.08) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function buildStylistColorMap(stylists) {
+function buildInstructorColorMap(instructors) {
   const map = {};
-  (stylists || []).forEach((s, idx) => {
+  (instructors || []).forEach((s, idx) => {
     map[s.id] = s.color_hex?.trim() || colorByIndex(idx);
   });
   return map;
@@ -50,14 +50,14 @@ function buildStylistColorMap(stylists) {
 /* =========================
    Adaptador de eventos
 ========================= */
-function useCalendarEvents(events, stylistColors) {
+function useCalendarEvents(events, instructorColors) {
   return useMemo(
     () =>
       (Array.isArray(events) ? events : []).map((ev) => {
         const type = ev.extendedProps?.eventType || "appointment";
         const st = ev.extendedProps?.status;
-        const sid = ev.extendedProps?.stylist_id ?? ev.extendedProps?.stylistId;
-        const baseColor = ev.backgroundColor || ev.extendedProps?.color_hex || stylistColors[sid] || "#6B7280";
+        const sid = ev.extendedProps?.instructor_id ?? ev.extendedProps?.instructorId;
+        const baseColor = ev.backgroundColor || ev.extendedProps?.color_hex || instructorColors[sid] || "#6B7280";
         const baseBorder = ev.borderColor || baseColor;
 
         let bg = baseColor;
@@ -91,24 +91,24 @@ function useCalendarEvents(events, stylistColors) {
           classNames: opacity < 1 ? ["fc-opacity"] : [],
         };
       }),
-    [events, stylistColors]
+    [events, instructorColors]
   );
 }
 
 export default function CalendarView() {
-  const { events, eventsLoading, eventsError, setRange, loadEvents, stylists } = useApp();
-  const [stylistFilter, setStylistFilter] = useState("");
+  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors } = useApp();
+  const [instructorFilter, setInstructorFilter] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const calendarRef = useRef(null);
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
 
-  const stylistColors = useMemo(() => buildStylistColorMap(stylists), [stylists]);
+  const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
 
   const resources = useMemo(() => {
     const map = new Map();
-    (stylists || []).forEach((s, idx) => {
+    (instructors || []).forEach((s, idx) => {
       map.set(String(s.id), {
         id: String(s.id),
         title: s.name,
@@ -119,7 +119,7 @@ export default function CalendarView() {
     let needsUnassigned = false;
     (events || []).forEach((ev) => {
       const ep = ev.extendedProps || {};
-      const sid = ep.stylist_id ?? ep.stylistId;
+      const sid = ep.instructor_id ?? ep.instructorId;
       if (!sid) needsUnassigned = true;
     });
 
@@ -132,20 +132,20 @@ export default function CalendarView() {
     }
 
     return Array.from(map.values());
-  }, [stylists, events]);
+  }, [instructors, events]);
   const filtered = useMemo(() => {
     let list = Array.isArray(events) ? events : [];
-    if (stylistFilter) {
+    if (instructorFilter) {
       list = list.filter(
-        (ev) => String(ev?.extendedProps?.stylist_id ?? ev?.extendedProps?.stylistId) === String(stylistFilter)
+        (ev) => String(ev?.extendedProps?.instructor_id ?? ev?.extendedProps?.instructorId) === String(instructorFilter)
       );
     }
     if (hideCancelled) {
       list = list.filter((ev) => (ev?.extendedProps?.status || "") !== "cancelled");
     }
     return list;
-  }, [events, stylistFilter, hideCancelled]);
-  const fullEvents = useCalendarEvents(filtered, stylistColors);
+  }, [events, instructorFilter, hideCancelled]);
+  const fullEvents = useCalendarEvents(filtered, instructorColors);
 
   // Rango sin desmontar
   const handleDatesSet = useCallback(
@@ -178,7 +178,7 @@ export default function CalendarView() {
     setModalOpen(true);
   }, []);
   useEffect(() => {
-    const elId = "stylist-colors";
+    const elId = "instructor-colors";
     let styleEl = document.getElementById(elId);
     if (!styleEl) {
       styleEl = document.createElement("style");
@@ -187,10 +187,10 @@ export default function CalendarView() {
     }
 
     // armamos mapa id->color
-    const map = buildStylistColorMap(stylists);
+    const map = buildInstructorColorMap(instructors);
     const rules = Object.entries(map).map(([id, hex]) => {
       const light = hexToRgba(hex, 0.07); // intensidad del fondo
-      // Header y cuerpo de la columna del resource (peluquero)
+      // Header y cuerpo de la columna del resource (instructor)
       return `
       /* header de la columna */
       .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
@@ -205,7 +205,7 @@ export default function CalendarView() {
 
     styleEl.textContent = rules;
     return () => { /* si querés limpiar en unmount, podés borrar styleEl */ };
-  }, [stylists]);
+  }, [instructors]);
 
   // Render elegante del evento
   const eventContent = useCallback((arg) => {
@@ -220,19 +220,19 @@ export default function CalendarView() {
       <div className="flex flex-col gap-1 p-1">
         <div className="text-xs font-semibold leading-tight line-clamp-1">{arg.event.title}</div>
         <div className="flex flex-wrap gap-1">
-          {ep.stylist_name && (
+          {ep.instructor_name && (
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
               style={{
-                backgroundColor: stylistColors[ep.stylist_id] || "#0959c9ff",
+                backgroundColor: instructorColors[ep.instructor_id] || "#0959c9ff",
                 opacity: 0.9,
               }}
             >
-              {ep.stylist_name}
+              {ep.instructor_name}
             </span>
           )}
           {occupancy && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-50">
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-[rgba(106,142,184,0.18)] text-accent">
               {occupancy} alumnos
             </span>
           )}
@@ -243,7 +243,7 @@ export default function CalendarView() {
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-100">Seña pagada</span>
           )}
           {status === "cancelled" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-500/25 text-slate-300">Cancelado</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-[rgba(154,160,166,0.2)] text-accent">Cancelado</span>
           )}
         </div>
       </div>
@@ -271,13 +271,13 @@ export default function CalendarView() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 animate-gradient-x" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#060d18] via-[#0c1726] to-[#132b45]" />
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-10">
-        <div className="bg-slate-900/60 backdrop-blur-2xl border border-indigo-500/10 shadow-2xl rounded-3xl p-6 transition-all duration-500 hover:border-indigo-400/30 hover:shadow-indigo-500/20">
+        <div className="bg-[rgba(12,24,38,0.78)] backdrop-blur-2xl border border-[rgba(79,108,152,0.25)] shadow-[0_30px_60px_rgba(4,10,18,0.45)] rounded-3xl p-6 transition-all duration-500 hover:border-[rgba(106,142,184,0.35)] hover:shadow-[0_40px_70px_rgba(6,16,28,0.55)]">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">
+              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-[#6A8EB8]">
                 📅 Calendario general
               </h2>
             </div>
@@ -285,34 +285,34 @@ export default function CalendarView() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Filtro estilista */}
               <div className="relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/80" />
                 <select
-                  value={stylistFilter}
-                  onChange={(e) => setStylistFilter(e.target.value)}
-                  disabled={Array.isArray(stylists) && stylists.length === 0}
+                  value={instructorFilter}
+                  onChange={(e) => setInstructorFilter(e.target.value)}
+                  disabled={Array.isArray(instructors) && instructors.length === 0}
                   className="
                     relative w-full pl-10 pr-4 py-2.5
                     rounded-xl
-                    bg-slate-900/60
-                    border border-slate-700/40
-                    text-slate-200 text-sm
+                    bg-[rgba(15,35,59,0.35)]
+                    border border-[rgba(106,142,184,0.3)]
+                    text-foreground text-sm
                     backdrop-blur-md
-                    placeholder-slate-500
+                    placeholder:text-foreground-muted
                     focus:outline-none
-                    focus:ring-2 focus:ring-indigo-500/30
-                    focus:border-indigo-500/30
+                    focus:ring-2 focus:ring-[rgba(106,142,184,0.5)]
+                    focus:border-[rgba(79,108,152,0.6)]
                     transition-all duration-200
-                    hover:border-slate-500/50
+                    hover:border-[rgba(106,142,184,0.6)]
                     disabled:opacity-50 disabled:cursor-not-allowed
                   "
                 >
-                  <option className="bg-slate-900" value="">
-                    {Array.isArray(stylists) && stylists.length > 0
+                  <option className="bg-[rgba(8,17,32,0.95)]" value="">
+                    {Array.isArray(instructors) && instructors.length > 0
                       ? "Todos los profesionales"
                       : "Sin filtro de profesional"}
                   </option>
-                  {(stylists || []).map((s) => (
-                    <option key={s.id} className="bg-slate-900" value={s.id}>
+                  {(instructors || []).map((s) => (
+                    <option key={s.id} className="bg-[rgba(8,17,32,0.95)]" value={s.id}>
                       {s.name}
                     </option>
                   ))}
@@ -324,8 +324,8 @@ export default function CalendarView() {
                 onClick={loadEvents}
                 disabled={eventsLoading}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl 
-                           bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white text-sm font-medium
-                           hover:scale-[1.02] shadow-lg shadow-indigo-500/20 transition-all duration-300 disabled:opacity-50"
+                           bg-gradient-to-r from-primary to-[#6A8EB8] text-white text-sm font-medium
+                           hover:scale-[1.02] shadow-lg shadow-[rgba(15,35,59,0.35)] transition-all duration-300 disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${eventsLoading ? "animate-spin" : ""}`} />
                 Actualizar
@@ -333,7 +333,7 @@ export default function CalendarView() {
               <button
                 onClick={() => setHideCancelled(v => !v)}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-                border ${hideCancelled ? "bg-slate-800/80 border-slate-600 text-slate-100" : "bg-slate-900/60 border-slate-700/40 text-slate-200"}
+                border ${hideCancelled ? "bg-[rgba(15,35,59,0.55)] border-[rgba(79,108,152,0.5)] text-white" : "bg-[rgba(12,24,38,0.35)] border-[rgba(79,108,152,0.35)] text-foreground"}
                 hover:scale-[1.01]`}
                 title={hideCancelled ? "Mostrar cancelados" : "Ocultar cancelados"}
               >
@@ -344,26 +344,24 @@ export default function CalendarView() {
 
           {/* Errores */}
           {eventsError && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-sm">
               {eventsError}
             </div>
           )}
 
           {/* Calendario + overlay */}
-          <div className="relative rounded-2xl border border-slate-800/30 bg-slate-900/30 p-2 overflow-visible">
+          <div className="relative rounded-2xl border border-[rgba(79,108,152,0.25)] bg-[rgba(10,20,32,0.6)] p-2 overflow-visible">
             {eventsLoading && (
-              <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
-                <div className="animate-pulse text-slate-300 font-medium">Actualizando calendario…</div>
+              <div className="absolute inset-0 bg-[rgba(8,17,32,0.65)] backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
+                <div className="animate-pulse text-foreground-muted font-medium">Actualizando calendario…</div>
               </div>
             )}
             {!eventsLoading && fullEvents.length === 0 && (
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/50 bg-slate-950/40 text-center text-sm text-slate-300 z-10 px-6">
-                <div className="pointer-events-auto">
-                  <p>No hay eventos en este rango.</p>
-                  <p className="text-xs text-slate-500">
-                    Programá una nueva clase o turno para que aparezca acá.
-                  </p>
-                </div>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[rgba(106,142,184,0.35)] bg-[rgba(10,20,32,0.65)] text-center text-sm text-foreground-muted z-10 px-6">
+                <p>No hay eventos en este rango.</p>
+                <p className="text-xs text-foreground-muted/70">
+                  Programá una nueva clase o turno para que aparezca acá.
+                </p>
               </div>
             )}
 

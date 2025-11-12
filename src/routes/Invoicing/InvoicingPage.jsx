@@ -323,7 +323,7 @@ export default function InvoicingPage() {
               documento: apt.customer_documento || apt.documento
             },
             // Normalizar campos de estilista
-            stylist: apt.stylist || { name: apt.stylist_name },
+            instructor: apt.instructor || { name: apt.instructor_name },
             // Precio
             price: apt.price || apt.service_price || apt.service?.price || 0,
             total: apt.total || apt.price || apt.service_price || apt.service?.price || 0,
@@ -2097,8 +2097,8 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
                             <div className="flex items-center justify-between">
                               <div>
                                 <span className="font-medium text-foreground">{getServiceName(apt)}</span>
-                                {apt.stylist?.name && (
-                                  <span className="text-xs text-foreground-secondary ml-2">- {apt.stylist.name}</span>
+                                {apt.instructor?.name && (
+                                  <span className="text-xs text-foreground-secondary ml-2">- {apt.instructor.name}</span>
                                 )}
                               </div>
                               <span className="font-semibold text-foreground">

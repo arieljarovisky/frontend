@@ -3,7 +3,7 @@ import { useApp } from "../context/UseApp";
 import { apiClient } from "../api/client";
 import Button from "./ui/Button";
 import { Field } from "./ui/Field";
-import { Users, CalendarClock, RefreshCw } from "lucide-react";
+import { Users, CalendarClock, RefreshCw, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 function formatSessionLabel(session) {
@@ -33,8 +33,13 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
     customerName: defaultName || "",
     customerPhone: defaultPhone || "",
     notes: "",
+    repeatEnabled: false,
+    repeatCount: 4,
+    repeatUntil: "",
   });
   const [saving, setSaving] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const loadSessions = useCallback(async () => {
     if (!classesEnabled) {
@@ -79,6 +84,32 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleCancelSeries = useCallback(async () => {
+    if (!summary?.seriesId) return;
+    try {
+      setCancelling(true);
+      const resp = await apiClient.cancelClassSeriesEnrollments(summary.seriesId, {
+        customerId: summary.customerId,
+        customerPhone: summary.customerPhone,
+        scope: "upcoming",
+      });
+      const cancelled = Number(resp?.cancelled || 0);
+      toast.success(
+        cancelled > 0
+          ? `Se cancelaron ${cancelled} inscripciones futuras de la serie`
+          : "No había inscripciones futuras para cancelar"
+      );
+      setSummary(null);
+      loadSessions();
+    } catch (err) {
+      const errorMsg =
+        err?.response?.data?.error || err?.message || "No se pudieron cancelar las inscripciones";
+      toast.error("Error al cancelar la serie", { description: errorMsg });
+    } finally {
+      setCancelling(false);
+    }
+  }, [summary, loadSessions]);
+
   const handleSubmit = async (evt) => {
     evt.preventDefault();
     if (!form.sessionId) {
@@ -98,16 +129,42 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
         customerPhone: form.customerPhone,
         notes: form.notes || null,
       };
+      if (form.repeatEnabled) {
+        payload.repeat = {
+          enabled: true,
+          count: form.repeatUntil ? null : Number(form.repeatCount) || 4,
+          until: form.repeatUntil || null,
+        };
+      }
       const response = await apiClient.createClassEnrollment(Number(form.sessionId), payload);
       if (response?.ok === false) {
         throw new Error(response?.error || "No se pudo inscribir al cliente");
       }
-      toast.success("Cliente inscripto en la clase seleccionada");
+
+      const createdSessions = Array.isArray(response?.data) ? response.data : [];
+      const total = createdSessions.length || 1;
+      toast.success(
+        total > 1 ? `Cliente inscripto en ${total} clases de la serie` : "Cliente inscripto en la clase seleccionada"
+      );
+
+      const selectedSession = sessions.find((session) => String(session.id) === String(form.sessionId));
+      setSummary({
+        total,
+        sessions: createdSessions,
+        seriesId: response?.meta?.seriesId ?? selectedSession?.series_id ?? null,
+        customerId: response?.meta?.customerId ?? null,
+        customerPhone: form.customerPhone,
+      });
+
       setForm((prev) => ({
         ...prev,
         notes: "",
         sessionId: "",
+        repeatEnabled: false,
+        repeatCount: 4,
+        repeatUntil: "",
       }));
+
       loadSessions();
     } catch (e) {
       const errorMsg = e?.response?.data?.error || e?.message || "Error al inscribir en la clase";
@@ -140,6 +197,52 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
           {error}
+        </div>
+      )}
+
+      {summary && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-4 space-y-3">
+          <div className="text-sm text-emerald-200 font-semibold">
+            Se confirmaron {summary.total} {summary.total === 1 ? "inscripción" : "inscripciones"}.
+          </div>
+          {summary.sessions?.length ? (
+            <ul className="space-y-1 text-xs text-emerald-100">
+              {summary.sessions.slice(0, 5).map((item) => {
+                const date = item.startsAt ? new Date(item.startsAt.replace(" ", "T")) : null;
+                const label = date
+                  ? date.toLocaleString("es-AR", {
+                      weekday: "short",
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : `Sesión #${item.sessionId}`;
+                return (
+                  <li key={`summary-${item.enrollmentId}-${item.sessionId}`} className="flex items-center gap-2">
+                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                    <span>{label}</span>
+                  </li>
+                );
+              })}
+              {summary.sessions.length > 5 && (
+                <li className="text-emerald-200/70">…y {summary.sessions.length - 5} clases más.</li>
+              )}
+            </ul>
+          ) : null}
+
+          {summary.seriesId && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancelSeries}
+              disabled={cancelling}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-200 hover:border-red-500/60 hover:text-red-100 transition disabled:opacity-40"
+            >
+              <Trash2 className="w-4 h-4" />
+              {cancelling ? "Cancelando…" : "Cancelar todas las inscripciones futuras"}
+            </Button>
+          )}
         </div>
       )}
 
@@ -194,6 +297,74 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
             className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
           />
         </Field>
+
+        <div className="rounded-xl border border-slate-700/40 bg-slate-900/60 px-4 py-4">
+          <label className="flex items-center justify-between text-sm font-medium text-slate-300">
+            <span className="flex items-center gap-2">
+              <Repeat className="w-4 h-4 text-indigo-400" />
+              Inscribir en todas las clases de la serie
+            </span>
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500"
+              checked={form.repeatEnabled}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  repeatEnabled: e.target.checked,
+                }))
+              }
+            />
+          </label>
+
+          {form.repeatEnabled && (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm text-slate-200">
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                  Cantidad máxima
+                </label>
+                <input
+                  type="number"
+                  min={2}
+                  max={26}
+                  value={form.repeatCount}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      repeatCount: e.target.value ? Number(e.target.value) : "",
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Si usás fecha límite, se ignora esta cantidad.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                  Fecha límite (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={form.repeatUntil}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      repeatUntil: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Inscribiremos al cliente hasta esa fecha inclusive.
+                </p>
+              </div>
+              <div className="md:col-span-2 rounded-lg bg-slate-900/60 border border-slate-700/40 px-3 py-2 text-xs text-slate-300 leading-relaxed">
+                Vamos a reservar cupo en cada clase de la misma serie. Si alguna está completa, frenamos el proceso y no se guardan cambios.
+              </div>
+            </div>
+          )}
+        </div>
 
         <Button
           type="submit"

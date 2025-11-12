@@ -41,7 +41,7 @@ export default function Commissions() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-xl font-semibold text-slate-100">Comisiones por Peluquero</h1>
+        <h1 className="text-xl font-semibold text-slate-100">Comisiones por Instructor</h1>
         <p className="text-slate-400 text-sm">Definí el porcentaje de comisión individual.</p>
       </header>
 
@@ -49,7 +49,7 @@ export default function Commissions() {
         <table className="w-full text-sm">
           <thead className="bg-slate-900/60 text-slate-300">
             <tr>
-              <th className="px-3 py-2 text-left">Peluquero</th>
+              <th className="px-3 py-2 text-left">Instructor</th>
               <th className="px-3 py-2 text-right">Comisión (%)</th>
               <th className="px-3 py-2 w-36"></th>
             </tr>
@@ -78,7 +78,7 @@ export default function Commissions() {
               </tr>
             ))}
             {!rows.length && (
-              <tr><td className="px-3 py-4 text-slate-400" colSpan={3}>No hay peluqueros activos.</td></tr>
+              <tr><td className="px-3 py-4 text-slate-400" colSpan={3}>No hay instructores activos.</td></tr>
             )}
           </tbody>
         </table>

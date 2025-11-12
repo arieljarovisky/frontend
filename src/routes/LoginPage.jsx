@@ -232,13 +232,15 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-foreground">
                 Email
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+              <div className="input-group">
+                <span className="input-group__icon">
+                  <Mail />
+                </span>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input pl-10"
+                  className="input input--with-icon"
                   placeholder="tu@email.com"
                   required
                   autoFocus
@@ -250,20 +252,22 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-foreground">
                 Contraseña
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+              <div className="input-group">
+                <span className="input-group__icon">
+                  <Lock />
+                </span>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input pl-10 pr-10"
+                  className="input input--with-icon input--with-icon-right"
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+                  className="input-group__action"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

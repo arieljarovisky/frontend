@@ -27,10 +27,11 @@ import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
 import BusinessTypeConfig from "./BusinessTypeConfig.jsx";
 import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/UseApp";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
-    <div className="card p-6">
+    <div className="card card--space-lg">
       <div className="flex items-start gap-4 mb-6">
         <div className="p-3 rounded-xl bg-gradient-to-br from-primary-600/20 to-primary-600/5 border border-primary-600/30">
           <Icon className="w-6 h-6 text-primary-400" />
@@ -82,6 +83,7 @@ export default function ConfigPage() {
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { tenantInfo, refreshFeatures } = useApp();
   const [active, setActive] = useState("general");
   const [floating, setFloating] = useState(false);
   const [topOffset, setTopOffset] = useState(12);
@@ -112,7 +114,7 @@ export default function ConfigPage() {
 
   // Estados
   const [general, setGeneral] = useState({
-    businessName: "Pelu de Barrio",
+    businessName: "Studio Central",
     timezone: "America/Argentina/Buenos_Aires",
     currency: "ARS",
     dateFormat: "DD/MM/YYYY",
@@ -145,6 +147,38 @@ export default function ConfigPage() {
     calculateOnDeposit: false,
     showInDashboard: true,
   });
+  const planInfo = tenantInfo?.plan || null;
+  const PLAN_STATUS_LABELS = {
+    authorized: "Activo",
+    manual: "Activo (manual)",
+    pending: "Pendiente",
+    cancelled: "Cancelado",
+    paused: "Pausado",
+    error: "Error",
+  };
+  const formatCurrency = (value, currency = "ARS") => {
+    if (value == null) return "—";
+    try {
+      return new Intl.NumberFormat("es-AR", {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(Number(value));
+    } catch {
+      return `${currency} ${value}`;
+    }
+  };
+  const formatDateTime = (value) => {
+    if (!value) return "—";
+    try {
+      return new Date(value).toLocaleString("es-AR", {
+        dateStyle: "long",
+        timeStyle: "short",
+      });
+    } catch {
+      return value;
+    }
+  };
 
   // Estados de Mercado Pago
   const [mpConfig, setMpConfig] = useState({
@@ -576,7 +610,7 @@ export default function ConfigPage() {
       >
         <div className="mx-auto max-w-4xl rounded-2xl p-[1px] bg-gradient-to-r from-sky-500/30 via-fuchsia-500/20 to-indigo-500/30 shadow-lg">
           <div className="rounded-2xl bg-slate-900/80 backdrop-blur border border-white/10">
-            <nav className="flex items-center justify-center gap-1 p-1">
+            <nav className="flex items-center gap-1 p-1 overflow-x-auto flex-nowrap justify-start md:justify-center">
               {TABS.map(({ id, label, Icon, external }) => {
                 const isActive = active === id;
                 const base = "group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm transition-all";
@@ -585,7 +619,7 @@ export default function ConfigPage() {
                 return (
                   <button
                     key={id}
-                    onClick={() => (external ? navigate(`/${tenantSlug}/admin/peluqueros`) : goTo(id))}
+                    onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))}
                     className={`${base} ${isActive ? on : off}`}
                   >
                     <Icon className="w-4 h-4 opacity-80 group-hover:opacity-100" />
@@ -654,7 +688,6 @@ export default function ConfigPage() {
           </div>
         </ConfigSection>
       </div>
-
 
       {/* BUSINESS TYPE */}
       <div id="business-type">
@@ -1213,7 +1246,7 @@ export default function ConfigPage() {
           icon={Percent}
         >
           <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <FieldGroup label="Comisión por defecto (%)" hint="Porcentaje que se aplica a nuevos peluqueros">
+            <FieldGroup label="Comisión por defecto (%)" hint="Porcentaje que se aplica a nuevos instructores">
               <input
                 type="number"
                 min="0"
@@ -1246,7 +1279,7 @@ export default function ConfigPage() {
             <p className="text-sm text-primary-300 flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
               <span>
-                Para configurar comisiones individuales por peluquero,{" "}
+                Para configurar comisiones individuales por instructor,{" "}
                 <button
                   onClick={() => navigate(`/${tenantSlug}/admin/comisiones`)}
                   className="underline font-medium hover:text-primary-200"

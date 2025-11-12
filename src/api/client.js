@@ -346,19 +346,59 @@ apiClient.listServices = async function ({ active = true } = {}) {
    STYLISTS API
 ========================= */
 
-apiClient.listStylists = async function ({ active = true } = {}) {
+apiClient.listInstructors = async function ({ active = true } = {}) {
   const params = active ? { active: 1 } : {};
-  const { data } = await apiClient.get("/api/meta/stylists", { params });
+  const { data } = await apiClient.get("/api/meta/instructors", { params });
   return data?.data || [];
+};
+
+apiClient.adminListInstructors = async function () {
+  const { data } = await apiClient.get("/api/admin/instructors");
+  return data?.data || [];
+};
+
+apiClient.adminCreateInstructor = async function (payload) {
+  const { data } = await apiClient.post("/api/admin/instructors", payload);
+  return data;
+};
+
+apiClient.adminUpdateInstructor = async function (id, payload) {
+  const { data } = await apiClient.put(`/api/admin/instructors/${id}`, payload);
+  return data;
+};
+
+apiClient.adminDeleteInstructor = async function (id) {
+  const { data } = await apiClient.delete(`/api/admin/instructors/${id}`);
+  return data;
+};
+
+apiClient.adminListServices = async function () {
+  const { data } = await apiClient.get("/api/admin/services");
+  return data?.data || [];
+};
+
+apiClient.adminCreateService = async function (payload) {
+  const { data } = await apiClient.post("/api/admin/services", payload);
+  return data;
+};
+
+apiClient.adminUpdateService = async function (id, payload) {
+  const { data } = await apiClient.put(`/api/admin/services/${id}`, payload);
+  return data;
+};
+
+apiClient.adminDeleteService = async function (id) {
+  const { data } = await apiClient.delete(`/api/admin/services/${id}`);
+  return data;
 };
 
 /* =========================
    AVAILABILITY API
 ========================= */
 
-apiClient.getAvailability = async function ({ stylistId, serviceId, date }) {
+apiClient.getAvailability = async function ({ instructorId, serviceId, date }) {
   const { data } = await apiClient.get("/api/availability", {
-    params: { stylistId, serviceId, date },
+    params: { instructorId, serviceId, date },
   });
   return data;
 };
@@ -372,16 +412,29 @@ apiClient.createAppointment = async function (appointmentData) {
   return data;
 };
 
+apiClient.createRecurringAppointments = async function (payload) {
+  const { data } = await apiClient.post("/api/appointments/recurring", payload);
+  return data;
+};
+
+apiClient.cancelAppointmentSeries = async function (seriesId, { includePast = false, notify = true } = {}) {
+  const params = {};
+  if (includePast) params.includePast = "true";
+  if (!notify) params.notify = "false";
+  const { data } = await apiClient.delete(`/api/appointments/series/${seriesId}`, { params });
+  return data;
+};
+
 apiClient.updateAppointment = async function (id, updates) {
   const { data } = await apiClient.patch(`/api/appointments/${id}`, updates);
   return data;
 };
 
-apiClient.listAppointments = async function ({ from, to, stylistId } = {}) {
+apiClient.listAppointments = async function ({ from, to, instructorId } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/appointments", { params });
   return data;
 };
@@ -446,7 +499,7 @@ apiClient.disconnectMP = async function () {
 ========================= */
 
 apiClient.listCustomers = async function (q = "", signal) {
-  const { data } = await apiClient.get("/api/meta/customers", {
+  const { data } = await apiClient.get("/api/admin/customers", {
     params: { q },
     signal,
   });
@@ -455,7 +508,7 @@ apiClient.listCustomers = async function (q = "", signal) {
 
 apiClient.customerDetail = async function (customerId, signal) {
   if (!customerId) throw new Error("customerId es requerido");
-  const { data } = await apiClient.get(`/api/customers/${customerId}`, { signal });
+  const { data } = await apiClient.get(`/api/admin/customers/${customerId}`, { signal });
   return data?.data || data || null;
 };
 
@@ -469,16 +522,16 @@ apiClient.updateCustomer = async function (customerId, payload) {
    CALENDAR API
 ========================= */
 
-apiClient.getCalendarDay = async function ({ date, stylistId } = {}) {
+apiClient.getCalendarDay = async function ({ date, instructorId } = {}) {
   const params = { date };
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/calendar/day", { params });
   return data;
 };
 
-apiClient.getCalendarRange = async function ({ from, to, stylistId } = {}) {
+apiClient.getCalendarRange = async function ({ from, to, instructorId } = {}) {
   const params = { from, to };
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/calendar/range", { params });
   return data;
 };
@@ -504,9 +557,9 @@ apiClient.getCommissions = async function (params = {}) {
     return [];
   }
 };
-apiClient.updateCommission = async function (stylistId, percentage) {
+apiClient.updateCommission = async function (instructorId, percentage) {
   try {
-    const { data } = await apiClient.put(`/api/commissions/${stylistId}`, {
+    const { data } = await apiClient.put(`/api/commissions/${instructorId}`, {
       percentage: Number(percentage),
     });
     return data;
@@ -518,38 +571,38 @@ apiClient.updateCommission = async function (stylistId, percentage) {
 /* =========================
    STYLIST STATS API
 ========================= */
-apiClient.getStylistStatsRange = async function ({ from, to, stylistId }) {
-  if (!stylistId) throw new Error("stylistId es requerido");
+apiClient.getInstructorStatsRange = async function ({ from, to, instructorId }) {
+  if (!instructorId) throw new Error("instructorId es requerido");
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
-  const { data } = await apiClient.get(`/api/stats/${encodeURIComponent(stylistId)}`, { params });
+  const { data } = await apiClient.get(`/api/stats/${encodeURIComponent(instructorId)}`, { params });
   return data ?? {};
 };
 /* =========================
    WORKING HOURS API
 ========================= */
-// Muchos routers de hours requieren stylistId. Envíalo siempre si lo tenés.
-apiClient.getWorkingHours = async function ({ stylistId } = {}) {
+// Muchos routers de hours requieren instructorId. Envíalo siempre si lo tenés.
+apiClient.getWorkingHours = async function ({ instructorId } = {}) {
   const params = {};
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/working-hours", { params });
   return toArray(data); // <-- siempre array
 };
 
-apiClient.saveWorkingHours = async function ({ stylistId, hours }) {
-  const { data } = await apiClient.put("/api/working-hours", { stylistId, hours });
+apiClient.saveWorkingHours = async function ({ instructorId, hours }) {
+  const { data } = await apiClient.put("/api/working-hours", { instructorId, hours });
   return data;
 };
 
 /* =========================
    DAYS OFF / BLOQUEOS API
 ========================= */
-apiClient.listDaysOff = async function ({ from, to, stylistId } = {}) {
+apiClient.listDaysOff = async function ({ from, to, instructorId } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/days-off", { params });
   return toArray(data); // <-- siempre array
 };
@@ -557,11 +610,11 @@ apiClient.listDaysOff = async function ({ from, to, stylistId } = {}) {
 /* =========================
    DAYS OFF / BLOQUEOS API
 ========================= */
-apiClient.listDaysOff = async function ({ from, to, stylistId } = {}) {
+apiClient.listDaysOff = async function ({ from, to, instructorId } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
-  if (stylistId) params.stylistId = stylistId;
+  if (instructorId) params.instructorId = instructorId;
   const { data } = await apiClient.get("/api/days-off", { params });
   return data?.data ?? data ?? [];
 };
@@ -619,6 +672,11 @@ apiClient.saveConfigBulk = async function (updates) {
   return data?.data ?? data ?? {};
 };
 
+apiClient.payPlanManual = async function (payload = {}) {
+  const { data } = await apiClient.post("/api/config/subscription/manual-charge", payload);
+  return data?.data ?? data ?? {};
+};
+
 /* =========================
    TENANT / FEATURES API
 ========================= */
@@ -648,11 +706,13 @@ apiClient.updateClassTemplate = async function (id, payload) {
   return data;
 };
 
-apiClient.listClassSessions = async function ({ from, to, status } = {}) {
+apiClient.listClassSessions = async function ({ from, to, status, instructorId, activityType } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
   if (status) params.status = status;
+  if (instructorId) params.instructorId = instructorId;
+  if (activityType) params.activityType = activityType;
   const { data } = await apiClient.get("/api/classes/sessions", { params });
   if (Array.isArray(data)) return data;
   return data?.data ?? data ?? [];
@@ -683,6 +743,11 @@ apiClient.createClassEnrollment = async function (sessionId, payload) {
   return data;
 };
 
+apiClient.cancelClassSeriesEnrollments = async function (seriesId, payload) {
+  const { data } = await apiClient.post(`/api/classes/series/${seriesId}/enrollments/cancel`, payload);
+  return data;
+};
+
 apiClient.updateClassEnrollment = async function (sessionId, enrollmentId, payload) {
   const { data } = await apiClient.patch(
     `/api/classes/sessions/${sessionId}/enrollments/${enrollmentId}`,
@@ -695,6 +760,11 @@ apiClient.deleteClassEnrollment = async function (sessionId, enrollmentId) {
   const { data } = await apiClient.delete(
     `/api/classes/sessions/${sessionId}/enrollments/${enrollmentId}`
   );
+  return data;
+};
+
+apiClient.updateClassSeries = async function (seriesId, payload) {
+  const { data } = await apiClient.put(`/api/classes/series/${encodeURIComponent(seriesId)}`, payload);
   return data;
 };
 
@@ -740,6 +810,23 @@ apiClient.superAdmin = {
     }
     const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}`, payload);
     return data;
+  },
+
+  async updateTenantBusiness(id, payload) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}/business`, payload);
+    return data;
+  },
+
+  async updateTenantPlan(id, payload) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}/plan`, payload);
+    return data;
+  },
+
+  async listBusinessTypes() {
+    const { data } = await apiClient.get("/api/super-admin/business-types");
+    return data?.data || [];
   },
 };
 

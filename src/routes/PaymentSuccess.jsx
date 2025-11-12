@@ -41,7 +41,7 @@ export default function PaymentSuccess() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-8 text-center">
-          <Loader2 className="w-16 h-16 text-blue-400 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">
             Verificando pago...
           </h2>
@@ -84,7 +84,7 @@ export default function PaymentSuccess() {
 
         <button
           onClick={() => navigate(`/${tenantSlug}/appointments`)}
-          className="w-full py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full py-3 px-6 bg-gradient-to-r from-primary to-[#6A8EB8] text-white font-semibold rounded-xl hover:from-primary-hover hover:to-[#56779F] transition-all transform hover:scale-[1.02] active:scale-[0.98]"
         >
           Volver al inicio
         </button>

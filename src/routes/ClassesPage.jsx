@@ -10,9 +10,12 @@ import {
   Users,
   XCircle,
   Trash2,
+  MessageCircle,
+  PencilLine,
 } from "lucide-react";
 import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery";
+import { toast } from "sonner";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
   salon: { classes: false },
@@ -51,6 +54,16 @@ const DEFAULT_REPEAT_OPTIONS = {
   enabled: false,
   weeks: 4,
   patterns: [],
+};
+
+const DEFAULT_SERIES_EDIT = {
+  instructorId: "",
+  activityType: "",
+  serviceId: "",
+  capacityMax: "",
+  priceDecimal: "",
+  notes: "",
+  includePast: false,
 };
 
 const ACTIVE_ENROLLMENT_STATUSES = new Set(["reserved", "attended"]);
@@ -109,6 +122,55 @@ const currency = (value) =>
     Number(value || 0)
   );
 
+const findInstructorOverlap = (sessions) => {
+  if (!Array.isArray(sessions) || !sessions.length) return null;
+
+  const normalized = sessions
+    .map((session) => {
+      const instructorId = Number(session.instructorId);
+      const start = new Date(session.startsAt);
+      const end = new Date(session.endsAt);
+      if (!Number.isFinite(instructorId) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return null;
+      }
+      return { instructorId, start, end };
+    })
+    .filter(Boolean);
+
+  const byInstructor = new Map();
+  normalized.forEach((session) => {
+    if (!byInstructor.has(session.instructorId)) {
+      byInstructor.set(session.instructorId, []);
+    }
+    byInstructor.get(session.instructorId).push(session);
+  });
+
+  for (const [instructorId, list] of byInstructor.entries()) {
+    list.sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (let i = 1; i < list.length; i += 1) {
+      const prev = list[i - 1];
+      const current = list[i];
+      if (current.start < prev.end && current.end > prev.start) {
+        return { instructorId, prev, current };
+      }
+    }
+  }
+
+  return null;
+};
+
+function formatSeriesId(seriesId) {
+  if (!seriesId) return "—";
+  const clean = String(seriesId).replace(/[^a-zA-Z0-9]/g, "");
+  if (clean.length <= 6) return clean.toUpperCase();
+  return `SER-${clean.slice(-6).toUpperCase()}`;
+}
+
+function groupActivityLabel({ key, activity }) {
+  if (key === "__sin-serie__") return "Turnos sueltos";
+  return activity || "Clase";
+}
+
 const ActionBanner = ({ message, onClose }) => {
   if (!message) return null;
   const palette =
@@ -116,7 +178,7 @@ const ActionBanner = ({ message, onClose }) => {
       ? "bg-red-500/10 border-red-500/40 text-red-200"
       : message.type === "success"
         ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-200"
-        : "bg-blue-500/10 border-blue-500/40 text-blue-200";
+        : "bg-primary/10 border-primary/40 text-primary";
 
   return (
     <div className={`flex items-start justify-between gap-4 px-4 py-3 rounded-xl border ${palette}`}>
@@ -146,6 +208,8 @@ export default function ClassesPage() {
     from: defaultFrom,
     to: defaultTo,
     status: "scheduled",
+    instructorId: "",
+    activityType: "",
   });
 
   const [sessions, setSessions] = useState([]);
@@ -156,7 +220,7 @@ export default function ClassesPage() {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState("");
 
-  const [stylists, setStylists] = useState([]);
+  const [instructors, setInstructors] = useState([]);
   const [services, setServices] = useState([]);
 
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -164,13 +228,16 @@ export default function ClassesPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [sessionFormOpen, setSessionFormOpen] = useState(false);
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
 
   const [sessionForm, setSessionForm] = useState({
     templateId: "",
     activityType: "",
-    stylistId: "",
+    instructorId: "",
     serviceId: "",
     startsAt: defaultStartsAt,
     endsAt: defaultEndsAt,
@@ -188,7 +255,7 @@ export default function ClassesPage() {
     defaultCapacity: 10,
     defaultDurationMin: 60,
     defaultPriceDecimal: 0,
-    defaultStylistId: "",
+    defaultInstructorId: "",
     color: "",
     description: "",
     isActive: true,
@@ -204,6 +271,37 @@ export default function ClassesPage() {
   const [savingEnrollment, setSavingEnrollment] = useState(false);
 
   const [actionMessage, setActionMessage] = useState(null);
+  const [groupBySeries, setGroupBySeries] = useState(true);
+  const [seriesModal, setSeriesModal] = useState(null);
+  const [seriesEnrollForm, setSeriesEnrollForm] = useState({
+    sessionId: "",
+    customerName: "",
+    customerPhone: "",
+    notes: "",
+    repeatEnabled: true,
+  });
+  const [seriesEnrollLoading, setSeriesEnrollLoading] = useState(false);
+  const [seriesEditOpen, setSeriesEditOpen] = useState(false);
+  const [seriesEditValues, setSeriesEditValues] = useState(DEFAULT_SERIES_EDIT);
+  const [seriesEditSaving, setSeriesEditSaving] = useState(false);
+
+  const resetSeriesEditForm = useCallback(() => {
+    if (!seriesModal || seriesModal.key === "__sin-serie__") {
+      setSeriesEditValues(DEFAULT_SERIES_EDIT);
+      return;
+    }
+    const firstSession = seriesModal.sessions?.[0] || {};
+    setSeriesEditValues({
+      instructorId: firstSession?.instructor_id ? String(firstSession.instructor_id) : "",
+      activityType: firstSession?.activity_type || "",
+      serviceId: firstSession?.service_id ? String(firstSession.service_id) : "",
+      capacityMax: firstSession?.capacity_max != null ? String(firstSession.capacity_max) : "",
+      priceDecimal:
+        firstSession?.price_decimal != null ? String(Number(firstSession.price_decimal)) : "",
+      notes: firstSession?.notes || "",
+      includePast: false,
+    });
+  }, [seriesModal]);
 
   const dismissMessage = () => setActionMessage(null);
 
@@ -225,10 +323,10 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
   );
   const classesEnabled = Boolean(enabledFeatures.classes);
 
-  const fetchStylists = useCallback(async () => {
+  const fetchInstructors = useCallback(async () => {
     try {
-      const list = await apiClient.listStylists({ active: true });
-      setStylists(Array.isArray(list) ? list : []);
+      const list = await apiClient.listInstructors({ active: true });
+      setInstructors(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("❌ [classes] Error cargando estilistas:", error);
     }
@@ -266,6 +364,8 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         to: filters.to ? `${filters.to} 23:59:59` : undefined,
         status: filters.status || undefined,
       };
+      if (filters.instructorId) params.instructorId = filters.instructorId;
+      if (filters.activityType) params.activityType = filters.activityType;
       const list = await apiClient.listClassSessions(params);
       setSessions(Array.isArray(list) ? list : []);
     } catch (error) {
@@ -301,14 +401,46 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
   );
 
   useEffect(() => {
-    fetchStylists();
+    fetchInstructors();
     fetchServices();
     fetchTemplates();
-  }, [fetchStylists, fetchServices, fetchTemplates]);
+  }, [fetchInstructors, fetchServices, fetchTemplates]);
 
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, groupBySeries]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(sessions.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [sessions, page, pageSize]);
+
+  useEffect(() => {
+    if (!seriesModal) return;
+    const upcoming =
+      seriesModal.sessions?.filter((s) => new Date(s.starts_at) >= new Date()) ?? [];
+    const defaultSessionId =
+      upcoming[0]?.id ?? seriesModal.sessions?.[0]?.id ?? "";
+    setSeriesEnrollForm({
+      sessionId: defaultSessionId ? String(defaultSessionId) : "",
+      customerName: "",
+      customerPhone: "",
+      notes: "",
+      repeatEnabled: true,
+    });
+    setSeriesEnrollLoading(false);
+  }, [seriesModal]);
+
+  useEffect(() => {
+    resetSeriesEditForm();
+    setSeriesEditOpen(false);
+  }, [seriesModal, resetSeriesEditForm]);
 
   useEffect(() => {
     if (selectedSessionId) {
@@ -328,8 +460,8 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         capacityMax: template.default_capacity ?? prev.capacityMax,
         priceDecimal: template.default_price_decimal ?? prev.priceDecimal,
       };
-      if (!prev.stylistId && template.default_stylist_id) {
-        next.stylistId = String(template.default_stylist_id);
+      if (!prev.instructorId && template.default_instructor_id) {
+        next.instructorId = String(template.default_instructor_id);
       }
       if (template.default_duration_min) {
         next.endsAt = addMinutesToISO(prev.startsAt || defaultStartsAt, template.default_duration_min);
@@ -354,7 +486,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       setActionMessage({ type: "error", title: "Ingresá el tipo de actividad." });
       return;
     }
-    if (!sessionForm.stylistId) {
+    if (!sessionForm.instructorId) {
       setActionMessage({ type: "error", title: "Seleccioná un profesor." });
       return;
     }
@@ -365,7 +497,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
     const payload = {
       templateId: sessionForm.templateId ? Number(sessionForm.templateId) : undefined,
-      stylistId: Number(sessionForm.stylistId),
+      instructorId: Number(sessionForm.instructorId),
       serviceId: sessionForm.serviceId ? Number(sessionForm.serviceId) : undefined,
       startsAt: sessionForm.startsAt,
       endsAt: sessionForm.endsAt || addMinutesToISO(sessionForm.startsAt, sessionDurationMin),
@@ -381,6 +513,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     }
 
     let generatedSeriesId = null;
+    let additionalSessions = [];
 
     if (repeatOptions.enabled) {
       generatedSeriesId = window.crypto?.randomUUID?.() || `series-${Date.now()}`;
@@ -408,7 +541,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
           startTime: pattern.startTime || baseTime,
           endTime: pattern.endTime || "",
           durationMin: pattern.durationMin ? Number(pattern.durationMin) : null,
-          stylistId: pattern.stylistId || "",
+          instructorId: pattern.instructorId || "",
           serviceId: pattern.serviceId || "",
           capacityMax: pattern.capacityMax,
           priceDecimal: pattern.priceDecimal,
@@ -417,7 +550,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         })),
       ];
 
-      const additionalSessions = [];
+      additionalSessions = [];
 
       for (let week = 0; week < totalWeeks; week += 1) {
         patterns.forEach((pattern) => {
@@ -458,7 +591,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
             seriesId: generatedSeriesId,
           };
 
-          if (pattern.stylistId) sessionOverride.stylistId = Number(pattern.stylistId);
+          if (pattern.instructorId) sessionOverride.instructorId = Number(pattern.instructorId);
           if (pattern.serviceId) sessionOverride.serviceId = Number(pattern.serviceId);
           if (pattern.activityType) sessionOverride.activityType = String(pattern.activityType).trim();
           if (pattern.capacityMax !== undefined && pattern.capacityMax !== null && pattern.capacityMax !== "") {
@@ -478,6 +611,34 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       }
     }
 
+    const sessionsForValidation = [
+      {
+        instructorId: payload.instructorId,
+        startsAt: payload.startsAt,
+        endsAt: payload.endsAt,
+      },
+      ...additionalSessions.map((session) => ({
+        instructorId:
+          session.instructorId != null ? Number(session.instructorId) : payload.instructorId,
+        startsAt: session.startsAt,
+        endsAt: session.endsAt,
+      })),
+    ];
+
+    const overlap = findInstructorOverlap(sessionsForValidation);
+    if (overlap) {
+      const instructorName =
+        instructors.find((sty) => Number(sty.id) === Number(overlap.instructorId))?.name ||
+        "el instructor seleccionado";
+      const clashTime = formatDateTime(overlap.current.start);
+      setActionMessage({
+        type: "error",
+        title: "Revisá los horarios",
+        body: `Hay dos clases para ${instructorName} que se superponen (${clashTime}). Ajustá los horarios o el profesor antes de guardar.`,
+      });
+      return;
+    }
+
     try {
       setSavingSession(true);
       const response = await apiClient.createClassSession(payload);
@@ -492,7 +653,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       setSessionForm({
         templateId: "",
         activityType: "",
-        stylistId: "",
+        instructorId: "",
         serviceId: "",
         startsAt: defaultStartsAt,
         endsAt: defaultEndsAt,
@@ -533,7 +694,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         defaultCapacity: Number(templateForm.defaultCapacity || 0),
         defaultDurationMin: Number(templateForm.defaultDurationMin || 0),
         defaultPriceDecimal: Number(templateForm.defaultPriceDecimal || 0),
-        defaultStylistId: templateForm.defaultStylistId ? Number(templateForm.defaultStylistId) : undefined,
+        defaultInstructorId: templateForm.defaultInstructorId ? Number(templateForm.defaultInstructorId) : undefined,
         color: templateForm.color || null,
         isActive: templateForm.isActive,
       });
@@ -548,7 +709,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         defaultCapacity: 10,
         defaultDurationMin: 60,
         defaultPriceDecimal: 0,
-        defaultStylistId: "",
+        defaultInstructorId: "",
         color: "",
         description: "",
         isActive: true,
@@ -698,6 +859,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       if (selectedSessionId) {
         await fetchSessionDetail(selectedSessionId);
       }
+      setSeriesModal(null);
+      setSeriesEditOpen(false);
+      setSeriesEditValues(DEFAULT_SERIES_EDIT);
     } catch (error) {
       setActionMessage({
         type: "error",
@@ -711,6 +875,245 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     if (!sessionDetail?.enrollments) return 0;
     return sessionDetail.enrollments.filter((e) => ACTIVE_ENROLLMENT_STATUSES.has(e.status)).length;
   }, [sessionDetail]);
+
+  const handleSeriesEnrollSubmit = async (event) => {
+    event.preventDefault();
+    if (!seriesModal) return;
+    const { sessionId, customerPhone, customerName, notes, repeatEnabled } = seriesEnrollForm;
+    if (!sessionId || !customerPhone.trim()) {
+      toast.error("Seleccioná una clase y completá el teléfono del alumno.");
+      return;
+    }
+    try {
+      setSeriesEnrollLoading(true);
+      const payload = {
+        customerName: customerName?.trim() || undefined,
+        customerPhone: customerPhone.trim(),
+        notes: notes?.trim() || undefined,
+      };
+      if (repeatEnabled) payload.repeat = { enabled: true };
+      const response = await apiClient.createClassEnrollment(Number(sessionId), payload);
+      if (response?.ok === false) {
+        throw new Error(response?.error || "No se pudo inscribir al alumno.");
+      }
+      toast.success(
+        repeatEnabled ? "Alumno inscripto en toda la serie." : "Alumno inscripto en la clase seleccionada."
+      );
+      await fetchSessions();
+      setSeriesModal(null);
+    } catch (error) {
+      const msg = error?.response?.data?.error || error?.message || "Error al inscribir al alumno.";
+      toast.error("No se pudo inscribir al alumno", { description: msg });
+    } finally {
+      setSeriesEnrollLoading(false);
+    }
+  };
+
+  const handleSeriesEditChange = (field, value) => {
+    setSeriesEditValues((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSeriesEditSubmit = async (event) => {
+    event.preventDefault();
+    if (!seriesModal || seriesModal.key === "__sin-serie__") return;
+
+    const { instructorId, activityType, serviceId, capacityMax, priceDecimal, notes, includePast } =
+      seriesEditValues;
+
+    if (!instructorId) {
+      setActionMessage({ type: "error", title: "Seleccioná un profesor para la serie." });
+      return;
+    }
+    if (!activityType?.trim()) {
+      setActionMessage({ type: "error", title: "Ingresá el tipo de actividad para la serie." });
+      return;
+    }
+
+    const capacityValue = Number(capacityMax);
+    if (!Number.isFinite(capacityValue) || capacityValue <= 0) {
+      setActionMessage({ type: "error", title: "El cupo debe ser un número mayor a cero." });
+      return;
+    }
+
+    const priceValue = Number(priceDecimal);
+    if (!Number.isFinite(priceValue) || priceValue < 0) {
+      setActionMessage({ type: "error", title: "El precio debe ser un número positivo." });
+      return;
+    }
+
+    const payload = {
+      instructorId: Number(instructorId),
+      activityType: activityType.trim(),
+      serviceId: serviceId === "" ? null : Number(serviceId),
+      capacityMax: capacityValue,
+      priceDecimal: priceValue,
+      notes: notes ?? "",
+      includePast,
+    };
+
+    setSeriesEditSaving(true);
+    try {
+      await apiClient.updateClassSeries(seriesModal.key, payload);
+      setActionMessage({
+        type: "success",
+        title: "Serie actualizada",
+        body: includePast
+          ? "Se actualizaron todas las clases de la serie."
+          : "Se actualizaron las próximas clases de la serie.",
+      });
+      await fetchSessions();
+
+      const instructorName =
+        instructors.find((sty) => String(sty.id) === String(instructorId))?.name ||
+        seriesModal.instructor;
+
+      setSeriesModal((prev) => {
+        if (!prev || prev.key !== seriesModal.key) return prev;
+        return {
+          ...prev,
+          instructor: instructorName,
+          activity: payload.activityType || prev.activity,
+          sessions: prev.sessions.map((session) => ({
+            ...session,
+            instructor_id: payload.instructorId,
+            instructor_name: instructorName,
+            service_id: payload.serviceId,
+            activity_type: payload.activityType,
+            capacity_max: payload.capacityMax,
+            price_decimal: payload.priceDecimal,
+            notes: payload.notes,
+          })),
+        };
+      });
+
+      setSeriesEditOpen(false);
+    } catch (error) {
+      setActionMessage({
+        type: "error",
+        title: "No se pudo actualizar la serie",
+        body: error?.response?.data?.error || error?.message || "Intentá nuevamente más tarde.",
+      });
+    } finally {
+      setSeriesEditSaving(false);
+    }
+  };
+
+  const handleShareSeriesWhatsApp = useCallback(() => {
+    if (!seriesModal) return;
+    const activityLabel = groupActivityLabel({
+      key: seriesModal.key,
+      activity: seriesModal.activity,
+    });
+    const instructorName = seriesModal.instructor || "nuestro equipo";
+    const firstClass = seriesModal.sessions?.[0]
+      ? formatDateTime(seriesModal.sessions[0].starts_at)
+      : "Próximamente";
+
+    const scheduleMap = new Map();
+    (seriesModal.sessions || []).forEach((session) => {
+      const start = new Date(session.starts_at);
+      const end = session.ends_at ? new Date(session.ends_at) : null;
+      const day = start.toLocaleDateString("es-AR", { weekday: "long" });
+      const normalizedDay = day.charAt(0).toUpperCase() + day.slice(1);
+      const timeLabel = end
+        ? `${start.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} – ${end.toLocaleTimeString(
+            "es-AR",
+            { hour: "2-digit", minute: "2-digit" }
+          )}`
+        : start.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      if (!scheduleMap.has(normalizedDay)) {
+        scheduleMap.set(normalizedDay, new Set());
+      }
+      scheduleMap.get(normalizedDay).add(timeLabel);
+    });
+    const scheduleLines = Array.from(scheduleMap.entries())
+      .map(([day, times]) => `• ${day}: ${Array.from(times).join(", ")}`)
+      .join("\n");
+
+    const message = [
+      `Hola! 👋`,
+      `Te comparto la serie *${activityLabel}*.`,
+      `Profesor: ${instructorName}`,
+      `Primera clase: ${firstClass}`,
+      scheduleLines ? `Horarios:\n${scheduleLines}` : "",
+      `Si querés anotarte, respondeme por acá con tu nombre y teléfono. 🙌`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [seriesModal]);
+
+  const groupedSessions = useMemo(() => {
+    if (!groupBySeries) return [];
+    const seriesMap = new Map();
+
+    sessions.forEach((session) => {
+      const key = session.series_id || "__sin-serie__";
+      const entry = seriesMap.get(key);
+      if (entry) {
+        entry.sessions.push(session);
+        return;
+      }
+
+      seriesMap.set(key, {
+        key,
+        label: session.series_id ? session.series_id : "Sesiones sin serie",
+        sessions: [session],
+      });
+    });
+
+    const result = Array.from(seriesMap.values()).map((group) => {
+      const ordered = [...group.sessions].sort(
+        (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+      );
+
+      const first = ordered[0];
+      const representativeInstructor =
+        ordered.find((s) => s.instructor_name)?.instructor_name || first?.instructor_name || "Sin asignar";
+      const representativeActivity =
+        ordered.find((s) => s.activity_type)?.activity_type || first?.activity_type || "Clase";
+      const formattedHash =
+        group.key === "__sin-serie__"
+          ? ""
+          : `SER-${String(group.key).slice(-6).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
+
+      return {
+        ...group,
+        sessions: ordered,
+        instructor: representativeInstructor,
+        activity: representativeActivity,
+        hash: formattedHash,
+        firstStartsAt: ordered[0]?.starts_at ? new Date(ordered[0].starts_at).getTime() : Number.MAX_SAFE_INTEGER,
+      };
+    });
+
+    result.sort((a, b) => a.firstStartsAt - b.firstStartsAt);
+    return result;
+  }, [groupBySeries, sessions]);
+
+  const paginatedSessions = useMemo(() => {
+    const source = sessions;
+    const start = (page - 1) * pageSize;
+    return groupBySeries ? sessions : source.slice(start, start + pageSize);
+  }, [sessions, page, pageSize, groupBySeries]);
+
+  const paginatedSeries = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return groupBySeries ? groupedSessions.slice(start, start + pageSize) : groupedSessions;
+  }, [groupedSessions, page, pageSize, groupBySeries]);
+
+  const paginationInfo = useMemo(() => {
+    const total = groupBySeries ? groupedSessions.length : sessions.length;
+    const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+    const end = Math.min(page * pageSize, total);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    return { start, end, total, totalPages };
+  }, [groupBySeries, groupedSessions.length, sessions.length, page, pageSize]);
 
   const handleRepeatToggle = (enabled) => {
     setRepeatOptions((prev) => ({
@@ -739,7 +1142,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
           weekday: baseWeekday,
           startTime: baseTime,
           durationMin: sessionDurationMin || 60,
-          stylistId: "",
+          instructorId: "",
           serviceId: "",
           capacityMax: "",
           priceDecimal: "",
@@ -828,7 +1231,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
       <section className="card p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="text-xs uppercase tracking-wide text-foreground-secondary block mb-1">
                 Desde
@@ -867,14 +1270,65 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 ))}
               </select>
             </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide text-foreground-secondary block mb-1">
+                Profesor
+              </label>
+              <select
+                value={filters.instructorId}
+                onChange={(e) => setFilters((prev) => ({ ...prev, instructorId: e.target.value }))}
+                className="input"
+              >
+                <option value="">Todos</option>
+                {instructors.map((sty) => (
+                  <option key={sty.id} value={sty.id}>
+                    {sty.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide text-foreground-secondary block mb-1">
+                Actividad
+              </label>
+              <select
+                value={filters.activityType}
+                onChange={(e) => setFilters((prev) => ({ ...prev, activityType: e.target.value }))}
+                className="input"
+              >
+                <option value="">Todas</option>
+                {Array.from(new Set(sessions.map((session) => session.activity_type).filter(Boolean))).map((activity) => (
+                  <option key={activity} value={activity}>
+                    {activity}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-            <CalendarClock className="w-4 h-4" />
-            Mostrando {sessions.length} clases
+          <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-3">
+            <label className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-foreground-secondary">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={groupBySeries}
+                onChange={(e) => setGroupBySeries(e.target.checked)}
+              />
+              Agrupar por serie
+            </label>
+            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+              <CalendarClock className="w-4 h-4" />
+              {groupBySeries
+                ? paginationInfo.total === 0
+                  ? "Sin series"
+                  : `Mostrando ${paginationInfo.start}-${paginationInfo.end} de ${paginationInfo.total} series`
+                : sessions.length === 0
+                  ? "Sin clases"
+                  : `Mostrando ${paginationInfo.start}-${paginationInfo.end} de ${paginationInfo.total} clases`}
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto border border-border rounded-xl">
+        <div className="overflow-x-auto border p-3 border-border rounded-xl">
           {sessionsLoading ? (
             <div className="py-12 flex items-center justify-center gap-2 text-foreground-secondary">
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -886,8 +1340,154 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
             <div className="py-12 text-center text-foreground-secondary">
               No se encontraron clases en este rango de fechas.
             </div>
+          ) : groupBySeries ? (
+            <>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {paginatedSeries.map((group) => {
+                const nextClass = group.sessions[0];
+                const daySchedules = (() => {
+                  const map = new Map();
+                  group.sessions.forEach((s) => {
+                    const startDate = new Date(s.starts_at);
+                    const endDate = s.ends_at ? new Date(s.ends_at) : null;
+                    const day = startDate.toLocaleDateString("es-AR", { weekday: "long" });
+                    const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+                    const timeLabel = endDate
+                      ? `${startDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} – ${endDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`
+                      : startDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+                    if (!map.has(dayLabel)) {
+                      map.set(dayLabel, new Set());
+                    }
+                    map.get(dayLabel).add(timeLabel);
+                  });
+                  return Array.from(map.entries()).map(([day, times]) => ({
+                    day,
+                    times: Array.from(times),
+                  }));
+                })();
+                return (
+                  <article
+                    key={group.key}
+                    onClick={() => setSeriesModal(group)}
+                    className="rounded-2xl border border-border bg-background-secondary/40 shadow-lg shadow-black/40 hover:shadow-primary-500/20 transition cursor-pointer flex flex-col p-5 space-y-4"
+                  >
+                    <header className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs uppercase tracking-wide text-primary-200/70 font-semibold">
+                          {group.key === "__sin-serie__" ? "Sin serie" : "Serie recurrente"}
+                        </span>
+                        {group.hash && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary-500/40 bg-primary-500/15 px-2 py-0.5 text-[10px] tracking-wider text-primary-100">
+                            {group.hash}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {groupActivityLabel({ key: group.key, activity: group.activity })}
+                        </h3>
+                        <p className="text-xs text-foreground-secondary">
+                          Profesor principal:{" "}
+                          <span className="text-foreground font-medium">{group.instructor}</span>
+                        </p>
+                      </div>
+                    </header>
+                    <div className="grid grid-cols-2 gap-3 text-xs text-foreground-secondary">
+                      <div>
+                        <span className="text-foreground-muted uppercase block">Primera clase</span>
+                        <span className="text-foreground font-medium">
+                          {formatDateTime(group.sessions[0]?.starts_at)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-foreground-muted uppercase block">Última clase</span>
+                        <span className="text-foreground font-medium">
+                          {formatDateTime(group.sessions[group.sessions.length - 1]?.starts_at)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-foreground-muted uppercase block">Total</span>
+                        <span className="text-foreground font-medium">{group.sessions.length} clases</span>
+                      </div>
+                      <div>
+                        <span className="text-foreground-muted uppercase block">Próxima</span>
+                        <span className="text-foreground font-medium">
+                          {nextClass ? formatDateTime(nextClass.starts_at) : "Sin fecha"}
+                        </span>
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <span className="text-foreground-muted uppercase block">Días y horarios</span>
+                        {daySchedules.length ? (
+                          <ul className="space-y-1">
+                            {daySchedules.map(({ day, times }) => (
+                              <li key={`schedule-${group.key}-${day}`} className="flex items-start gap-2 text-foreground">
+                                <span className="font-semibold min-w-[80px]">{day}</span>
+                                <span className="text-foreground-secondary">{times.join(", ")}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-foreground-secondary">—</span>
+                        )}
+                      </div>
+                    </div>
+                    <footer className="flex items-center justify-between pt-2 border-t border-border/60 text-xs text-primary-200">
+                      <span>Click para ver detalle</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-primary-500/50 bg-primary-500/15 text-[11px]">
+                        Ver detalle →
+                      </span>
+                    </footer>
+                  </article>
+                );
+              })}
+              </div>
+              {groupBySeries && paginationInfo.total > 0 && (
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-4 border-t border-border bg-background/40 mt-6 rounded-2xl">
+                  <div className="text-xs text-foreground-secondary">
+                    Página {page} de {paginationInfo.totalPages}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-xs text-foreground-secondary flex items-center gap-2">
+                      Mostrar
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setPage(1);
+                        }}
+                        className="input text-xs w-auto px-2 py-1"
+                      >
+                        {[6, 9, 12].map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                      series
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        disabled={page === 1}
+                        className="px-2 py-1 rounded-lg border border-border text-xs text-foreground-secondary hover:bg-background-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        onClick={() => setPage((prev) => Math.min(paginationInfo.totalPages, prev + 1))}
+                        disabled={page === paginationInfo.totalPages}
+                        className="px-2 py-1 rounded-lg border border-border text-xs text-foreground-secondary hover:bg-background-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
-            <table className="w-full text-sm">
+            <>
+              <table className="w-full text-sm">
               <thead>
                 <tr className="bg-background-secondary text-foreground-muted text-xs uppercase tracking-wide">
                   <th className="py-3 px-4 text-left">Inicio</th>
@@ -900,7 +1500,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 </tr>
               </thead>
               <tbody>
-                {sessions.map((session) => {
+                {paginatedSessions.map((session) => {
                   const isSelected = String(session.id) === String(selectedSessionId);
                   return (
                     <tr
@@ -913,9 +1513,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                       <td className="py-3 px-4 font-medium text-foreground">{formatDateTime(session.starts_at)}</td>
                       <td className="py-3 px-4 text-foreground-secondary">{session.activity_type}</td>
                       <td className="py-3 px-4 text-foreground-secondary">
-                        {session.series_id ? session.series_id : "—"}
+                        {formatSeriesId(session.series_id)}
                       </td>
-                      <td className="py-3 px-4 text-foreground-secondary">{session.stylist_name}</td>
+                      <td className="py-3 px-4 text-foreground-secondary">{session.instructor_name}</td>
                       <td className="py-3 px-4 text-foreground-secondary">
                         {session.capacity_max} lugares
                       </td>
@@ -926,7 +1526,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                             session.status === "scheduled"
                               ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
                               : session.status === "completed"
-                                ? "bg-blue-500/10 text-blue-300 border border-blue-500/40"
+                                ? "bg-primary/10 text-primary border border-primary/20"
                                 : "bg-red-500/10 text-red-300 border border-red-500/40"
                           }`}
                         >
@@ -938,6 +1538,50 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 })}
               </tbody>
             </table>
+              {!groupBySeries && paginationInfo.total > 0 && (
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-4 border-t border-border bg-background/40">
+                  <div className="text-xs text-foreground-secondary">
+                    Página {page} de {paginationInfo.totalPages}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-xs text-foreground-secondary flex items-center gap-2">
+                      Mostrar
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setPage(1);
+                        }}
+                        className="input text-xs w-auto px-2 py-1"
+                      >
+                        {[10, 25, 50].map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                      clases
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        disabled={page === 1}
+                        className="px-2 py-1 rounded-lg border border-border text-xs text-foreground-secondary hover:bg-background-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        onClick={() => setPage((prev) => Math.min(paginationInfo.totalPages, prev + 1))}
+                        disabled={page === paginationInfo.totalPages}
+                        className="px-2 py-1 rounded-lg border border-border text-xs text-foreground-secondary hover:bg-background-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -1033,7 +1677,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   </div>
                   <div>
                     <span className="text-xs uppercase text-foreground-muted block">Profesor</span>
-                    {sessionDetail.stylist_name}
+                    {sessionDetail.instructor_name}
                   </div>
                   <div>
                     <span className="text-xs uppercase text-foreground-muted block">Precio</span>
@@ -1042,7 +1686,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 </div>
                 <div className="flex items-center gap-3 text-sm text-foreground-secondary">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-border/40 bg-background/60 text-xs">
-                    Serie: {sessionDetail.series_id || "—"}
+                    Serie: {formatSeriesId(sessionDetail.series_id)}
                   </span>
                   <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-200 border border-primary-500/20 text-xs font-medium">
                     {sessionDetail.status}
@@ -1230,12 +1874,12 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   <span className="text-foreground-secondary">Profesor</span>
                   <select
                     className="input"
-                    value={sessionForm.stylistId}
-                    onChange={(e) => handleSessionFormChange("stylistId", e.target.value)}
+                    value={sessionForm.instructorId}
+                    onChange={(e) => handleSessionFormChange("instructorId", e.target.value)}
                     required
                   >
                     <option value="">Seleccionar</option>
-                    {stylists.map((sty) => (
+                    {instructors.map((sty) => (
                       <option key={sty.id} value={sty.id}>
                         {sty.name}
                       </option>
@@ -1415,11 +2059,11 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                               <span className="text-foreground-secondary">Profesor</span>
                               <select
                                 className="input"
-                                value={pattern.stylistId}
-                                onChange={(e) => handlePatternFieldChange(index, "stylistId", e.target.value)}
+                                value={pattern.instructorId}
+                                onChange={(e) => handlePatternFieldChange(index, "instructorId", e.target.value)}
                               >
                                 <option value="">Usar profesor base</option>
-                                {stylists.map((sty) => (
+                                {instructors.map((sty) => (
                                   <option key={sty.id} value={sty.id}>
                                     {sty.name}
                                   </option>
@@ -1607,11 +2251,11 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   <span className="text-foreground-secondary">Profesor por defecto</span>
                   <select
                     className="input"
-                    value={templateForm.defaultStylistId}
-                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultStylistId: e.target.value }))}
+                    value={templateForm.defaultInstructorId}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultInstructorId: e.target.value }))}
                   >
                     <option value="">Sin asignar</option>
-                    {stylists.map((sty) => (
+                    {instructors.map((sty) => (
                       <option key={sty.id} value={sty.id}>
                         {sty.name}
                       </option>
@@ -1653,6 +2297,321 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {seriesModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSeriesModal(null);
+          }}
+        >
+          <div className="w-full max-w-3xl bg-background border border-border rounded-3xl shadow-2xl overflow-hidden">
+            <header className="flex items-center justify-between px-6 py-4 border-b border-border gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-foreground-muted">
+                  {seriesModal.hash || "SERIE"}
+                </p>
+                <h2 className="text-xl font-semibold text-foreground">
+                  {groupActivityLabel({ key: seriesModal.key, activity: seriesModal.activity })}
+                </h2>
+                <p className="text-sm text-foreground-secondary">
+                  Profesor principal:{" "}
+                  <span className="font-medium text-foreground">{seriesModal.instructor}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {seriesModal.key !== "__sin-serie__" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setSeriesEditOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-500/40 text-primary-100 hover:bg-primary-500/15 transition"
+                    >
+                      <PencilLine className="w-4 h-4" />
+                      {seriesEditOpen ? "Cerrar edición" : "Editar serie"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCancelSeries(seriesModal.key)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-500/40 text-red-200 hover:bg-red-500/15 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar serie
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={handleShareSeriesWhatsApp}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/15 transition"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Compartir por WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSeriesModal(null)}
+                  className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground-secondary hover:bg-background-secondary transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </header>
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3 text-xs text-foreground-secondary">
+                <div>
+                  <span className="text-foreground-muted uppercase block">Primera clase</span>
+                  <span className="text-foreground font-medium">
+                    {formatDateTime(seriesModal.sessions[0]?.starts_at)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-foreground-muted uppercase block">Última clase</span>
+                  <span className="text-foreground font-medium">
+                    {formatDateTime(seriesModal.sessions[seriesModal.sessions.length - 1]?.starts_at)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-foreground-muted uppercase block">Total de clases</span>
+                  <span className="text-foreground font-medium">{seriesModal.sessions.length}</span>
+                </div>
+                <div>
+                  <span className="text-foreground-muted uppercase block">Serie</span>
+                  <span className="text-foreground font-medium">{seriesModal.hash || "—"}</span>
+                </div>
+              </div>
+              <table className="w-full text-sm border border-border/60 rounded-2xl overflow-hidden">
+                <thead className="bg-background-secondary">
+                  <tr className="text-xs uppercase tracking-wide text-foreground-muted">
+                    <th className="py-3 px-4 text-left">Inicio</th>
+                    <th className="py-3 px-4 text-left">Profesor</th>
+                    <th className="py-3 px-4 text-left">Cupo</th>
+                    <th className="py-3 px-4 text-left">Precio</th>
+                    <th className="py-3 px-4 text-left">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seriesModal.sessions.map((session) => (
+                    <tr key={`modal-session-${session.id}`} className="border-t border-border/50">
+                      <td className="py-3 px-4 text-foreground">{formatDateTime(session.starts_at)}</td>
+                      <td className="py-3 px-4 text-foreground-secondary">{session.instructor_name}</td>
+                      <td className="py-3 px-4 text-foreground-secondary">{session.capacity_max} lugares</td>
+                      <td className="py-3 px-4 text-foreground-secondary">{currency(session.price_decimal)}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
+                            session.status === "scheduled"
+                              ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                              : session.status === "completed"
+                                ? "bg-primary/10 text-primary border border-primary/20"
+                                : "bg-red-500/10 text-red-300 border border-red-500/40"
+                          }`}
+                        >
+                          {session.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {seriesModal.key !== "__sin-serie__" && seriesEditOpen && (
+                <div className="border border-border/60 rounded-2xl bg-background-secondary/40 p-4 space-y-4">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-semibold text-foreground">Editar datos de la serie</h3>
+                    <p className="text-xs text-foreground-secondary">
+                      Los cambios se aplican a todas las clases programadas {seriesEditValues.includePast ? "(incluidas las pasadas)." : "a partir de hoy."}
+                    </p>
+                  </div>
+                  <form className="space-y-4" onSubmit={handleSeriesEditSubmit}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                        Profesor
+                        <select
+                          className="input"
+                          value={seriesEditValues.instructorId}
+                          onChange={(e) => handleSeriesEditChange("instructorId", e.target.value)}
+                          required
+                        >
+                          <option value="">Seleccioná un profesor</option>
+                          {instructors.map((sty) => (
+                            <option key={`series-edit-instructor-${sty.id}`} value={String(sty.id)}>
+                              {sty.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                        Actividad
+                        <input
+                          className="input"
+                          value={seriesEditValues.activityType}
+                          onChange={(e) => handleSeriesEditChange("activityType", e.target.value)}
+                          placeholder="Ej: Yoga intermedio"
+                          required
+                        />
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                        Servicio
+                        <select
+                          className="input"
+                          value={seriesEditValues.serviceId}
+                          onChange={(e) => handleSeriesEditChange("serviceId", e.target.value)}
+                        >
+                          <option value="">Sin servicio asociado</option>
+                          {services.map((svc) => (
+                            <option key={`series-edit-service-${svc.id}`} value={String(svc.id)}>
+                              {svc.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                        Cupo
+                        <input
+                          type="number"
+                          min={1}
+                          className="input"
+                          value={seriesEditValues.capacityMax}
+                          onChange={(e) => handleSeriesEditChange("capacityMax", e.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                        Precio
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="input"
+                          value={seriesEditValues.priceDecimal}
+                          onChange={(e) => handleSeriesEditChange("priceDecimal", e.target.value)}
+                          required
+                        />
+                      </label>
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                      Notas para la serie
+                      <textarea
+                        className="input min-h-[72px]"
+                        value={seriesEditValues.notes}
+                        onChange={(e) => handleSeriesEditChange("notes", e.target.value)}
+                        placeholder="Comentarios visibles en cada clase"
+                      />
+                    </label>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <label className="inline-flex items-center gap-2 text-xs text-foreground-secondary">
+                        <input
+                          type="checkbox"
+                          checked={seriesEditValues.includePast}
+                          onChange={(e) => handleSeriesEditChange("includePast", e.target.checked)}
+                        />
+                        Aplicar también a clases pasadas
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetSeriesEditForm();
+                            setSeriesEditOpen(false);
+                          }}
+                          className="px-3 py-1.5 rounded-full border border-border text-xs text-foreground-secondary hover:bg-background-secondary transition"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={seriesEditSaving}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500 text-white text-xs hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {seriesEditSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                          Guardar cambios
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              )}
+              <div className="border border-border/60 rounded-2xl bg-background-secondary/40 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Inscribir alumno en la serie</h3>
+                <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={handleSeriesEnrollSubmit}>
+                  <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                    Clase
+                    <select
+                      className="input"
+                      value={seriesEnrollForm.sessionId}
+                      onChange={(e) =>
+                        setSeriesEnrollForm((prev) => ({ ...prev, sessionId: e.target.value }))
+                      }
+                      required
+                    >
+                      {(seriesModal.sessions || []).map((session) => (
+                        <option key={`enroll-option-${session.id}`} value={String(session.id)}>
+                          {formatDateTime(session.starts_at)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                    Teléfono (WhatsApp)
+                    <input
+                      className="input"
+                      value={seriesEnrollForm.customerPhone}
+                      onChange={(e) =>
+                        setSeriesEnrollForm((prev) => ({ ...prev, customerPhone: e.target.value }))
+                      }
+                      placeholder="+54911..."
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                    Nombre
+                    <input
+                      className="input"
+                      value={seriesEnrollForm.customerName}
+                      onChange={(e) =>
+                        setSeriesEnrollForm((prev) => ({ ...prev, customerName: e.target.value }))
+                      }
+                      placeholder="Nombre del alumno (opcional)"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                    Notas
+                    <input
+                      className="input"
+                      value={seriesEnrollForm.notes}
+                      onChange={(e) =>
+                        setSeriesEnrollForm((prev) => ({ ...prev, notes: e.target.value }))
+                      }
+                      placeholder="Notas para el profesor (opcional)"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-foreground-secondary md:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={seriesEnrollForm.repeatEnabled}
+                      onChange={(e) =>
+                        setSeriesEnrollForm((prev) => ({ ...prev, repeatEnabled: e.target.checked }))
+                      }
+                    />
+                    Inscribir en todas las clases futuras de la serie
+                  </label>
+                  <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+                    <button
+                      type="submit"
+                      disabled={seriesEnrollLoading}
+                      className="px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {seriesEnrollLoading ? "Inscribiendo…" : "Inscribir alumno"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -17,7 +17,7 @@ export default function ThemeToggle() {
           }`}
         />
         <Moon
-          className={`absolute inset-0 w-5 h-5 text-blue-500 transition-all duration-300 ${
+          className={`absolute inset-0 w-5 h-5 text-primary transition-all duration-300 ${
             theme === "dark" ? "opacity-100 rotate-0" : "opacity-0 -rotate-90"
           }`}
         />

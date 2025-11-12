@@ -10,7 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 const STEP_IDS = ["owner", "business", "branding", "plan"];
 
 const BUSINESS_TYPES = [
-  { value: "salon", label: "Peluquería / Salón" },
+  { value: "salon", label: "Salón de Belleza" },
   { value: "barbershop", label: "Barbería" },
   { value: "spa", label: "Spa / Estética" },
   { value: "gym", label: "Gimnasio / Fitness" },
@@ -707,7 +707,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
               placeholder="Ej: belleza-zen"
               className="flex-1 rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
             />
-              <div className="text-xs text-slate-500">agendly.com/</div>
+              <div className="text-xs text-slate-500">arjaerp.com/</div>
           </div>
           <p
             className={`text-xs ${
@@ -720,7 +720,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
           >
             {subdomainStatus.checking
               ? "Verificando disponibilidad..."
-              : subdomainStatus.message || "Tu acceso sería: agendly.com/subdominio"}
+              : subdomainStatus.message || "Tu acceso sería: arjaerp.com/subdominio"}
           </p>
         </label>
 
@@ -798,7 +798,7 @@ function PlanStep({ session, plan, features }) {
           </span>
         </h4>
         <ul className="mt-4 space-y-2 text-sm text-slate-300">
-          {(plan?.reasons || ["Plan de entrada para comenzar a usar Agendly"]).
+          {(plan?.reasons || ["Plan de entrada para comenzar a usar ARJA ERP"]).
             map((reason, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-indigo-300 mt-0.5" />

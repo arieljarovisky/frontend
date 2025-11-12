@@ -23,29 +23,29 @@ import {
 
 function StatCard({ title, value, subtitle, icon: Icon, trend, color = "primary" }) {
   const colorClasses = {
-    primary: "from-primary-600/20 to-primary-600/5 border-primary-600/30 text-primary-400",
-    success: "from-emerald-600/20 to-emerald-600/5 border-emerald-600/30 text-emerald-400",
-    warning: "from-amber-600/20 to-amber-600/5 border-amber-600/30 text-amber-400",
-    danger: "from-red-600/20 to-red-600/5 border-red-600/30 text-red-400",
+    primary: "stat-chip--primary",
+    success: "stat-chip--success",
+    warning: "stat-chip--warning",
+    danger: "stat-chip--danger",
   };
 
   return (
-    <div className="card p-6 hover:scale-[1.02] transition-transform">
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-xl bg-gradient-to-br ${colorClasses[color]} border`}>
-          <Icon className="w-6 h-6" />
+    <div className="card card--space-lg">
+      <div className="stat-card__header">
+        <div className={`stat-chip ${colorClasses[color]}`}>
+          <Icon />
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            <TrendingUp className={`w-3 h-3 ${trend < 0 ? 'rotate-180' : ''}`} />
+          <div className={`stat-trend ${trend < 0 ? "stat-trend--down" : "stat-trend--up"}`}>
+            <TrendingUp className={trend < 0 ? "stat-trend__icon--down" : "stat-trend__icon"} />
             {Math.abs(trend)}%
           </div>
         )}
       </div>
       <div>
-        <p className="text-sm text-foreground-secondary mb-1">{title}</p>
-        <p className="text-3xl font-bold text-foreground">{value}</p>
-        {subtitle && <p className="text-xs text-foreground-muted mt-2">{subtitle}</p>}
+        <p className="stat-card__subtitle">{title}</p>
+        <p className="stat-card__value">{value}</p>
+        {subtitle && <p className="stat-card__footnote">{subtitle}</p>}
       </div>
     </div>
   );
@@ -58,7 +58,7 @@ function Section({ title, children, action }) {
         <h2 className="section-header">{title}</h2>
         {action}
       </div>
-      <div className="card p-6">
+      <div className="card card--space-lg card--no-hover">
         {children}
       </div>
     </div>
@@ -70,7 +70,7 @@ const STATUS_CONFIG = {
   pending_deposit: { label: "Seña pendiente", color: "bg-amber-600/20 text-amber-400 border-amber-600/30" },
   deposit_paid: { label: "Seña pagada", color: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30" },
   confirmed: { label: "Confirmado", color: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30" },
-  completed: { label: "Completado", color: "bg-blue-600/20 text-blue-400 border-blue-600/30" },
+  completed: { label: "Completado", color: "bg-primary-600/20 text-primary-400 border-primary-600/30" },
   cancelled: { label: "Cancelado", color: "bg-background-secondary text-foreground-secondary border-border" },
 };
 
@@ -318,7 +318,7 @@ export default function DashboardPage() {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Hora</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Cliente</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Servicio</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Peluquero</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Instructor</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Estado</th>
                 </tr>
               </thead>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-3 px-4 text-sm text-foreground">{a.customer_name}</td>
                       <td className="py-3 px-4 text-sm text-foreground-secondary">{a.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.stylist_name}</td>
+                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.instructor_name}</td>
                       <td className="py-3 px-4">
                         <span className={`badge ${config.color}`}>
                           {config.label}
