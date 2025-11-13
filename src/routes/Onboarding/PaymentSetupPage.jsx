@@ -142,7 +142,7 @@ export default function PaymentSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+    <div className="min-h-screen  from-slate-950 via-slate-900 to-slate-950 text-slate-100">
       <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_0%_0%,#6366f122,transparent_55%)]" />
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
         <header className="flex items-center justify-between mb-8">

@@ -115,39 +115,90 @@ export default function ProductsPage() {
       )}
 
       {/* Filtros */}
-      <div className="card p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, código o código de barras..."
-              className="input pl-10"
-            />
+      <div className="card border border-primary/15 bg-gradient-to-br from-background-secondary/70 via-background-secondary/40 to-primary/5 p-5 shadow-[0_18px_40px_rgba(8,20,36,0.35)] backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-end gap-5">
+          <div className="flex-1">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Buscar producto
+            </span>
+            <div className="input-group">
+              <span className="input-group__icon text-primary/70">
+                <Search className="w-5 h-5" />
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nombre, código o código de barras..."
+                className="input input--with-icon h-12 pr-4 rounded-xl border border-transparent bg-background/65 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 shadow-inner shadow-black/10"
+              />
+            </div>
           </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="input w-full sm:w-48"
-          >
-            <option value="">Todas las categorías</option>
-            {(categories || []).map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 px-4 py-2 bg-background-secondary rounded-lg cursor-pointer hover:bg-border transition-colors">
-            <input
-              type="checkbox"
-              checked={showLowStock}
-              onChange={(e) => setShowLowStock(e.target.checked)}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-            />
-            <span className="text-sm text-foreground-secondary">Solo stock bajo</span>
-          </label>
+
+          <div className="w-full sm:w-60">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Categoría
+            </span>
+            <div className="relative">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">Todas las categorías</option>
+                {(categories || []).map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full sm:w-auto">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Estado
+            </span>
+            <label
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer border transition-all duration-200 ${
+                showLowStock
+                  ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
+                  : "bg-background/65 border-transparent hover:border-primary/25"
+              }`}
+            >
+              <span className="relative inline-flex h-5 w-10 items-center">
+                <input
+                  type="checkbox"
+                  checked={showLowStock}
+                  onChange={(e) => setShowLowStock(e.target.checked)}
+                  className="peer absolute h-full w-full cursor-pointer opacity-0"
+                />
+                <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
+                <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
+              </span>
+              <span
+                className={`text-sm font-medium transition-colors ${
+                  showLowStock ? "text-primary/90" : "text-foreground-secondary"
+                }`}
+              >
+                Solo stock bajo
+              </span>
+            </label>
+          </div>
         </div>
       </div>
 

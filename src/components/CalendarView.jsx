@@ -271,7 +271,7 @@ export default function CalendarView() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#060d18] via-[#0c1726] to-[#132b45]" />
+      <div className="absolute inset-0" />
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         <div className="bg-[rgba(12,24,38,0.78)] backdrop-blur-2xl border border-[rgba(79,108,152,0.25)] shadow-[0_30px_60px_rgba(4,10,18,0.45)] rounded-3xl p-6 transition-all duration-500 hover:border-[rgba(106,142,184,0.35)] hover:shadow-[0_40px_70px_rgba(6,16,28,0.55)]">
           {/* Header */}

@@ -420,30 +420,59 @@ export default function InvoicingPage() {
       </div>
 
       {/* Filtros */}
-      <div className="card p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por número, cliente..."
-              className="input pl-10"
-            />
+      <div className="card border border-primary/15 bg-gradient-to-br from-background-secondary/70 via-background-secondary/40 to-primary/5 p-5 shadow-[0_18px_40px_rgba(8,20,36,0.35)] backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-end gap-5">
+          <div className="flex-1">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Buscar factura
+            </span>
+            <div className="input-group">
+              <span className="input-group__icon text-primary/70">
+                <Search className="w-5 h-5" />
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por número, cliente..."
+                className="input input--with-icon h-12 pr-4 rounded-xl border border-transparent bg-background/65 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 shadow-inner shadow-black/10"
+              />
+            </div>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input w-full sm:w-48"
-          >
-            <option value="">Todos los estados</option>
-            <option value="draft">Borrador</option>
-            <option value="pending">Pendiente</option>
-            <option value="approved">Aprobada</option>
-            <option value="rejected">Rechazada</option>
-            <option value="cancelled">Anulada</option>
-          </select>
+
+          <div className="w-full sm:w-60">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Estado
+            </span>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">Todos los estados</option>
+                <option value="draft">Borrador</option>
+                <option value="pending">Pendiente</option>
+                <option value="approved">Aprobada</option>
+                <option value="rejected">Rechazada</option>
+                <option value="cancelled">Anulada</option>
+              </select>
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

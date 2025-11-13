@@ -33,24 +33,24 @@
    VARIABLES CSS PARA TEMA OSCURO
    ============================================ */
 .dark {
-  --background: 10 20 28;
-  --background-secondary: 16 32 44;
-  --foreground: 230 240 246;
-  --foreground-secondary: 186 208 221;
-  --foreground-muted: 138 160 176;
-  --border: 38 68 88;
-  --border-hover: 62 100 126;
-  --primary: 18 178 210;
-  --primary-hover: 26 150 195;
-  --primary-light: 22 58 82;
-  --accent: 24 128 205;
-  --accent-hover: 42 152 220;
-  --sidebar-bg-start: 6 16 26;
-  --sidebar-bg-end: 3 12 22;
-  --sidebar-border: 32 58 78;
-  --sidebar-shadow: 3 10 20;
-  --sidebar-text: 224 236 244;
-  --sidebar-muted: 148 172 190;
+  --background: 14 28 44;
+  --background-secondary: 22 48 70;
+  --foreground: 230 242 248;
+  --foreground-secondary: 188 214 228;
+  --foreground-muted: 144 172 190;
+  --border: 44 84 110;
+  --border-hover: 68 120 150;
+  --primary: 24 182 208;
+  --primary-hover: 18 154 186;
+  --primary-light: 34 88 116;
+  --accent: 32 156 212;
+  --accent-hover: 46 176 226;
+  --sidebar-bg-start: 16 30 48;
+  --sidebar-bg-end: 8 18 34;
+  --sidebar-border: 30 64 92;
+  --sidebar-shadow: 4 12 24;
+  --sidebar-text: 226 242 248;
+  --sidebar-muted: 160 188 204;
 }
 
 /* ============================================
