@@ -677,6 +677,21 @@ apiClient.payPlanManual = async function (payload = {}) {
   return data?.data ?? data ?? {};
 };
 
+apiClient.getWhatsAppConfig = async function () {
+  const { data } = await apiClient.get("/api/config/whatsapp");
+  return data?.data ?? data ?? {};
+};
+
+apiClient.saveWhatsAppConfig = async function (payload) {
+  const { data } = await apiClient.put("/api/config/whatsapp", payload);
+  return data?.data ?? data ?? {};
+};
+
+apiClient.testWhatsAppConfig = async function (payload) {
+  const { data } = await apiClient.post("/api/config/whatsapp/test", payload);
+  return data;
+};
+
 /* =========================
    TENANT / FEATURES API
 ========================= */
@@ -821,6 +836,32 @@ apiClient.superAdmin = {
   async updateTenantPlan(id, payload) {
     if (!id) throw new Error("tenantId es requerido");
     const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}/plan`, payload);
+    return data;
+  },
+
+  async getTenantWhatsApp(id) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.get(`/api/super-admin/tenants/${id}/whatsapp`);
+    return data;
+  },
+
+  async upsertTenantWhatsAppCredentials(id, payload) {
+    if (!id) throw new Error("tenantId es requerido");
+    if (!payload || typeof payload !== "object") {
+      throw new Error("payload es requerido");
+    }
+    const { data } = await apiClient.put(
+      `/api/super-admin/tenants/${id}/whatsapp/credentials`,
+      payload
+    );
+    return data;
+  },
+
+  async clearTenantWhatsAppCredentials(id) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.delete(
+      `/api/super-admin/tenants/${id}/whatsapp/credentials`
+    );
     return data;
   },
 

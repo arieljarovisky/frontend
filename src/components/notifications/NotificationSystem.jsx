@@ -11,9 +11,10 @@ export function NotificationSystem() {
       closeButton
       toastOptions={{
         style: {
-          background: '#1e293b',
-          border: '1px solid #334155',
-          color: '#f1f5f9',
+          background: 'linear-gradient(135deg, #0f3a56, #0d7fd4)',
+          border: '1px solid rgba(19, 135, 185, 0.65)',
+          color: '#e6f9ff',
+          boxShadow: '0 16px 32px rgba(5, 24, 38, 0.4)',
         },
       }}
     />

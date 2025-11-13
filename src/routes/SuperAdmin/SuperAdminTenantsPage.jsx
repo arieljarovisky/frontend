@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Search,
@@ -11,6 +11,10 @@ import {
   CalendarCheck,
   Building2,
   Rocket,
+  Phone,
+  Power,
+  Clock,
+  Trash2,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { useQuery } from "../../shared/useQuery.js";
@@ -30,6 +34,23 @@ const STATUS_OPTIONS = [
   { value: "paused", label: "Pausados" },
   { value: "suspended", label: "Suspendidos" },
 ];
+
+function formatDateTimeForInput(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+}
+
+function parseInputDateTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
 
 function formatStatus(status) {
   switch (status) {
@@ -615,6 +636,108 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
     FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: null }), {})
   );
   const [planCode, setPlanCode] = useState("");
+  const [hubData, setHubData] = useState(null);
+  const [hubLoading, setHubLoading] = useState(true);
+  const [hubError, setHubError] = useState("");
+  const [hubSaving, setHubSaving] = useState(false);
+  const [hubClearing, setHubClearing] = useState(false);
+  const [hubForm, setHubForm] = useState({
+    phoneNumberId: "",
+    accessToken: "",
+    verifyToken: "",
+    refreshToken: "",
+    tokenExpiresAt: "",
+    isActive: true,
+    managedNotes: "",
+  });
+
+  const loadHub = useCallback(async () => {
+    setHubLoading(true);
+    setHubError("");
+    try {
+      const response = await apiClient.superAdmin.getTenantWhatsApp(tenantId);
+      const hub = response?.data ?? null;
+      setHubData(hub);
+      setHubForm({
+        phoneNumberId: hub?.phoneNumberId ?? "",
+        accessToken: "",
+        verifyToken: hub?.verifyToken ?? "",
+        refreshToken: hub?.refreshToken ?? "",
+        tokenExpiresAt: hub?.tokenExpiresAt ? formatDateTimeForInput(hub.tokenExpiresAt) : "",
+        isActive: hub?.isActive ?? false,
+        managedNotes: hub?.managedNotes ?? "",
+      });
+    } catch (err) {
+      setHubError(err?.response?.data?.error || err?.message || "No se pudo cargar WhatsApp");
+      setHubData(null);
+      setHubForm({
+        phoneNumberId: "",
+        accessToken: "",
+        verifyToken: "",
+        refreshToken: "",
+        tokenExpiresAt: "",
+        isActive: true,
+        managedNotes: "",
+      });
+    } finally {
+      setHubLoading(false);
+    }
+  }, [tenantId]);
+
+  const handleSaveHubCredentials = async () => {
+    const phoneNumberId = hubForm.phoneNumberId.trim();
+    const accessToken = hubForm.accessToken.trim();
+    if (!phoneNumberId) {
+      toast.error("Ingresá el Phone Number ID que devuelve Meta para esta línea.");
+      return;
+    }
+    setHubSaving(true);
+    try {
+      const payload = {
+        phoneNumberId,
+        verifyToken: hubForm.verifyToken.trim() || undefined,
+        refreshToken: hubForm.refreshToken.trim() || undefined,
+        tokenExpiresAt: parseInputDateTime(hubForm.tokenExpiresAt) || undefined,
+        phoneDisplay: hubData?.phoneDisplay || undefined,
+        isActive: !!hubForm.isActive,
+        managedNotes: hubForm.managedNotes.trim() || undefined,
+      };
+      if (accessToken) {
+        payload.accessToken = accessToken;
+      } else if (!hubData?.hasCredentials) {
+        toast.error("Ingresá el access token generado en Meta.");
+        setHubSaving(false);
+        return;
+      }
+      await apiClient.superAdmin.upsertTenantWhatsAppCredentials(tenantId, {
+        ...payload,
+      });
+      toast.success("Credenciales de WhatsApp guardadas");
+      await loadHub();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "No se pudo guardar las credenciales");
+    } finally {
+      setHubSaving(false);
+    }
+  };
+
+  const handleClearHubCredentials = async () => {
+    if (!hubData) return;
+    const confirmed = window.confirm(
+      "¿Eliminar todas las credenciales del hub de WhatsApp para este tenant? El asistente quedará inactivo."
+    );
+    if (!confirmed) return;
+    setHubClearing(true);
+    try {
+      await apiClient.superAdmin.clearTenantWhatsAppCredentials(tenantId);
+      toast.success("Credenciales eliminadas");
+      await loadHub();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "No se pudo eliminar las credenciales");
+    } finally {
+      setHubClearing(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -681,6 +804,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
     return () => controller.abort();
   }, [tenantId]);
 
+  useEffect(() => {
+    loadHub();
+  }, [loadHub]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur" onClick={onClose}>
       <div
@@ -724,11 +851,11 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
           <div className="p-8 text-center text-foreground-secondary">No hay datos disponibles.</div>
         ) : (
           <div className="px-6 py-5 space-y-6">
-            {detail?.tenant?.is_system && (
+            {detail?.tenant?.is_system ? (
               <div className="p-4 border border-primary/40 rounded-lg bg-primary/5 text-sm text-primary">
                 Este tenant corresponde al panel global del sistema.
               </div>
-            )}
+            ) : null}
             <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <InfoCard
                 title="Información general"
@@ -946,6 +1073,222 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                   ) : null}
                 </div>
               </div>
+            </section>
+
+            <section className="border border-border rounded-xl p-4 bg-background-secondary/40 space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm text-foreground">WhatsApp centralizado</h4>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full ${
+                    hubData
+                      ? hubData.hasCredentials
+                        ? hubData.isActive
+                          ? "bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
+                          : "bg-amber-500/15 text-amber-200 border border-amber-500/30"
+                        : "bg-slate-500/15 text-slate-200 border border-slate-500/30"
+                      : "bg-slate-500/15 text-slate-200 border border-slate-500/30"
+                  }`}
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  {hubData
+                    ? hubData.hasCredentials
+                      ? hubData.isActive
+                        ? "Activo"
+                        : "Configurado (pausado)"
+                      : "Pendiente de credenciales"
+                    : "Sin configurar"}
+                </span>
+              </div>
+
+              {hubLoading ? (
+                <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                  <div className="h-4 w-4 animate-spin rounded-full border border-primary border-t-transparent" />
+                  Cargando información del hub…
+                </div>
+              ) : hubError ? (
+                <p className="text-sm text-red-400">{hubError}</p>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-foreground-muted">Número informado por el tenant</p>
+                      <p className="font-medium text-foreground">
+                        {hubData?.phoneDisplay || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground-muted">Última actualización</p>
+                      <p className="font-medium text-foreground">
+                        {hubData?.updatedAt
+                          ? new Date(hubData.updatedAt).toLocaleString("es-AR")
+                          : "Sin credenciales"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground-muted">Asignado por</p>
+                      <p className="font-medium text-foreground">
+                        {hubData?.managedBy || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground-muted">Notas internas</p>
+                      <p className="font-medium text-foreground">
+                        {hubData?.managedNotes || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="label">Phone Number ID (Meta)</label>
+                      <input
+                        className="input"
+                        value={hubForm.phoneNumberId}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            phoneNumberId: event.target.value,
+                          }))
+                        }
+                        placeholder="Ej: 123456789012345"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Access token</label>
+                      <input
+                        className="input"
+                        type="password"
+                        value={hubForm.accessToken}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            accessToken: event.target.value,
+                          }))
+                        }
+                        placeholder="Token prolongado generado en Meta"
+                      />
+                      <p className="text-[11px] text-foreground-muted mt-1">
+                        Siempre que reemplaces las credenciales, cargá el token completo.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Verify token (webhook)</label>
+                      <input
+                        className="input"
+                        value={hubForm.verifyToken}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            verifyToken: event.target.value,
+                          }))
+                        }
+                        placeholder="Texto utilizado en la verificación"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Refresh token (opcional)</label>
+                      <input
+                        className="input"
+                        value={hubForm.refreshToken}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            refreshToken: event.target.value,
+                          }))
+                        }
+                        placeholder="Si usás refresh token, ingresalo aquí"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Expira el</label>
+                      <input
+                        className="input"
+                        type="datetime-local"
+                        value={hubForm.tokenExpiresAt}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            tokenExpiresAt: event.target.value,
+                          }))
+                        }
+                      />
+                      <p className="text-[11px] text-foreground-muted mt-1">
+                        Opcional. Ayuda a recordar cuándo renovar el token.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Notas internas</label>
+                      <textarea
+                        className="input min-h-[72px]"
+                        value={hubForm.managedNotes}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            managedNotes: event.target.value,
+                          }))
+                        }
+                        placeholder="Información útil para el equipo de soporte"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-6">
+                      <input
+                        id="hub-active"
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-border"
+                        checked={hubForm.isActive}
+                        onChange={(event) =>
+                          setHubForm((prev) => ({
+                            ...prev,
+                            isActive: event.target.checked,
+                          }))
+                        }
+                      />
+                      <label htmlFor="hub-active" className="text-sm text-foreground">
+                        Marcar asistente como activo en el hub
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        onClick={handleSaveHubCredentials}
+                        disabled={hubSaving}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-white text-sm hover:bg-primary/90 disabled:opacity-60"
+                      >
+                        {hubSaving ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border border-white/70 border-t-transparent" />
+                            Guardando…
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="w-4 h-4" />
+                            Guardar credenciales
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClearHubCredentials}
+                        disabled={hubClearing || !hubData}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm hover:bg-background disabled:opacity-60"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Limpiar
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-foreground-muted flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      El asistente solo responde cuando el hub tiene credenciales activas.
+                    </p>
+                  </div>
+                </>
+              )}
             </section>
 
             {detail.planFeatures ? (

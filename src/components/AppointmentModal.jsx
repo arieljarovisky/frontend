@@ -763,7 +763,7 @@ export default function AppointmentModal({ open, onClose, event }) {
         )}
 
         {/* Footer */}
-        <div className="flex flex-wrap gap-2 pt-4 border-t" style={{ borderColor: darkMode ? "#334155" : "#e5e7eb" }}>
+        <div className="flex flex-wrap gap-2 pt-4 border-t" style={{ borderColor: darkMode ? "#165273" : "#e5e7eb" }}>
           {isSeries && (
             <button
               onClick={askCancelSeries}

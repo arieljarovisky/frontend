@@ -2,105 +2,101 @@ import { useId } from "react";
 
 export default function Logo({ size = "default", showText = true, className = "" }) {
   const sizes = {
-    small: "w-8 h-8",
-    default: "w-10 h-10 sm:w-12 sm:h-12",
-    large: "w-16 h-16",
-    xl: "w-20 h-20"
+    small: "w-9 h-9",
+    default: "w-11 h-11 sm:w-14 sm:h-14",
+    large: "w-18 h-18",
+    xl: "w-24 h-24",
   };
 
   const textSizes = {
     small: "text-sm",
     default: "text-base sm:text-xl",
     large: "text-2xl sm:text-3xl",
-    xl: "text-3xl sm:text-4xl"
+    xl: "text-3xl sm:text-4xl",
   };
 
-  const leftGradId = typeof useId === "function" ? `${useId()}-left` : "arja-logo-left";
-  const rightGradId = typeof useId === "function" ? `${useId()}-right` : "arja-logo-right";
-  const circuitGradId = typeof useId === "function" ? `${useId()}-circuit` : "arja-logo-circuit";
+  const id = typeof useId === "function" ? useId() : "arja-logo";
+  const gradLeftId = `${id}-left`;
+  const gradRightId = `${id}-right`;
+  const gradHighlightId = `${id}-highlight`;
+  const gradGearId = `${id}-gear`;
 
   return (
     <div className={`flex items-center gap-2 sm:gap-3 ${className}`}>
-      {/* Símbolo ARJA */}
       <div className={`${sizes[size]} relative flex-shrink-0`}>
-        <div className="w-full h-full rounded-xl bg-white shadow-[0_18px_28px_rgba(15,35,59,0.2)] flex items-center justify-center">
-          <svg
-            viewBox="0 0 120 120"
-            className="w-4/5 h-4/5"
-            role="img"
-            aria-label="Logotipo ARJA"
-          >
+        <div className="w-full h-full rounded-2xl bg-white shadow-[0_16px_32px_rgba(9,64,118,0.18)] flex items-center justify-center">
+          <svg viewBox="0 0 220 220" className="w-4/5 h-4/5" role="img" aria-label="ARJA ERP" focusable="false">
             <defs>
-              <linearGradient id={leftGradId} x1="10%" y1="90%" x2="80%" y2="10%">
-                <stop offset="0%" stopColor="#0B1D33" />
-                <stop offset="100%" stopColor="#1A3352" />
+              <linearGradient id={gradLeftId} x1="15%" y1="90%" x2="65%" y2="10%">
+                <stop offset="0%" stopColor="#4FD4E4" />
+                <stop offset="100%" stopColor="#13B5CF" />
               </linearGradient>
-              <linearGradient id={rightGradId} x1="20%" y1="10%" x2="100%" y2="80%">
-                <stop offset="0%" stopColor="#D2D6DB" />
-                <stop offset="100%" stopColor="#8D96A4" />
+              <linearGradient id={gradRightId} x1="30%" y1="0%" x2="95%" y2="90%">
+                <stop offset="0%" stopColor="#1AC3DF" />
+                <stop offset="100%" stopColor="#0D7FD4" />
               </linearGradient>
-              <linearGradient id={circuitGradId} x1="0%" y1="50%" x2="100%" y2="50%">
-                <stop offset="0%" stopColor="#B9BEC6" />
-                <stop offset="100%" stopColor="#7E848C" />
+              <linearGradient id={gradHighlightId} x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stopColor="#F6FDFF" />
+                <stop offset="100%" stopColor="#B9F4FF" />
+              </linearGradient>
+              <linearGradient id={gradGearId} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0A4F72" />
+                <stop offset="100%" stopColor="#08375D" />
               </linearGradient>
             </defs>
 
             {/* Pierna izquierda */}
             <path
-              d="M32 92L54 28c1.3-3.6 4.7-6 8.5-6h9.5L51 92H32Z"
-              fill={`url(#${leftGradId})`}
+              d="M111 20L40 200h44l39-104 39 104h44L135 20z"
+              fill={`url(#${gradLeftId})`}
             />
 
-            {/* Pierna derecha */}
+            {/* Cara derecha */}
             <path
-              d="M68 22h12c3.5 0 6.7 1.9 8.4 5l-27.3 65H40.6L68 22Z"
-              fill={`url(#${rightGradId})`}
+              d="M111 20L135 20 204 200h-42l-28-72-23-64z"
+              fill={`url(#${gradRightId})`}
             />
 
-            {/* Traviesa */}
+            {/* Faceta interior */}
             <path
-              d="M48 55h50c2.2 0 4 1.8 4 4v6c0 2.2-1.8 4-4 4H48c-2.2 0-4-1.8-4-4v-6c0-2.2 1.8-4 4-4Z"
-              fill="#0F233B"
+              d="M111 76l18 48h-56z"
+              fill={`url(#${gradHighlightId})`}
+              opacity="0.7"
             />
 
-            {/* Vaciado interior */}
+            {/* Flecha interna */}
             <path
-              d="M60 48h10l-12 28H48l12-28Z"
-              fill="#F4F6F8"
+              d="M68 104h66l-15-15 11-11 34 34-34 34-11-11 15-15H68c-8.3 0-15 6.7-15 15 0 6.7 4.2 12.4 10.4 14.5l-12.6 12.6C41.7 147.6 36 135.2 36 121c0-23.2 18.8-42 42-42Z"
+              fill="#F8FEFF"
+              stroke="#13B5CF"
+              strokeWidth="6"
+              strokeLinejoin="round"
             />
 
-            {/* Circuitos */}
-            {[40, 58, 76].map((y) => (
-              <g key={y}>
-                <line
-                  x1="86"
-                  y1={y}
-                  x2="110"
-                  y2={y}
-                  stroke={`url(#${circuitGradId})`}
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
-                <circle cx="114" cy={y} r="6" fill="#7E848C" />
-              </g>
-            ))}
+            {/* Engranaje */}
+            <g transform="translate(148 116) scale(3.2)">
+              <path
+                d="M11.983 1.5a1.5 1.5 0 0 0-1.415.987l-.55 1.51a8.06 8.06 0 0 0-1.695.98l-1.518-.551a1.5 1.5 0 0 0-1.898.832l-1.5 3.897a1.5 1.5 0 0 0 .832 1.898l1.519.55a8.06 8.06 0 0 0 0 1.963l-1.52.55a1.5 1.5 0 0 0-.831 1.898l1.5 3.897a1.5 1.5 0 0 0 1.898.832l1.518-.55a8.06 8.06 0 0 0 1.695.98l.55 1.509a1.5 1.5 0 0 0 1.898.832l3.897-1.5a1.5 1.5 0 0 0 .832-1.898l-.55-1.519a8.06 8.06 0 0 0 .98-1.695l1.509-.55a1.5 1.5 0 0 0 .832-1.898l-1.5-3.897a1.5 1.5 0 0 0-1.898-.831l-1.519.55a8.06 8.06 0 0 0-1.695-.98l-.55-1.51A1.5 1.5 0 0 0 11.983 1.5Zm.017 6a3 3 0 1 1-3 3 3 3 0 0 1 3-3Z"
+                fill={`url(#${gradGearId})`}
+              />
+            </g>
           </svg>
         </div>
       </div>
 
-      {/* Texto: ARJA ERP */}
       {showText && (
         <div className="min-w-0 flex-1">
-          <div className={`flex flex-wrap items-baseline gap-1 text-primary ${textSizes[size]} leading-tight`}>
-            <h1 className="font-semibold tracking-tight">
-              ARJA
-            </h1>
-            <span className={`font-medium text-accent ${size === 'small' ? 'text-xs leading-none' : 'text-sm sm:text-base'} `}>
+          <div className={`flex flex-wrap items-baseline gap-1 leading-tight ${textSizes[size]}`}>
+            <h1 className="font-semibold tracking-tight text-[#083B5D]">ARJA</h1>
+            <span
+              className={`${size === "small" ? "text-xs leading-none" : "text-sm sm:text-base"} font-semibold`}
+              style={{ color: "#13B5CF" }}
+            >
               ERP
             </span>
           </div>
-          {size !== 'small' && (
-            <p className="text-[10px] sm:text-xs text-foreground-muted leading-tight mt-0.5 uppercase tracking-[0.12em] whitespace-normal break-words">
+          {size !== "small" && (
+            <p className="text-[10px] sm:text-xs leading-tight mt-[2px] uppercase tracking-[0.12em]" style={{ color: "#1C8FA6" }}>
               Gestión Empresarial Inteligente
             </p>
           )}
@@ -109,4 +105,3 @@ export default function Logo({ size = "default", showText = true, className = ""
     </div>
   );
 }
-
