@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import {
   authApi,
   setAccessToken,
@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
+import Logo from "../components/Logo";
 
 function safeNextParam(search) {
   const next = new URLSearchParams(search).get("next");
@@ -156,9 +157,9 @@ export default function LoginPage() {
                 >
                   <div className="font-medium text-foreground flex items-center gap-2">
                     {tenant.is_system && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/20 text-primary">
-                        Global
-                      </span>
+          <div className="flex justify-center">
+            <Logo size="default" showText />
+          </div>
                     )}
                     <span>
                       {tenant.name || tenant.slug}
@@ -201,8 +202,8 @@ export default function LoginPage() {
         <div className="card p-8 space-y-8">
           {/* Logo y título */}
           <div className="text-center space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
-              <Calendar className="w-8 h-8 text-primary" />
+            <div className="flex justify-center">
+              <Logo size="default" showText />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -319,3 +320,6 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+

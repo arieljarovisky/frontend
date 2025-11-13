@@ -1112,7 +1112,7 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                 <p className="text-sm text-red-400">{hubError}</p>
               ) : (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <p className="text-xs text-foreground-muted">Número informado por el tenant</p>
                       <p className="font-medium text-foreground">
@@ -1141,11 +1141,11 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="flex flex-col gap-2">
                       <label className="label">Phone Number ID (Meta)</label>
                       <input
-                        className="input"
+                        className="input w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         value={hubForm.phoneNumberId}
                         onChange={(event) =>
                           setHubForm((prev) => ({
@@ -1156,10 +1156,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                         placeholder="Ej: 123456789012345"
                       />
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="label">Access token</label>
                       <input
-                        className="input"
+                        className="input w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         type="password"
                         value={hubForm.accessToken}
                         onChange={(event) =>
@@ -1174,10 +1174,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                         Siempre que reemplaces las credenciales, cargá el token completo.
                       </p>
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="label">Verify token (webhook)</label>
                       <input
-                        className="input"
+                        className="input w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         value={hubForm.verifyToken}
                         onChange={(event) =>
                           setHubForm((prev) => ({
@@ -1188,10 +1188,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                         placeholder="Texto utilizado en la verificación"
                       />
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="label">Refresh token (opcional)</label>
                       <input
-                        className="input"
+                        className="input w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         value={hubForm.refreshToken}
                         onChange={(event) =>
                           setHubForm((prev) => ({
@@ -1202,10 +1202,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                         placeholder="Si usás refresh token, ingresalo aquí"
                       />
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="label">Expira el</label>
                       <input
-                        className="input"
+                        className="input w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         type="datetime-local"
                         value={hubForm.tokenExpiresAt}
                         onChange={(event) =>
@@ -1219,10 +1219,10 @@ function TenantDetailModal({ tenantId, onClose, onEdit }) {
                         Opcional. Ayuda a recordar cuándo renovar el token.
                       </p>
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-2">
                       <label className="label">Notas internas</label>
                       <textarea
-                        className="input min-h-[72px]"
+                        className="input min-h-[72px] w-full bg-background/60 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-shadow"
                         value={hubForm.managedNotes}
                         onChange={(event) =>
                           setHubForm((prev) => ({
