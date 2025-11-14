@@ -931,7 +931,7 @@ export default function ConfigPage() {
                 return <button type="button" key={id} onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))} className={`${base} ${isActive ? on : off}`}><Icon className="w-4 h-4 opacity-80 group-hover:opacity-100 transition-opacity" /> <span className="whitespace-nowrap">{label}</span></button>;
               })}
             </nav>
-            <div className="md:hidden grid grid-cols-2 gap-2">
+            <div className="hidden">
               {TABS.map(({ id, label, Icon, external }) => {
                 const isActive = active === id;
                 return <button type="button" key={id} onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${isActive ? "bg-gradient-to-r from-[#13b5cf] to-[#0d7fd4] text-white shadow-lg ring-2 ring-white/10" : "text-slate-200/80 hover:text-white hover:bg-white/10 ring-1 ring-transparent"}`}><Icon className="w-4 h-4 opacity-80" /> <span>{label}</span></button>;
