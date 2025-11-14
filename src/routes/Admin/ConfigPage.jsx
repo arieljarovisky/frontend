@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Play,
   TestTube,
+  Info,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -95,6 +96,7 @@ export default function ConfigPage() {
   const [navHeight, setNavHeight] = useState(0);
   const [navOffset, setNavOffset] = useState(148);
   const [navBounds, setNavBounds] = useState({ width: null, left: null });
+  const SCROLL_MARGIN = 48;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -229,6 +231,8 @@ export default function ConfigPage() {
   const [testingArca, setTestingArca] = useState(false);
   const [arcaTestResult, setArcaTestResult] = useState(null);
   const [arcaConnectionStatus, setArcaConnectionStatus] = useState(null);
+  const [arcaStatusLoading, setArcaStatusLoading] = useState(false);
+  const [showArcaTutorial, setShowArcaTutorial] = useState(false);
 
   // ============================================
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
@@ -359,6 +363,7 @@ export default function ConfigPage() {
 
   // Verificar conexión con ARCA
   const checkArcaConnection = async () => {
+    setArcaStatusLoading(true);
     try {
       const response = await apiClient.verifyArcaConnection();
       setArcaConnectionStatus(response);
@@ -366,8 +371,11 @@ export default function ConfigPage() {
       console.error("Error verificando ARCA:", error);
       setArcaConnectionStatus({
         ok: false,
-        error: error.response?.data?.error || error.message
+        error: error.response?.data?.error || error.message,
+        details: error.response?.data?.details,
       });
+    } finally {
+      setArcaStatusLoading(false);
     }
   };
 
@@ -766,7 +774,7 @@ export default function ConfigPage() {
     const ids = TABS.filter((t) => !t.external).map((t) => t.id);
 
     const calcActive = () => {
-      const refY = navOffset;
+      const refY = navOffset + SCROLL_MARGIN;
       const nearBottom =
         window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
 
@@ -835,7 +843,8 @@ export default function ConfigPage() {
   const goTo = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const targetY = window.scrollY + el.getBoundingClientRect().top - navOffset;
+    const adjustedOffset = Math.max(0, navOffset - SCROLL_MARGIN);
+    const targetY = window.scrollY + el.getBoundingClientRect().top - adjustedOffset;
     window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
     setActive(id);
   };
@@ -1229,7 +1238,21 @@ export default function ConfigPage() {
               {/* Estado de conexión y test */}
               <div className="space-y-4 mt-6">
                 {/* Estado de conexión */}
-                {arcaConnectionStatus && (
+                {arcaStatusLoading && (
+                  <div className="p-4 rounded-xl border bg-background-secondary/60 border-border/60 flex items-center gap-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary-300" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Verificando credenciales de ARCA...
+                      </p>
+                      <p className="text-xs text-foreground-muted">
+                        Esto puede tardar unos segundos si el servidor consulta AFIP.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {arcaConnectionStatus && !arcaStatusLoading && (
                   <div className={`p-4 rounded-xl border ${arcaConnectionStatus.ok
                     ? "bg-green-500/10 border-green-500/30"
                     : "bg-red-500/10 border-red-500/30"
@@ -1390,6 +1413,80 @@ export default function ConfigPage() {
                       )}
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 rounded-xl border border-border/60 bg-background-secondary/60 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-primary-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      ¿Cómo funciona la facturación centralizada con ARCA?
+                    </p>
+                    <p className="text-xs text-foreground-muted">
+                      Nuestro equipo mantiene los certificados y credenciales. Solo necesitamos tu CUIT para emitir comprobantes a tu nombre.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowArcaTutorial((prev) => !prev)}
+                  className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Info className="w-4 h-4" />
+                  {showArcaTutorial ? "Ocultar tutorial AFIP y ARCA" : "Ver tutorial paso a paso (AFIP + ARCA)"}
+                </button>
+
+                {showArcaTutorial && (
+                  <div className="p-3 rounded-lg bg-background/80 border border-border/40 text-xs text-foreground-secondary space-y-2">
+                    <p className="font-semibold text-foreground">Tutorial rápido</p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>
+                        <strong>Ingresá a AFIP</strong> con clave fiscal y abrí el <em>Administrador de Relaciones</em>.
+                      </li>
+                      <li>
+                        Elegí <strong>Delegar servicio</strong> &rarr; Buscá “Facturación Electrónica” y delegalo a la CUIT del proveedor que administra ARCA para tu estudio (<code className="bg-background px-1 rounded text-foreground">20-41834523-4</code> - ARJA ERP).
+                      </li>
+                      <li>
+                        Volvé a esta pantalla, ingresá tu CUIT y tocá <strong>Guardar configuración</strong>.
+                      </li>
+                      <li>
+                        Presioná <strong>Verificar conexión</strong>. Si todo está OK vas a ver el mensaje en verde.
+                      </li>
+                      <li>
+                        Finalmente, generá la <strong>Factura de prueba</strong> para confirmar que AFIP responde correctamente.
+                      </li>
+                    </ol>
+                    <p>
+                      <strong>¿Usás tus propios certificados?</strong> Además de subir el archivo <code className="bg-background px-1 rounded text-foreground">.p12</code> (o <code className="bg-background px-1 rounded text-foreground">.crt</code>/<code className="bg-background px-1 rounded text-foreground">.key</code>), asegurate de tener habilitado el servicio WSFE/WSAA en AFIP para tu CUIT. En ese caso no necesitás delegar.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid md:grid-cols-3 gap-3 text-xs text-foreground-secondary">
+                  <div className="p-3 rounded-lg bg-background/80 border border-border/40">
+                    <p className="font-semibold text-foreground mb-1">1. Guardá tu CUIT</p>
+                    <p>Ingresá el CUIT y guardá la configuración. El sistema lo usa para generar tus facturas.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/80 border border-border/40">
+                    <p className="font-semibold text-foreground mb-1">2. Verificá la conexión</p>
+                    <p>Usá el botón <strong>Verificar conexión</strong> para confirmar que el servidor tiene todo listo.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/80 border border-border/40">
+                    <p className="font-semibold text-foreground mb-1">3. Emití una prueba</p>
+                    <p>Cuando el estado sea OK, generá una factura de prueba para confirmar que AFIP responde correctamente.</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-background/60 border border-border/30 text-xs text-foreground-muted">
+                  <p className="font-medium text-foreground mb-1">¿Querés usar tus propios certificados?</p>
+                  <p>
+                    Escribinos por soporte y te ayudamos a habilitar el modo avanzado. Vas a necesitar cargar tu certificado
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.p12</code> o los archivos
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.crt</code> y
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.key</code>, junto con la contraseña.
+                  </p>
                 </div>
               </div>
             </div>
