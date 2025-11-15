@@ -936,6 +936,7 @@ select.input:focus {
   display: none;
   align-items: center;
   gap: 24px;
+  position: relative;
 }
 
 .landing-nav__link {
@@ -948,6 +949,81 @@ select.input:focus {
 
 .landing-nav__link:hover {
   color: rgb(var(--foreground));
+}
+
+.landing-nav__link--dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.landing-nav__link--dropdown::after {
+  content: "▾";
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+
+.landing-nav__link--dropdown:hover::after {
+  transform: translateY(2px);
+}
+
+.landing-nav__mega {
+  pointer-events: none;
+  opacity: 0;
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: calc(100% + 12px);
+  transform: translate(-50%, 10px);
+  width: min(1100px, 96vw);
+  background: rgba(var(--background), 0.98);
+  border: 1px solid rgba(var(--border), 0.45);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(5, 13, 23, 0.35);
+  padding: 28px;
+  z-index: 55;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.landing-nav__links:hover ~ .landing-nav__mega,
+.landing-nav__mega:hover,
+.landing-nav.has-mega .landing-nav__mega {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.landing-nav__mega-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 320px;
+  gap: 28px;
+}
+
+.landing-nav__mega-cta {
+  padding: 24px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(var(--primary), 0.08), rgba(var(--primary), 0.02));
+  border: 1px solid rgba(var(--primary), 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.landing-nav__mega-overlay {
+  position: fixed;
+  top: 82px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(2, 6, 15, 0.8), rgba(2, 8, 23, 0.92));
+  z-index: 45;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.landing-nav__mega-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .landing-nav__toggle {
@@ -997,6 +1073,43 @@ select.input:focus {
 
 .landing-nav__mobile-theme {
   padding-block: 8px;
+}
+
+.landing-nav__mobile-dropdown {
+  border: 1px solid rgba(var(--border), 0.4);
+  border-radius: 14px;
+  padding: 10px 14px;
+  background: rgba(var(--background), 0.6);
+}
+
+.landing-nav__mobile-dropdown summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: rgb(var(--foreground));
+  list-style: none;
+}
+
+.landing-nav__mobile-dropdown[open] summary {
+  margin-bottom: 8px;
+}
+
+.landing-nav__mobile-dropdown ul {
+  list-style: none;
+  padding-left: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.landing-nav__mobile-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 0;
+  color: rgba(var(--foreground-secondary), 0.9);
+  font-size: 0.9rem;
+}
+
+.landing-nav__mobile-dropdown button:hover {
+  color: rgb(var(--primary));
 }
 
 @media (min-width: 768px) {

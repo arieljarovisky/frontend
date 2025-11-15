@@ -15,14 +15,12 @@ import {
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const features = [
     {
@@ -149,7 +147,7 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Características
+              Funcionalidades
             </a>
             <a
               href="#pricing"
@@ -169,7 +167,17 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Testimonios
+              Recursos
+            </a>
+            <a
+              href="/docs"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/docs");
+              }}
+              className="landing-nav__link"
+            >
+              Documentación
             </a>
             <div className="landing-nav__auth">
               <ThemeToggle />
@@ -200,21 +208,40 @@ export default function LandingPage() {
           <div className="landing-nav__mobile">
             <a
               href="#features"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
             >
-              Características
+              Funcionalidades
             </a>
             <a
               href="#pricing"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
             >
               Precios
             </a>
             <a
               href="#testimonials"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                document.getElementById("testimonials")?.scrollIntoView({ behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
             >
-              Testimonios
+              Recursos
+            </a>
+            <a
+              href="/docs"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                navigate("/docs");
+              }}
+            >
+              Documentación
             </a>
             <div className="landing-nav__mobile-theme">
               <ThemeToggle />
@@ -402,7 +429,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/onboarding")}
                   className={`w-full py-3 rounded-lg font-semibold transition-colors ${
                     plan.popular
                       ? "bg-primary text-white hover:bg-primary-hover"

@@ -183,9 +183,21 @@ export default function CustomerDetailPage() {
           label: "Membresía",
           value: subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción",
           hint: subscriptionSummary?.hasSubscription
-            ? subscriptionSummary?.hasActiveSubscription
-              ? "Cuota al día"
-              : "Revisar estado de pago"
+            ? [
+                subscriptionSummary?.plan_name || null,
+                subscriptionSummary?.amount_decimal != null
+                  ? formatCurrency(subscriptionSummary.amount_decimal, subscriptionSummary.currency)
+                  : null,
+                subscriptionSummary?.last_payment_at
+                  ? `Último pago ${formatDateTime(subscriptionSummary.last_payment_at)}`
+                  : null,
+                subscriptionSummary?.next_charge_at
+                  ? `Próximo ${formatDateTime(subscriptionSummary.next_charge_at)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" • ") ||
+              (subscriptionSummary?.hasActiveSubscription ? "Cuota al día" : "Revisar estado de pago")
             : "No hay suscripciones asociadas",
           badgeClass: subscriptionSummary?.hasSubscription ? primaryMembershipTone.tone : membershipStatusMap.default.tone,
         }
@@ -486,26 +498,39 @@ export default function CustomerDetailPage() {
         <section className="space-y-3">
           <div className="text-sm font-medium">Suscripciones y pagos mensuales</div>
           <div className="rounded-xl border border-border bg-background-secondary/30 p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
                 <div className="text-xs uppercase text-foreground-muted tracking-wide">Estado principal</div>
-                <div className="mt-2">
-                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${primaryMembershipTone.tone}`}>
-                    {subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción"}
-                  </span>
+                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${primaryMembershipTone.tone}`}>
+                  {subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción"}
+                </span>
+              </div>
+              <div className="space-y-1 text-sm text-foreground">
+                <div className="text-xs uppercase text-foreground-muted tracking-wide">Plan actual</div>
+                <div className="font-semibold">
+                  {subscriptionSummary?.plan_name || subscriptions[0]?.plan_name || subscriptions[0]?.reason || "Sin plan asignado"}
+                </div>
+                <div className="text-xs text-foreground-muted">
+                  {subscriptionSummary?.amount_decimal != null
+                    ? formatCurrency(subscriptionSummary.amount_decimal, subscriptionSummary.currency)
+                    : "Sin monto definido"}
+                  {" • "}
+                  {subscriptionSummary?.plan_billing_day
+                    ? `Vence día ${subscriptionSummary.plan_billing_day}`
+                    : "Vence según fecha de pago"}
                 </div>
               </div>
               <div className="flex gap-6 text-sm text-foreground-secondary">
                 <div>
-                  <div className="text-xs uppercase text-foreground-muted tracking-wide">Próximo cobro</div>
-                  <div className="font-medium text-foreground">
-                    {subscriptionSummary?.next_charge_at ? formatDateTime(subscriptionSummary.next_charge_at) : "—"}
-                  </div>
-                </div>
-                <div>
                   <div className="text-xs uppercase text-foreground-muted tracking-wide">Último pago</div>
                   <div className="font-medium text-foreground">
                     {subscriptionSummary?.last_payment_at ? formatDateTime(subscriptionSummary.last_payment_at) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-foreground-muted tracking-wide">Próximo cobro</div>
+                  <div className="font-medium text-foreground">
+                    {subscriptionSummary?.next_charge_at ? formatDateTime(subscriptionSummary.next_charge_at) : "—"}
                   </div>
                 </div>
               </div>
@@ -516,11 +541,12 @@ export default function CustomerDetailPage() {
                 <div className="text-xs uppercase text-foreground-muted tracking-wide">Historial de suscripciones</div>
                 <div className="rounded-lg border border-border/60 overflow-hidden">
                   <div className="grid grid-cols-12 px-4 py-2 text-xs font-medium bg-dark-200 text-white-500 border-b">
-                    <div className="col-span-3">Creada</div>
-                    <div className="col-span-3">Motivo</div>
+                    <div className="col-span-2">Creada</div>
+                    <div className="col-span-3">Plan / Motivo</div>
                     <div className="col-span-2 text-right">Monto</div>
-                    <div className="col-span-2 text-right">Estado</div>
+                    <div className="col-span-2 text-right">Último pago</div>
                     <div className="col-span-2 text-right">Próximo cobro</div>
+                    <div className="col-span-1 text-right">Estado</div>
                   </div>
                   <div className="divide-y divide-border/60">
                     {subscriptions.map((sub) => {
@@ -528,16 +554,24 @@ export default function CustomerDetailPage() {
                       const label = membershipStatusMap[sub.status]?.label || sub.status || "—";
                       return (
                         <div key={sub.id} className="grid grid-cols-12 px-4 py-2 text-sm">
-                          <div className="col-span-3">{formatDateTime(sub.created_at)}</div>
-                          <div className="col-span-3">{sub.reason}</div>
+                          <div className="col-span-2">{formatDateTime(sub.created_at)}</div>
+                          <div className="col-span-3">
+                            <div className="font-medium text-foreground">{sub.plan_name || sub.reason || "Sin plan"}</div>
+                            {sub.plan_name && sub.reason ? (
+                              <div className="text-xs text-foreground-muted">{sub.reason}</div>
+                            ) : null}
+                          </div>
                           <div className="col-span-2 text-right">{formatCurrency(sub.amount_decimal, sub.currency)}</div>
                           <div className="col-span-2 text-right">
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${tone}`}>
-                              {label}
-                            </span>
+                            {sub.last_payment_at ? formatDateTime(sub.last_payment_at) : "—"}
                           </div>
                           <div className="col-span-2 text-right">
                             {sub.next_charge_at ? formatDateTime(sub.next_charge_at) : "—"}
+                          </div>
+                          <div className="col-span-1 text-right">
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${tone}`}>
+                              {label}
+                            </span>
                           </div>
                         </div>
                       );

@@ -1,5 +1,5 @@
 // src/routes/Admin/ConfigPage.jsx - Con navegación oculta en mobile
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Settings,
@@ -24,6 +24,8 @@ import {
   Play,
   TestTube,
   Info,
+  Plus,
+  Edit3,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -167,6 +169,27 @@ export default function ConfigPage() {
     newAppointment: true,
     cancelled: false,
   });
+  const [bookingConfig, setBookingConfig] = useState({
+    require_membership: false,
+  });
+  const [membershipPlans, setMembershipPlans] = useState([]);
+  const [loadingMembershipPlans, setLoadingMembershipPlans] = useState(false);
+  const [membershipError, setMembershipError] = useState("");
+
+  const loadMembershipPlans = useCallback(async () => {
+    try {
+      setLoadingMembershipPlans(true);
+      setMembershipError("");
+      const plans = await apiClient.listMembershipPlans();
+      setMembershipPlans(Array.isArray(plans) ? plans : []);
+    } catch (error) {
+      console.error("Error cargando planes de membresía:", error);
+      setMembershipError(error?.response?.data?.error || error?.message || "No se pudieron cargar las membresías");
+      setMembershipPlans([]);
+    } finally {
+      setLoadingMembershipPlans(false);
+    }
+  }, []);
 
   const [commissions, setCommissions] = useState({
     defaultPercentage: 50,
@@ -240,12 +263,13 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, c, n, contactData, w] = await Promise.all([
+        const [g, c, n, contactData, w, booking] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
           apiClient.getConfigSection("contact").catch(() => ({})), // Si no existe, retornar objeto vacío
           apiClient.getWhatsAppConfig().catch(() => ({})),
+          apiClient.getAppointmentsConfig().catch(() => ({})),
         ]);
 
         setGeneral({
@@ -269,6 +293,9 @@ export default function ConfigPage() {
           paid: Boolean(n.paid ?? true),
           newAppointment: Boolean(n.newAppointment ?? true),
           cancelled: Boolean(n.cancelled ?? false),
+        });
+        setBookingConfig({
+          require_membership: Boolean(booking.require_membership),
         });
 
         setContact({
@@ -360,6 +387,14 @@ export default function ConfigPage() {
     loadPayments();
     checkArcaConnection();
   }, []);
+
+  useEffect(() => {
+    if (bookingConfig.require_membership) {
+      loadMembershipPlans();
+    } else {
+      setMembershipPlans([]);
+    }
+  }, [bookingConfig.require_membership, loadMembershipPlans]);
 
   // Verificar conexión con ARCA
   const checkArcaConnection = async () => {
@@ -607,6 +642,28 @@ export default function ConfigPage() {
     }
   };
 
+  const goToMembershipPlansPage = (planId = null) => {
+    const basePath = tenantSlug ? `/${tenantSlug}/admin/membresias` : "/admin/membresias";
+    if (planId) {
+      navigate(`${basePath}?planId=${planId}`);
+    } else {
+      navigate(basePath);
+    }
+  };
+
+  const handlePlanToggle = async (plan) => {
+    try {
+      await apiClient.updateMembershipPlan(plan.id, { is_active: !plan.is_active });
+      toast.success(
+        plan.is_active ? "Membresía desactivada" : "Membresía activada"
+      );
+      await loadMembershipPlans();
+    } catch (error) {
+      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
+      toast.error(errorMessage);
+    }
+  };
+
   // ============================================
   // 💾 GUARDAR CONFIGURACIÓN
   // ============================================
@@ -637,6 +694,7 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("contact", contact),
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
+        apiClient.saveAppointmentsConfig(bookingConfig),
         // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
         savePayments(),
       ]);
@@ -897,6 +955,8 @@ export default function ConfigPage() {
   const highlightedTips =
     whatsappStatusTips[whatsappConfig.status] || whatsappStatusTips.pending;
 
+  const navZIndex = 70;
+
   return (
     <div className="space-y-6">
       <div ref={navAnchorRef} />
@@ -912,9 +972,9 @@ export default function ConfigPage() {
                 top: topOffset,
                 left: navBounds.left != null ? `${navBounds.left}px` : 0,
                 width: navBounds.width != null ? `${navBounds.width}px` : "100%",
-                zIndex: 70,
+                zIndex: navZIndex,
               }
-            : { position: "relative", zIndex: 70 }
+            : { position: "relative", zIndex: navZIndex }
         }
       >
         <div className="mx-auto max-w-6xl">
@@ -998,6 +1058,165 @@ export default function ConfigPage() {
         </ConfigSection>
       </div>
 
+      {/* BOOKING */}
+      <div id="booking">
+        <ConfigSection
+          title="Reservas y membresías"
+          description="Configurá si el sistema requiere cuota al día antes de permitir un turno"
+          icon={Shield}
+        >
+          <div className="space-y-4">
+            <SwitchField
+              label="Requerir cuota al día para reservar"
+              description="Bloqueá las reservas si el cliente no tiene una suscripción activa. Ideal para gimnasios o clubes."
+              checked={bookingConfig.require_membership}
+              onChange={(e) =>
+                setBookingConfig((prev) => ({ ...prev, require_membership: e.target.checked }))
+              }
+            />
+            <p className="text-xs text-foreground-muted">
+              Cuando está desactivado, cualquier cliente puede reservar aunque no tenga una
+              membresía vigente (recomendado para peluquerías y estudios sin mensualidad).
+            </p>
+            {bookingConfig.require_membership && (
+              <div className="rounded-2xl border border-border/60 bg-background-secondary/50 p-4 space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Planes de membresía</p>
+                    <p className="text-xs text-foreground-muted">
+                      Definí los precios y duración de las cuotas que vas a controlar.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => goToMembershipPlansPage()}
+                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo plan
+                  </Button>
+                </div>
+
+                {membershipError ? (
+                  <div className="py-6 text-sm text-red-400">
+                    {membershipError}
+                  </div>
+                ) : loadingMembershipPlans ? (
+                  <div className="py-10 flex flex-col items-center gap-2 text-foreground-muted">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Cargando planes...
+                  </div>
+                ) : membershipPlans.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-foreground-muted">
+                    No cargaste planes de membresía todavía. Creá al menos uno para hacer cumplir la cuota mensual.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-border/70">
+                    <table className="w-full min-w-[520px] text-sm">
+                      <thead className="bg-background-secondary/70 text-foreground-muted text-xs uppercase tracking-wide">
+                        <tr>
+                          <th className="text-left px-4 py-3">Nombre</th>
+                          <th className="text-left px-4 py-3">Precio</th>
+                          <th className="text-left px-4 py-3">Duración</th>
+                          <th className="text-left px-4 py-3">Estado</th>
+                          <th className="text-right px-4 py-3">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {membershipPlans.map((plan) => (
+                          <tr key={plan.id} className="border-t border-border/60">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{plan.name}</p>
+                              {plan.description && (
+                                <p className="text-xs text-foreground-muted">{plan.description}</p>
+                              )}
+                              {(plan.max_classes_per_week || plan.max_classes_per_month || plan.max_active_appointments) ? (
+                                <p className="text-xs text-foreground-muted mt-1 space-x-2">
+                                  {plan.max_classes_per_week ? (
+                                    <span>Semanal: {plan.max_classes_per_week}</span>
+                                  ) : null}
+                                  {plan.max_classes_per_month ? (
+                                    <span>Mensual: {plan.max_classes_per_month}</span>
+                                  ) : null}
+                                  {plan.max_active_appointments ? (
+                                    <span>Turnos activos: {plan.max_active_appointments}</span>
+                                  ) : null}
+                                </p>
+                              ) : null}
+                              <p className="text-xs text-foreground-muted mt-1 space-x-2">
+                                {plan.billing_day ? (
+                                  <span>Vence día {plan.billing_day}</span>
+                                ) : (
+                                  <span>Vence según fecha de pago</span>
+                                )}
+                                <span>Gracia: {plan.grace_days ?? 0} días</span>
+                                <span>
+                                  Interés:{" "}
+                                  {plan.interest_type === "none"
+                                    ? "Sin interés"
+                                    : plan.interest_type === "percent"
+                                    ? `${plan.interest_value ?? 0}%`
+                                    : `$${plan.interest_value ?? 0}`}
+                                </span>
+                                <span>
+                                  Bloquea: {plan.auto_block ? "Sí" : "No"}
+                                </span>
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {formatCurrency(plan.price_decimal)}
+                            </td>
+                            <td className="px-4 py-3 text-foreground-secondary">
+                              {plan.duration_months <= 1
+                                ? "1 mes"
+                                : `${plan.duration_months} meses`}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                  plan.is_active
+                                    ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                                    : "bg-slate-500/10 text-slate-300 border border-slate-500/40"
+                                }`}
+                              >
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    plan.is_active ? "bg-emerald-300" : "bg-slate-300"
+                                  }`}
+                                />
+                                {plan.is_active ? "Activo" : "Inactivo"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => goToMembershipPlansPage(plan.id)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePlanToggle(plan)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-foreground-secondary hover:text-foreground hover:bg-border transition-colors"
+                                >
+                                  {plan.is_active ? "Desactivar" : "Activar"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </ConfigSection>
+      </div>
+
       {/* BUSINESS TYPE */}
       <div id="business-type">
         <ConfigSection
@@ -1008,7 +1227,6 @@ export default function ConfigPage() {
           <BusinessTypeConfig />
         </ConfigSection>
       </div>
-
       {/* WHATSAPP */}
       <div id="whatsapp">
         <ConfigSection
@@ -1916,3 +2134,188 @@ export default function ConfigPage() {
     </div>
   );
 }
+
+/* Legacy MembershipPlanModal (reemplazado por la página /admin/membresias)
+function MembershipPlanModal({ form, onClose, onChange, onSubmit, saving }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm">
+      <div className="card w-full max-w-lg relative border border-border/70 p-6 sm:p-7">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-foreground-secondary hover:text-foreground"
+          aria-label="Cerrar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <h3 className="text-xl font-semibold text-foreground mb-4">
+          {form?.id ? "Editar plan de membresía" : "Nuevo plan de membresía"}
+        </h3>
+        <div className="space-y-4">
+          <FieldGroup label="Nombre">
+            <input
+              type="text"
+              value={form?.name ?? ""}
+              onChange={(e) => onChange("name", e.target.value)}
+              className="input w-full"
+              placeholder="Ej: Mensual Clásica"
+            />
+          </FieldGroup>
+          <FieldGroup label="Precio mensual">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form?.price_decimal ?? 0}
+              onChange={(e) => onChange("price_decimal", e.target.value)}
+              className="input w-full"
+            />
+          </FieldGroup>
+          <FieldGroup label="Duración (meses)">
+            <input
+              type="number"
+              min="1"
+              value={form?.duration_months ?? 1}
+              onChange={(e) => onChange("duration_months", e.target.value)}
+              className="input w-full"
+            />
+          </FieldGroup>
+          <div>
+            <p className="text-xs uppercase text-foreground-muted tracking-wide mb-2">
+              Límites (dejá vacío para ilimitado)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FieldGroup label="Clases por semana">
+                <input
+                  type="number"
+                  min="0"
+                  value={form?.max_classes_per_week ?? ""}
+                  onChange={(e) => onChange("max_classes_per_week", e.target.value)}
+                  className="input w-full"
+                  placeholder="ej. 3"
+                />
+              </FieldGroup>
+              <FieldGroup label="Clases por mes">
+                <input
+                  type="number"
+                  min="0"
+                  value={form?.max_classes_per_month ?? ""}
+                  onChange={(e) => onChange("max_classes_per_month", e.target.value)}
+                  className="input w-full"
+                  placeholder="ej. 10"
+                />
+              </FieldGroup>
+              <FieldGroup label="Turnos activos simultáneos">
+                <input
+                  type="number"
+                  min="0"
+                  value={form?.max_active_appointments ?? ""}
+                  onChange={(e) => onChange("max_active_appointments", e.target.value)}
+                  className="input w-full"
+                  placeholder="ej. 4"
+                />
+              </FieldGroup>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldGroup label="Día de vencimiento">
+              <input
+                type="number"
+                min="1"
+                max="31"
+                value={form?.billing_day ?? ""}
+                onChange={(e) => onChange("billing_day", e.target.value)}
+                className="input w-full"
+                placeholder="Ej: 10"
+              />
+              <p className="text-xs text-foreground-muted mt-1">
+                Dejalo vacío para que se calcule desde la fecha de pago.
+              </p>
+            </FieldGroup>
+            <FieldGroup label="Días de gracia">
+              <input
+                type="number"
+                min="0"
+                value={form?.grace_days ?? ""}
+                onChange={(e) => onChange("grace_days", e.target.value)}
+                className="input w-full"
+              />
+            </FieldGroup>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldGroup label="Interés por mora">
+              <select
+                value={form?.interest_type ?? "none"}
+                onChange={(e) => onChange("interest_type", e.target.value)}
+                className="input w-full"
+              >
+                <option value="none">Sin interés</option>
+                <option value="fixed">Monto fijo</option>
+                <option value="percent">Porcentaje</option>
+              </select>
+            </FieldGroup>
+            {form?.interest_type !== "none" && (
+              <FieldGroup label={form?.interest_type === "percent" ? "Porcentaje" : "Monto fijo"}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form?.interest_value ?? 0}
+                  onChange={(e) => onChange("interest_value", e.target.value)}
+                  className="input w-full"
+                  placeholder={form?.interest_type === "percent" ? "Ej: 5" : "Ej: 1500"}
+                />
+              </FieldGroup>
+            )}
+          </div>
+          <div className="border border-border rounded-xl p-3">
+            <SwitchField
+              label="Bloquear automáticamente al vencer"
+              description="Si está activo, los clientes con deuda no podrán reservar cuando pase el vencimiento + gracia."
+              checked={form?.auto_block ?? true}
+              onChange={(e) => onChange("auto_block", e.target.checked)}
+            />
+          </div>
+          <FieldGroup label="Descripción (opcional)">
+            <textarea
+              value={form?.description ?? ""}
+              onChange={(e) => onChange("description", e.target.value)}
+              className="input w-full min-h-[90px]"
+            />
+          </FieldGroup>
+          <div className="border border-border rounded-xl p-3">
+            <SwitchField
+              label="Plan activo"
+              description={
+                form?.id
+                  ? "Podés pausar temporalmente la venta de este plan."
+                  : "Los planes nuevos se crean activos."
+              }
+              checked={form?.is_active ?? true}
+              disabled={!form?.id}
+              onChange={(e) => onChange("is_active", e.target.checked)}
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              className="btn-primary"
+              disabled={saving}
+            >
+              {saving ? "Guardando..." : form?.id ? "Guardar cambios" : "Crear plan"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+*/

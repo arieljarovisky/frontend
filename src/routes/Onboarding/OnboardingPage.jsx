@@ -403,35 +403,36 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div className="min-h-screen from-slate-950 via-slate-900 to-slate-950 text-slate-100">
-      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_0%_0%,#6366f122,transparent_55%)]" />
+    <div className="relative min-h-screen bg-gradient-to-b from-background via-background to-background-secondary text-foreground overflow-hidden">
+      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_15%_10%,rgba(19,181,207,0.25),transparent_55%)]" />
+      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_85%_20%,rgba(13,127,212,0.18),transparent_50%)]" />
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-3">
             <Logo size="small" showText />
-            <span className="text-sm text-slate-300">
+            <span className="text-sm text-foreground-secondary">
               Configurá tu sistema en menos de 5 minutos
             </span>
           </div>
           <ThemeToggle />
         </header>
 
-        <div className="bg-slate-900/70 border border-slate-700/40 rounded-3xl p-6 shadow-2xl backdrop-blur">
+        <div className="rounded-[28px] border border-border/60 bg-background/90 shadow-dark-lg backdrop-blur-xl p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-semibold mb-1">
+              <h1 className="text-2xl font-semibold mb-1 text-foreground">
                 {currentStep === "owner" && "Contanos sobre vos"}
                 {currentStep === "business" && "Tu negocio"}
                 {currentStep === "branding" && "Personalizá tu sistema"}
                 {currentStep === "plan" && "Plan recomendado"}
               </h1>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-foreground-secondary">
                 Paso {stepIndex + 1} de {STEP_IDS.length}
               </p>
             </div>
-            <div className="w-32 h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div className="w-32 h-2 rounded-full bg-border/40 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all"
+                className="h-full bg-gradient-to-r from-primary to-accent transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -456,12 +457,12 @@ export default function OnboardingPage() {
             </motion.div>
           </AnimatePresence>
 
-          <footer className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+          <footer className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-foreground-muted">
               <span>¿Ya tenés cuenta?</span>
               <button
                 onClick={() => navigate("/login")}
-                className="text-indigo-400 hover:text-indigo-300"
+                className="text-primary hover:text-primary-hover"
               >
                 Iniciar sesión
               </button>
@@ -470,7 +471,7 @@ export default function OnboardingPage() {
               <button
                 onClick={handlePrev}
                 disabled={stepIndex === 0 || loading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-700/60 text-sm text-slate-200 hover:bg-slate-800/60 disabled:opacity-40"
+                className="btn btn-secondary min-w-[140px] justify-center disabled:opacity-40"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Atrás
@@ -479,7 +480,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleFinish}
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-sm font-semibold hover:from-indigo-600 hover:to-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary min-w-[160px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
@@ -497,7 +498,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleNext}
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-sm font-semibold hover:from-indigo-600 hover:to-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary min-w-[160px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
@@ -524,8 +525,8 @@ function StepSection({ title, subtitle, children }) {
   return (
     <section className="space-y-4">
       <header>
-        <h2 className="text-xl font-semibold text-slate-100">{title}</h2>
-        {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        {subtitle && <p className="text-sm text-foreground-secondary">{subtitle}</p>}
       </header>
       <div className="grid gap-4">{children}</div>
     </section>
@@ -535,12 +536,12 @@ function StepSection({ title, subtitle, children }) {
 function InputField({ label, hint, ...props }) {
   return (
     <label className="space-y-2">
-      <span className="block text-sm font-medium text-slate-200">{label}</span>
+      <span className="block text-sm font-medium text-foreground">{label}</span>
       <input
         {...props}
-        className="w-full rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+        className="w-full rounded-2xl border border-border/60 bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition shadow-sm"
       />
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-foreground-muted">{hint}</p>}
     </label>
   );
 }
@@ -591,13 +592,13 @@ function BusinessStep({ data, features, onChange, onToggleFeature }) {
         subtitle="Nos ayuda a configurar la cuenta ideal para vos."
       >
         <label className="space-y-2">
-          <span className="block text-sm font-medium text-slate-200">
+          <span className="block text-sm font-medium text-foreground">
             Tipo de negocio
           </span>
           <select
             value={data.business_type}
             onChange={(e) => onChange("business", "business_type", e.target.value)}
-            className="w-full rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+            className="w-full rounded-2xl border border-border/60 bg-background-secondary/70 px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40"
           >
             <option value="" disabled>
               Seleccioná una opción
@@ -634,7 +635,7 @@ function BusinessStep({ data, features, onChange, onToggleFeature }) {
         </div>
 
         <label className="space-y-2">
-          <span className="block text-sm font-medium text-slate-200">
+          <span className="block text-sm font-medium text-foreground">
             Comentarios adicionales (opcional)
           </span>
           <textarea
@@ -642,7 +643,7 @@ function BusinessStep({ data, features, onChange, onToggleFeature }) {
             onChange={(e) => onChange("business", "notes", e.target.value)}
             rows={3}
             placeholder="Contanos algo particular de tu negocio..."
-            className="w-full rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+            className="w-full rounded-2xl border border-border/60 bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40"
           />
         </label>
       </StepSection>
@@ -657,21 +658,21 @@ function BusinessStep({ data, features, onChange, onToggleFeature }) {
               type="button"
               key={feature.key}
               onClick={() => onToggleFeature(feature.key)}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+              className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 features[feature.key]
-                  ? "border-indigo-500/60 bg-indigo-500/10 text-slate-100"
-                  : "border-slate-700/40 bg-slate-900/40 text-slate-400 hover:border-slate-600/60"
+                  ? "border-primary/60 bg-primary/10 text-foreground"
+                  : "border-border/50 bg-background-secondary/60 text-foreground-secondary hover:border-border"
               }`}
             >
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                   features[feature.key]
-                    ? "border-indigo-400 bg-indigo-500/30"
-                    : "border-slate-600"
+                    ? "border-primary bg-primary/30"
+                    : "border-border/70"
                 }`}
               >
                 {features[feature.key] && (
-                  <CheckCircle2 className="h-4 w-4 text-indigo-300" />
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
                 )}
               </span>
               <span className="text-sm font-medium">{feature.label}</span>
@@ -697,7 +698,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
           placeholder="Ej: Estudio Belleza Zen"
         />
         <label className="space-y-2">
-          <span className="block text-sm font-medium text-slate-200">
+          <span className="block text-sm font-medium text-foreground">
             Subdominio (acceso web)
           </span>
             <div className="flex items-center gap-3">
@@ -705,9 +706,9 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
               value={data.subdomain}
               onChange={(e) => onChange("branding", "subdomain", e.target.value)}
               placeholder="Ej: belleza-zen"
-              className="flex-1 rounded-xl border border-slate-700/50 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+              className="flex-1 rounded-2xl border border-border/60 bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40"
             />
-              <div className="text-xs text-slate-500">arjaerp.com/</div>
+              <div className="text-xs text-foreground-muted">arjaerp.com/</div>
           </div>
           <p
             className={`text-xs ${
@@ -715,7 +716,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
                 ? "text-emerald-400"
                 : subdomainStatus.available === false
                 ? "text-red-400"
-                : "text-slate-500"
+                : "text-foreground-muted"
             }`}
           >
             {subdomainStatus.checking
@@ -726,7 +727,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <label className="space-y-2">
-            <span className="block text-sm font-medium text-slate-200">
+            <span className="block text-sm font-medium text-foreground">
               Color principal
             </span>
             <div className="flex gap-2 flex-wrap">
@@ -746,7 +747,7 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
             </div>
           </label>
           <label className="space-y-2">
-            <span className="block text-sm font-medium text-slate-200">
+            <span className="block text-sm font-medium text-foreground">
               Color secundario
             </span>
             <div className="flex gap-2 flex-wrap">
@@ -781,40 +782,40 @@ function BrandingStep({ data, onChange, subdomainStatus }) {
 function PlanStep({ session, plan, features }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-indigo-500/40 bg-indigo-500/10 p-6">
-        <h3 className="text-lg font-semibold text-indigo-200">
+      <div className="rounded-2xl border border-primary/35 bg-primary/10 p-6">
+        <h3 className="text-lg font-semibold text-primary">
           ¡Listo! Este es el plan que recomendamos para vos
         </h3>
-        <p className="text-sm text-indigo-100/80 mt-2">
+        <p className="text-sm text-foreground-secondary mt-2">
           Podés cambiar de plan en cualquier momento desde tu panel.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-6">
-        <h4 className="text-lg font-semibold text-slate-100">
+      <div className="rounded-2xl border border-border/60 bg-background-secondary/70 p-6">
+        <h4 className="text-lg font-semibold text-foreground">
           Plan recomendado:{" "}
-          <span className="text-indigo-300 uppercase tracking-wide">
+          <span className="text-primary uppercase tracking-wide">
             {plan?.recommended || "Starter"}
           </span>
         </h4>
-        <ul className="mt-4 space-y-2 text-sm text-slate-300">
+        <ul className="mt-4 space-y-2 text-sm text-foreground-secondary">
           {(plan?.reasons || ["Plan de entrada para comenzar a usar ARJA ERP"]).
             map((reason, idx) => (
               <li key={idx} className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-300 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
                 <span>{reason}</span>
               </li>
             ))}
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-slate-700/40 bg-slate-900/40 p-6">
-        <h5 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border/50 bg-background-secondary/60 p-6">
+        <h5 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">
           Resumen de lo que necesitás
         </h5>
-        <dl className="grid sm:grid-cols-2 gap-3 text-sm text-slate-300">
+        <dl className="grid sm:grid-cols-2 gap-3 text-sm text-foreground-secondary">
           <div>
-            <dt className="font-medium text-slate-400">Features clave</dt>
+            <dt className="font-medium text-foreground">Features clave</dt>
             <dd className="mt-1">
               {Object.entries(features)
                 .filter(([, enabled]) => enabled)
@@ -823,7 +824,7 @@ function PlanStep({ session, plan, features }) {
             </dd>
           </div>
           <div>
-            <dt className="font-medium text-slate-400">
+            <dt className="font-medium text-foreground">
               Email de administrador
             </dt>
             <dd className="mt-1">{session?.email}</dd>

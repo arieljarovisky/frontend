@@ -677,6 +677,16 @@ apiClient.payPlanManual = async function (payload = {}) {
   return data?.data ?? data ?? {};
 };
 
+apiClient.getAppointmentsConfig = async function () {
+  const { data } = await apiClient.get("/api/config/appointments");
+  return data?.data ?? data ?? {};
+};
+
+apiClient.saveAppointmentsConfig = async function (payload = {}) {
+  const { data } = await apiClient.put("/api/config/appointments", payload);
+  return data?.data ?? data ?? {};
+};
+
 apiClient.getWhatsAppConfig = async function () {
   const { data } = await apiClient.get("/api/config/whatsapp");
   return data?.data ?? data ?? {};
@@ -684,6 +694,26 @@ apiClient.getWhatsAppConfig = async function () {
 
 apiClient.saveWhatsAppConfig = async function (payload) {
   const { data } = await apiClient.put("/api/config/whatsapp", payload);
+  return data?.data ?? data ?? {};
+};
+
+apiClient.listMembershipPlans = async function () {
+  const { data } = await apiClient.get("/api/memberships/plans");
+  return data?.data ?? data ?? [];
+};
+
+apiClient.createMembershipPlan = async function (payload = {}) {
+  const { data } = await apiClient.post("/api/memberships/plans", payload);
+  return data?.data ?? data ?? {};
+};
+
+apiClient.updateMembershipPlan = async function (id, payload = {}) {
+  const { data } = await apiClient.put(`/api/memberships/plans/${id}`, payload);
+  return data?.data ?? data ?? {};
+};
+
+apiClient.deleteMembershipPlan = async function (id) {
+  const { data } = await apiClient.delete(`/api/memberships/plans/${id}`);
   return data?.data ?? data ?? {};
 };
 

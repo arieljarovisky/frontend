@@ -3,9 +3,25 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "../shared/useQuery.js";
 import { apiClient } from "../api";
-import { SearchInput, initials, formatPhone } from "../shared/ui.jsx";
+import { SearchInput, initials, formatPhone, formatDateTime } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { useApp } from "../context/UseApp.js";
+
+const formatCurrency = (value, currency = "ARS") => {
+    if (value == null) return "—";
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "—";
+    try {
+        return new Intl.NumberFormat("es-AR", {
+            style: "currency",
+            currency: currency || "ARS",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        }).format(numeric);
+    } catch {
+        return `$${numeric.toFixed(2)} ${currency || ""}`.trim();
+    }
+};
 
 export default function CustomersPage() {
     // 1) Estado local de búsqueda
@@ -86,22 +102,43 @@ export default function CustomersPage() {
         default: { label: "Sin suscripción", className: "bg-foreground/5 text-foreground-secondary border border-border" },
     };
 
-    const renderMembershipPill = (row) => {
+    const renderMembershipInfo = (row) => {
         if (!showMembershipColumn) return null;
-        if (!row?.has_subscription) {
-            const style = membershipStyles.default;
-            return (
-                <span className={`inline-flex items-center justify-end rounded-full px-3 py-1 text-xs font-medium ${style.className}`}>
+        const statusKey = row?.has_subscription
+            ? row?.has_active_subscription
+                ? "authorized"
+                : row?.subscription_status || "default"
+            : "default";
+        const style = membershipStyles[statusKey] || membershipStyles.default;
+
+        const planLabel = row?.primary_plan_name;
+        const amountLabel =
+            row?.primary_plan_amount_decimal != null
+                ? formatCurrency(row.primary_plan_amount_decimal, row.primary_plan_currency)
+                : null;
+
+        return (
+            <div className="flex flex-col items-end gap-1 text-right">
+                <span className={`inline-flex items-center justify-end rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${style.className}`}>
                     {style.label}
                 </span>
-            );
-        }
-        const statusKey = row?.has_active_subscription ? "authorized" : row?.subscription_status || "default";
-        const style = membershipStyles[statusKey] || membershipStyles.default;
-        return (
-            <span className={`inline-flex items-center justify-end rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${style.className}`}>
-                {style.label}
-            </span>
+                {planLabel ? (
+                    <div className="text-xs font-medium text-foreground">{planLabel}</div>
+                ) : null}
+                {(amountLabel || row?.primary_last_payment_at || row?.primary_next_charge_at) ? (
+                    <div className="text-[11px] leading-tight text-foreground-muted space-y-0.5">
+                        {amountLabel ? <div>{amountLabel}</div> : null}
+                        <div>
+                            Último pago:{" "}
+                            {row?.primary_last_payment_at ? formatDateTime(row.primary_last_payment_at) : "—"}
+                        </div>
+                        <div>
+                            Próximo:{" "}
+                            {row?.primary_next_charge_at ? formatDateTime(row.primary_next_charge_at) : "—"}
+                        </div>
+                    </div>
+                ) : null}
+            </div>
         );
     };
 
@@ -190,7 +227,7 @@ export default function CustomersPage() {
                                 ) : null}
                                 {showMembershipColumn ? (
                                     <div className={`col-span-${columnLayout.membership} text-right`}>
-                                        {renderMembershipPill(r)}
+                                        {renderMembershipInfo(r)}
                                     </div>
                                 ) : null}
                             </Link>

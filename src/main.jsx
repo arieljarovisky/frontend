@@ -8,6 +8,7 @@ import "./styles/arja-theme.css";
 
 // Layout y páginas
 import LandingPage from "./routes/LandingPage.jsx";
+import DocsPage from "./routes/DocsPage.jsx";
 import AppLayout from "./routes/AppLayout.jsx";
 import DashboardPage from "./routes/DashboardPage.jsx";
 import CustomersPage from "./routes/CustomersPage.jsx";
@@ -41,12 +42,14 @@ import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
 import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
 import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
 import InstructorsPage from "./routes/Admin/InstructorsPage.jsx";
+import MembershipPlansPage from "./routes/Admin/MembershipPlansPage.jsx";
 import FeatureGate from "./components/FeatureGate.jsx";
 import { AppProvider } from "./context/AppProvider.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
   { path: "/", element: <LandingPage /> },
+  { path: "/docs", element: <DocsPage /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
@@ -175,6 +178,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <InstructorStats />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/membresias",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <MembershipPlansPage />
           </PrivateRoute>
         ),
       },

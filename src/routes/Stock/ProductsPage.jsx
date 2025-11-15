@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { 
@@ -10,7 +10,9 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
-  Filter
+  Filter,
+  Folder,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +21,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
   // Cargar productos
@@ -36,7 +39,10 @@ export default function ProductsPage() {
   );
 
   // Cargar categorías
-  const { data: categories = [] } = useQuery(
+  const {
+    data: categories = [],
+    refetch: refetchCategories,
+  } = useQuery(
     async () => {
       const response = await apiClient.get("/api/stock/categories");
       return response.data?.data || [];
@@ -85,16 +91,25 @@ export default function ProductsPage() {
             Administra tu inventario de productos
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingProduct(null);
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-sm sm:text-base">Nuevo Producto</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="btn-secondary flex items-center justify-center gap-2"
+          >
+            <Folder className="w-4 h-4" />
+            Categorías
+          </button>
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Nuevo Producto</span>
+          </button>
+        </div>
       </div>
 
       {/* Alertas de stock bajo */}
@@ -387,6 +402,14 @@ export default function ProductsPage() {
             setShowModal(false);
             setEditingProduct(null);
           }}
+        />
+      )}
+
+      {showCategoryModal && (
+        <CategoryModal
+          categories={categories}
+          onClose={() => setShowCategoryModal(false)}
+          onUpdated={() => refetchCategories()}
         />
       )}
     </div>
@@ -697,6 +720,187 @@ function ProductModal({ product, categories, onClose, onSave }) {
               product ? "Actualizar" : "Crear"
             )}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryModal({ categories = [], onClose, onUpdated }) {
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editing) {
+      setFormData({
+        name: editing.name || "",
+        description: editing.description || "",
+      });
+    } else {
+      setFormData({ name: "", description: "" });
+    }
+  }, [editing]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("Ingresá un nombre para la categoría");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editing) {
+        await apiClient.put(`/api/stock/categories/${editing.id}`, {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+        });
+        toast.success("Categoría actualizada");
+      } else {
+        await apiClient.post("/api/stock/categories", {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+        });
+        toast.success("Categoría creada");
+      }
+      setEditing(null);
+      setFormData({ name: "", description: "" });
+      onUpdated?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.error || "Error al guardar la categoría");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (category) => {
+    setSaving(true);
+    try {
+      await apiClient.delete(`/api/stock/categories/${category.id}`);
+      toast.success("Categoría eliminada");
+      if (editing?.id === category.id) {
+        setEditing(null);
+        setFormData({ name: "", description: "" });
+      }
+      onUpdated?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.error || "Error al eliminar la categoría");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm">
+      <div className="card w-full max-w-5xl relative shadow-2xl border border-border/60 bg-background/95 p-6 sm:p-8">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-foreground-secondary hover:text-foreground"
+          aria-label="Cerrar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h2 className="text-2xl font-semibold text-foreground mb-6 px-1 sm:px-2">Categorías</h2>
+
+        <div className="grid lg:grid-cols-[1.4fr,360px] gap-6 px-1 sm:px-2">
+          <div className="border border-border rounded-3xl overflow-hidden bg-background-secondary/70 p-3 sm:p-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-background-secondary/80 backdrop-blur">
+                  <th className="text-left px-4 py-3 font-semibold text-foreground">Nombre</th>
+                  <th className="text-left px-4 py-3 font-semibold text-foreground">Descripción</th>
+                  <th className="text-center px-4 py-3 font-semibold text-foreground">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 text-center text-foreground-muted">
+                      No hay categorías creadas
+                    </td>
+                  </tr>
+                ) : (
+                  categories.map((category) => (
+                    <tr key={category.id} className="border-t border-border">
+                      <td className="px-4 py-2">{category.name}</td>
+                      <td className="px-4 py-2 text-foreground-secondary">
+                        {category.description || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            onClick={() => setEditing(category)}
+                            className="px-3 py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-xs transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(category)}
+                            className="px-3 py-1.5 rounded-lg border border-red-400/40 text-red-400 hover:bg-red-400/10 text-xs transition-colors disabled:opacity-50"
+                            disabled={saving}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border border-border rounded-3xl p-5 bg-background-secondary/80 backdrop-blur">
+            <h3 className="font-semibold text-foreground mb-4">
+              {editing ? "Editar categoría" : "Nueva categoría"}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="input w-full"
+                  placeholder="Ej: Shampoos, Accesorios"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  className="input w-full"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                {editing ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(null)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancelar
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary flex-1"
+                >
+                  {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear categoría"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

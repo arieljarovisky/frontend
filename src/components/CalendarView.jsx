@@ -1,5 +1,5 @@
 // src/components/CalendarView.jsx — FullCalendar, moderno y fluido (responsive)
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { useMemo, useRef, useState, useCallback, useEffect, useContext } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -8,7 +8,7 @@ import listPlugin from "@fullcalendar/list";
 import esLocale from "@fullcalendar/core/locales/es";
 import { Filter, RefreshCw } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
-import { useApp } from "../context/UseApp";
+import { AppContext } from "../context/AppProvider";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import resourcePlugin from "@fullcalendar/resource";
 
@@ -96,7 +96,17 @@ function useCalendarEvents(events, instructorColors) {
 }
 
 export default function CalendarView() {
-  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors } = useApp();
+  const appCtx = useContext(AppContext);
+
+  if (!appCtx) {
+    return (
+      <div className="p-6 text-center text-sm text-foreground-muted">
+        Calendario no disponible. Este componente necesita el contexto de la app.
+      </div>
+    );
+  }
+
+  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors } = appCtx;
   const [instructorFilter, setInstructorFilter] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);

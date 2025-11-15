@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   CalendarCheck,
@@ -91,6 +92,8 @@ function EmptyState({ icon: Icon = Users, title, body, action }) {
 }
 
 export default function InstructorsPage() {
+  const { tenantSlug } = useParams();
+  const navigate = useNavigate();
   const [tab, setTab] = useState("instructors");
   const [loading, setLoading] = useState(false);
 
@@ -283,6 +286,12 @@ export default function InstructorsPage() {
             onClick={() => setTab("services")}
           >
             Servicios
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/${tenantSlug}/admin/instructores/estadisticas`)}
+          >
+            Horarios & estadísticas
           </Button>
         </div>
       </header>
