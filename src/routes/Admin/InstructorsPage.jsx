@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 import { apiClient } from "../../api";
 import Button from "../../components/ui/Button";
+import { useAuth } from "../../context/AuthContext";
 
 const DEFAULT_INSTRUCTOR_FORM = {
   name: "",
   colorHex: "#2563EB",
   isActive: true,
   serviceIds: [],
+  branchId: null,
 };
 
 const DEFAULT_SERVICE_FORM = {
@@ -94,11 +96,14 @@ function EmptyState({ icon: Icon = Users, title, body, action }) {
 export default function InstructorsPage() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tab, setTab] = useState("instructors");
   const [loading, setLoading] = useState(false);
 
   const [instructors, setInstructors] = useState([]);
   const [services, setServices] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
 
   const [instructorForm, setInstructorForm] = useState(DEFAULT_INSTRUCTOR_FORM);
   const [editingInstructorId, setEditingInstructorId] = useState(null);
@@ -107,6 +112,19 @@ export default function InstructorsPage() {
   const [serviceForm, setServiceForm] = useState(DEFAULT_SERVICE_FORM);
   const [editingServiceId, setEditingServiceId] = useState(null);
   const [savingService, setSavingService] = useState(false);
+
+  const loadBranches = useCallback(async () => {
+    try {
+      setBranchesLoading(true);
+      const response = await apiClient.listActiveBranches();
+      setBranches(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.error("[InstructorsPage] loadBranches error:", error);
+      toast.error("No se pudieron cargar las sucursales");
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -127,16 +145,28 @@ export default function InstructorsPage() {
     }
   }, []);
 
+  const defaultBranchId = user?.currentBranchId || user?.current_branch_id || null;
+
   useEffect(() => {
+    loadBranches();
     loadData();
-  }, [loadData]);
+  }, [loadBranches, loadData]);
+
+  useEffect(() => {
+    if (!editingInstructorId && defaultBranchId && instructorForm.branchId == null) {
+      setInstructorForm((prev) => ({ ...prev, branchId: defaultBranchId }));
+    }
+  }, [defaultBranchId, editingInstructorId, instructorForm.branchId]);
 
   const availableServices = useMemo(() => sortByName(services), [services]);
   const availableInstructors = useMemo(() => sortByName(instructors), [instructors]);
 
   const resetInstructorForm = () => {
     setEditingInstructorId(null);
-    setInstructorForm(DEFAULT_INSTRUCTOR_FORM);
+    setInstructorForm({
+      ...DEFAULT_INSTRUCTOR_FORM,
+      branchId: defaultBranchId,
+    });
   };
 
   const resetServiceForm = () => {
@@ -158,6 +188,7 @@ export default function InstructorsPage() {
         colorHex: instructorForm.colorHex || null,
         isActive: instructorForm.isActive,
         serviceIds: instructorForm.serviceIds,
+        branchId: instructorForm.branchId || null,
       };
 
       if (editingInstructorId) {
@@ -333,6 +364,7 @@ export default function InstructorsPage() {
                     <tr>
                       <th className="text-left py-3 px-4">Nombre</th>
                       <th className="text-left py-3 px-4">Servicios</th>
+                      <th className="text-left py-3 px-4">Sucursal</th>
                       <th className="text-left py-3 px-4">Estado</th>
                       <th className="text-right py-3 px-4">Acciones</th>
                     </tr>
@@ -340,6 +372,15 @@ export default function InstructorsPage() {
                   <tbody>
                     {instructors.map((instructor) => (
                       <tr key={instructor.id} className="border-b border-border/50 last:border-b-0">
+                        <td className="py-3 px-4 text-sm text-foreground-secondary">
+                          {instructor.branchName ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/60 bg-background text-xs">
+                              {instructor.branchName}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-foreground-muted italic">Sin asignar</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <span
@@ -398,6 +439,7 @@ export default function InstructorsPage() {
                                   colorHex: instructor.colorHex || "#2563EB",
                                   isActive: instructor.isActive,
                                   serviceIds: instructor.serviceIds || [],
+                              branchId: instructor.branchId || defaultBranchId || null,
                                 });
                               }}
                               aria-label="Editar instructor"
@@ -453,6 +495,39 @@ export default function InstructorsPage() {
                     setInstructorForm((prev) => ({ ...prev, colorHex: event.target.value }))
                   }
                 />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
+                <span className="font-medium text-foreground">Sucursal</span>
+                <select
+                  className="input"
+                  value={instructorForm.branchId ?? ""}
+                  onChange={(event) =>
+                    setInstructorForm((prev) => ({
+                      ...prev,
+                      branchId: event.target.value ? Number(event.target.value) : null,
+                    }))
+                  }
+                  disabled={branchesLoading || branches.length === 0}
+                >
+                  {branches.length === 0 ? (
+                    <option value="">
+                      {branchesLoading ? "Cargando..." : "No hay sucursales activas"}
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">Seleccionar sucursal</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <span className="text-xs text-foreground-muted">
+                  Definí en qué sede trabaja este empleado.
+                </span>
               </label>
 
               <MultiSelect

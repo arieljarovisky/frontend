@@ -16,6 +16,7 @@ import {
 import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
   salon: { classes: false },
@@ -198,6 +199,14 @@ const ActionBanner = ({ message, onClose }) => {
 };
 
 export default function ClassesPage() {
+  const { user } = useAuth();
+  const preferredBranchId = useMemo(
+    () =>
+      user?.currentBranchId || user?.current_branch_id
+        ? String(user.currentBranchId || user.current_branch_id)
+        : "",
+    [user?.currentBranchId, user?.current_branch_id]
+  );
   const today = new Date();
   const defaultFrom = toDateInputValue(today);
   const defaultTo = toDateInputValue(new Date(today.getTime() + 1000 * 60 * 60 * 24 * 14));
@@ -244,6 +253,7 @@ export default function ClassesPage() {
     capacityMax: 10,
     priceDecimal: 0,
     notes: "",
+    branchId: preferredBranchId,
   });
   const [sessionDurationMin, setSessionDurationMin] = useState(60);
   const [repeatOptions, setRepeatOptions] = useState(DEFAULT_REPEAT_OPTIONS);
@@ -304,6 +314,38 @@ export default function ClassesPage() {
   }, [seriesModal]);
 
   const dismissMessage = () => setActionMessage(null);
+
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+
+  const loadBranches = useCallback(async () => {
+    try {
+      setBranchesLoading(true);
+      const response = await apiClient.listActiveBranches();
+      const list = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      setBranches(list);
+      setSessionForm((prev) => {
+        if (prev.branchId) return prev;
+        const fallback = preferredBranchId || (list[0]?.id ? String(list[0].id) : "");
+        return fallback ? { ...prev, branchId: fallback } : prev;
+      });
+    } catch (error) {
+      console.error("❌ [classes] Error cargando sucursales:", error);
+      toast.error("No se pudieron cargar las sucursales");
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, [preferredBranchId]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
+
+  useEffect(() => {
+    if (preferredBranchId) {
+      setSessionForm((prev) => (prev.branchId ? prev : { ...prev, branchId: preferredBranchId }));
+    }
+  }, [preferredBranchId]);
 
 const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     () => apiClient.getTenantBusinessInfo(),
@@ -494,6 +536,10 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       setActionMessage({ type: "error", title: "Elegí una fecha y hora de inicio." });
       return;
     }
+    if (!sessionForm.branchId) {
+      setActionMessage({ type: "error", title: "Seleccioná la sucursal." });
+      return;
+    }
 
     const payload = {
       templateId: sessionForm.templateId ? Number(sessionForm.templateId) : undefined,
@@ -505,6 +551,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       capacityMax: Number(sessionForm.capacityMax || 0),
       priceDecimal: Number(sessionForm.priceDecimal || 0),
       notes: sessionForm.notes?.trim() || undefined,
+      branchId: Number(sessionForm.branchId),
     };
 
     if (payload.capacityMax <= 0) {
@@ -589,6 +636,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
             startsAt: toDateTimeLocalValue(occurrence),
             endsAt: toDateTimeLocalValue(endDate),
             seriesId: generatedSeriesId,
+            branchId: Number(sessionForm.branchId),
           };
 
           if (pattern.instructorId) sessionOverride.instructorId = Number(pattern.instructorId);
@@ -660,6 +708,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         capacityMax: 10,
         priceDecimal: 0,
         notes: "",
+        branchId: preferredBranchId || (branches[0]?.id ? String(branches[0].id) : ""),
       });
       setSessionDurationMin(60);
       setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
@@ -1900,6 +1949,29 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                         {svc.name}
                       </option>
                     ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-foreground-secondary">Sucursal</span>
+                  <select
+                    className="input"
+                    value={sessionForm.branchId || ""}
+                    onChange={(e) => handleSessionFormChange("branchId", e.target.value)}
+                    disabled={branchesLoading || branches.length === 0}
+                    required
+                  >
+                    {branchesLoading ? (
+                      <option value="">Cargando sucursales...</option>
+                    ) : branches.length === 0 ? (
+                      <option value="">No hay sucursales activas</option>
+                    ) : (
+                      branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </label>
 

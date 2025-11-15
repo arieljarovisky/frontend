@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import BranchSelector from "../components/BranchSelector";
 import { useQuery } from "../shared/useQuery";
 import { useApp } from "../context/UseApp.js";
 import {
@@ -180,6 +181,7 @@ export default function AppLayout() {
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
     { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
     { to: `${base}/admin/instructores`, label: navLabels.professionals, icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
+    { to: `${base}/admin/branches`, label: "Sucursales", icon: Building2, active: pathname.startsWith(`${base}/admin/branches`), adminOnly: true },
     { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
   ];
 
@@ -237,18 +239,19 @@ export default function AppLayout() {
 
         {/* Tenant Info */}
         {tenant && (
-          <div className="arja-sidebar__section">
+          <div className="arja-sidebar__section space-y-3">
             <div className="arja-tenant-card">
               <span className="arja-tenant-card__icon">
                 <Building2 />
               </span>
               <div className="arja-tenant-card__body">
-                <p className="arja-tenant-card__title">Sucursal</p>
+                <p className="arja-tenant-card__title">Negocio</p>
                 <p className="arja-tenant-card__value">
                   {tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain || `#${tenant.id}`}
                 </p>
               </div>
             </div>
+            {!tenant.is_system ? <BranchSelector /> : null}
           </div>
         )}
 

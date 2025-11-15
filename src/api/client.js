@@ -66,6 +66,41 @@ function getTenantId() {
   return id ? Number(id) : null;
 }
 
+const BRANCH_VIEW_MODE_KEY = "branchViewMode";
+
+function userCanViewAllBranches(user = getUserData()) {
+  if (!user) return false;
+  if (String(user.role || "").toLowerCase() === "admin") return true;
+  const accessMode = user.branchAccessMode || user.branch_access_mode || "all";
+  return accessMode !== "custom";
+}
+
+function normalizeBranchViewMode(mode) {
+  return mode === "all" ? "all" : "single";
+}
+
+function setBranchViewMode(mode) {
+  const next = normalizeBranchViewMode(mode);
+  if (next === "all" && !userCanViewAllBranches()) {
+    localStorage.setItem(BRANCH_VIEW_MODE_KEY, "single");
+    return;
+  }
+  localStorage.setItem(BRANCH_VIEW_MODE_KEY, next);
+}
+
+function getBranchViewModeRaw() {
+  return localStorage.getItem(BRANCH_VIEW_MODE_KEY) || "single";
+}
+
+function getBranchViewMode() {
+  const raw = getBranchViewModeRaw();
+  if (raw === "all" && !userCanViewAllBranches()) {
+    localStorage.setItem(BRANCH_VIEW_MODE_KEY, "single");
+    return "single";
+  }
+  return normalizeBranchViewMode(raw);
+}
+
 // ✅ NUEVO: Guardar info completa del usuario
 function setUserData(user) {
   if (user) {
@@ -97,6 +132,17 @@ apiClient.interceptors.request.use(
     // Solo agregar para ngrok; en localhost NO
     if (isNgrok) {
       config.headers["ngrok-skip-browser-warning"] = "true";
+    }
+    const method = (config.method || "get").toLowerCase();
+    const viewMode = getBranchViewMode();
+    if (
+      method === "get" &&
+      viewMode === "all" &&
+      userCanViewAllBranches() &&
+      config.headers?.["X-Branch-Mode"] !== "skip" &&
+      (config.params?.branchId === undefined || config.params.branchId === null)
+    ) {
+      config.params = { ...(config.params || {}), branchId: "all" };
     }
     return config;
   },
@@ -329,6 +375,44 @@ apiClient.getConfig = async function () {
 
 apiClient.updateConfig = async function (config) {
   const { data } = await apiClient.put("/api/config", config);
+  return data;
+};
+
+/* =========================
+   BRANCHES API
+========================= */
+
+apiClient.listBranches = async function () {
+  const { data } = await apiClient.get("/api/branches", {
+    headers: { "X-Branch-Mode": "skip" },
+  });
+  return data;
+};
+
+apiClient.createBranch = async function (payload) {
+  const { data } = await apiClient.post("/api/branches", payload);
+  return data;
+};
+
+apiClient.updateBranch = async function (id, payload) {
+  const { data } = await apiClient.put(`/api/branches/${id}`, payload);
+  return data;
+};
+
+apiClient.deleteBranch = async function (id) {
+  const { data } = await apiClient.delete(`/api/branches/${id}`);
+  return data;
+};
+
+apiClient.listActiveBranches = async function () {
+  const { data } = await apiClient.get("/api/branches/catalog", {
+    headers: { "X-Branch-Mode": "skip" },
+  });
+  return data;
+};
+
+apiClient.setCurrentBranch = async function (branchId) {
+  const { data } = await apiClient.post("/api/branches/current", { branchId });
   return data;
 };
 
@@ -992,6 +1076,8 @@ export {
   getTenantId,
   setUserData,
   getUserData,
+  setBranchViewMode,
+  getBranchViewMode,
 
   // Auth API
   authApi,

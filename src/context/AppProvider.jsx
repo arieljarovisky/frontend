@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { apiClient } from "../api/client";
+import { useAuth } from "./AuthContext";
 
 const BUSINESS_TYPE_DEFAULT_FEATURES = {
   salon: { classes: false },
@@ -46,8 +47,22 @@ export function AppProvider({ children, pollMs = 15000 }) {
     repeatEnabled: false,
     repeatCount: 4,
     repeatUntil: "",
+    branchId: "",
   });
   const updateBooking = (patch) => setBooking((b) => ({ ...b, ...patch }));
+
+  const { user } = useAuth();
+  const preferredBranchId = useMemo(
+    () =>
+      user?.currentBranchId || user?.current_branch_id
+        ? String(user.currentBranchId || user.current_branch_id)
+        : "",
+    [user?.currentBranchId, user?.current_branch_id]
+  );
+
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchesError, setBranchesError] = useState("");
 
   // --- Calendar events ---
   const [range, _setRange] = useState(() => {
@@ -87,6 +102,50 @@ export function AppProvider({ children, pollMs = 15000 }) {
   const [features, setFeatures] = useState({});
   const [featuresLoading, setFeaturesLoading] = useState(false);
   const classesEnabled = useMemo(() => features?.classes !== false, [features]);
+
+  const loadBranches = useCallback(async () => {
+    try {
+      setBranchesLoading(true);
+      setBranchesError("");
+      const response = await apiClient.listActiveBranches();
+      const list = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+          ? response
+          : [];
+      setBranches(list);
+      setBooking((prev) => {
+        if (prev.branchId && list.some((branch) => String(branch.id) === String(prev.branchId))) {
+          return prev;
+        }
+        const fallback =
+          (preferredBranchId &&
+            list.some((branch) => String(branch.id) === String(preferredBranchId)))
+            ? preferredBranchId
+            : list[0]?.id
+              ? String(list[0].id)
+              : "";
+        if (!fallback && prev.branchId === "") {
+          return prev;
+        }
+        return fallback ? { ...prev, branchId: fallback } : { ...prev, branchId: "" };
+      });
+    } catch (error) {
+      console.error("❌ [AppProvider] Error cargando sucursales:", error);
+      setBranchesError(error?.message || "No se pudieron cargar las sucursales");
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, [preferredBranchId]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
+
+  useEffect(() => {
+    if (!preferredBranchId) return;
+    setBooking((prev) => (prev.branchId ? prev : { ...prev, branchId: preferredBranchId }));
+  }, [preferredBranchId]);
 
   // ============================================
   // 🧰 Helper: Local MySQL datetime
@@ -176,8 +235,12 @@ export function AppProvider({ children, pollMs = 15000 }) {
       Object.entries(planFeatures).forEach(([key, value]) => {
         if (value === false) {
           merged[key] = false;
-        } else if (value === true && merged[key] === undefined) {
-          merged[key] = true;
+        } else if (value === true) {
+          if (merged[key] === undefined) {
+            merged[key] = true;
+          }
+        } else if (merged[key] === undefined) {
+          merged[key] = value;
         }
       });
       setFeatures(merged);
@@ -205,10 +268,11 @@ export function AppProvider({ children, pollMs = 15000 }) {
       setEventsLoading(true);
       setEventsError("");
 
-      const appointmentsPromise = apiClient.listAppointments({ from: fromIso, to: toIso });
-      const classesPromise = classesEnabled
-        ? apiClient.listClassSessions({ from: fromIso, to: toIso })
-        : Promise.resolve([]);
+      const params = { from: fromIso, to: toIso };
+    const appointmentsPromise = apiClient.listAppointments(params);
+    const classesPromise = classesEnabled
+      ? apiClient.listClassSessions(params)
+      : Promise.resolve([]);
 
       const [appointmentsData, sessionsData] = await Promise.all([appointmentsPromise, classesPromise]);
 
@@ -361,6 +425,13 @@ export function AppProvider({ children, pollMs = 15000 }) {
         overrideData.repeatUntil !== undefined ? overrideData.repeatUntil : booking.repeatUntil;
 
       const { selectedSlot, serviceId, instructorId } = booking;
+      const branchId =
+        overrideData.branchId ??
+        booking.branchId ??
+        preferredBranchId ??
+        user?.currentBranchId ??
+        user?.current_branch_id ??
+        "";
 
       if (!customerPhone) {
         setBookingSave({ saving: false, ok: false, error: "⚠️ Ingresá tu teléfono de WhatsApp" });
@@ -384,6 +455,15 @@ export function AppProvider({ children, pollMs = 15000 }) {
         return;
       }
 
+      if (!branchId) {
+        setBookingSave({
+          saving: false,
+          ok: false,
+          error: "⚠️ Seleccioná la sucursal del turno",
+        });
+        return;
+      }
+
       try {
         setBookingSave({ saving: true, ok: false, error: "" });
 
@@ -399,6 +479,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
           startsAt,
           durationMin,
           status: "scheduled",
+          branchId: Number(branchId),
         };
 
         if (repeatEnabled) {
@@ -430,7 +511,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
         setBookingSave({ saving: false, ok: false, error: message });
       }
     },
-    [booking, services, toLocalMySQL, loadEvents]
+    [booking, services, toLocalMySQL, loadEvents, preferredBranchId]
   );
 
   const updateAppointment = useCallback(
@@ -441,6 +522,12 @@ export function AppProvider({ children, pollMs = 15000 }) {
           startsAt: patch.startsAt ? toLocalMySQL(patch.startsAt) : undefined,
           endsAt: patch.endsAt ? toLocalMySQL(patch.endsAt) : undefined,
         };
+        if (patch.branchId !== undefined) {
+          body.branchId =
+            patch.branchId === null || patch.branchId === ""
+              ? null
+              : Number(patch.branchId);
+        }
         if (patch.applySeries) {
           body.applySeries = patch.applySeries;
         }
@@ -500,6 +587,10 @@ export function AppProvider({ children, pollMs = 15000 }) {
       loadAvailability,
       bookingSave,
       createAppointment,
+      branches,
+      branchesLoading,
+      branchesError,
+      reloadBranches: loadBranches,
       // Calendar
       events,
       eventsLoading,
@@ -516,6 +607,10 @@ export function AppProvider({ children, pollMs = 15000 }) {
       featuresLoading,
       classesEnabled,
       refreshFeatures,
+      loadBranches,
+      branches,
+      branchesLoading,
+      branchesError,
     }),
     [
       services,
@@ -541,6 +636,10 @@ export function AppProvider({ children, pollMs = 15000 }) {
       featuresLoading,
       classesEnabled,
       refreshFeatures,
+      loadBranches,
+      branches,
+      branchesLoading,
+      branchesError,
     ]
   );
 

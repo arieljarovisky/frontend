@@ -20,11 +20,12 @@ import { apiClient } from "../../api/client.js";
 import { useQuery } from "../../shared/useQuery.js";
 import { useDebouncedValue } from "../../shared/useDebouncedValue.js";
 
-const FEATURE_KEYS = ["appointments", "stock", "invoicing"];
+const FEATURE_KEYS = ["appointments", "stock", "invoicing", "multiBranch"];
 const FEATURE_LABELS = {
   appointments: "Turnos",
   stock: "Gestión de stock",
   invoicing: "Facturación",
+  multiBranch: "Operación multi-sucursal",
 };
 
 const STATUS_OPTIONS = [

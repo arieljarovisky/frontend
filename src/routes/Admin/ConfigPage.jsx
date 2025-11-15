@@ -100,6 +100,29 @@ export default function ConfigPage() {
   const [navBounds, setNavBounds] = useState({ width: null, left: null });
   const SCROLL_MARGIN = 48;
 
+  const permissions = user?.permissions || {};
+  const configPerms = permissions.config || [];
+  const invoicesPerms = permissions.invoicing || [];
+  const hasConfigAccess =
+    user?.role === "admin" ||
+    configPerms.length > 0 ||
+    invoicesPerms.length > 0;
+
+  if (!hasConfigAccess) {
+    return (
+      <div className="p-6">
+        <div className="card card--space-lg text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            No tenés permiso para ver Configuración
+          </h2>
+          <p className="text-foreground-secondary text-sm">
+            Pedí a un administrador que te otorgue acceso a este módulo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab === 'mercadopago') {

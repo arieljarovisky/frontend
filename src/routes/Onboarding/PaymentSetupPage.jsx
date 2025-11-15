@@ -9,7 +9,8 @@ import { useAuth } from "../../context/AuthContext";
 const PLAN_DETAILS = {
   starter: { code: "starter", label: "Plan Starter", currency: "ARS", amount: 9999 },
   growth: { code: "growth", label: "Plan Growth", currency: "ARS", amount: 19999 },
-  pro: { code: "pro", label: "Plan Pro", currency: "ARS", amount: 39999 },
+  scale: { code: "scale", label: "Plan Escala", currency: "ARS", amount: 44900 },
+  pro: { code: "pro", label: "Plan Pro a Medida", currency: "ARS", amount: 0 },
 };
 
 function formatPrice(amount, currency = "ARS") {

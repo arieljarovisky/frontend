@@ -1,17 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Edit, 
+import {
+  Users,
+  Plus,
+  Search,
+  Edit,
   Trash2,
   Shield,
   UserCheck,
   UserX,
   Key,
-  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +19,8 @@ export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [showPermissions, setShowPermissions] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
 
   // Cargar usuarios
   const { data: users = [], loading, error, refetch } = useQuery(
@@ -39,14 +40,22 @@ export default function UsersPage() {
     []
   );
 
-  // Cargar roles
-  const { data: rolesData } = useQuery(
-    async () => {
-      const response = await apiClient.get("/api/users/roles/list");
-      return response.data?.data || {};
-    },
-    []
-  );
+  const loadBranches = async () => {
+    try {
+      setBranchesLoading(true);
+      const response = await apiClient.listActiveBranches();
+      setBranches(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.error("[UsersPage] loadBranches error:", error);
+      toast.error("No se pudieron cargar las sucursales");
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBranches();
+  }, []);
 
   const handleDelete = async (id) => {
     if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
@@ -193,10 +202,20 @@ export default function UsersPage() {
                   </span>
                 </div>
 
-                {user.appointments_count !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground-secondary">Turnos:</span>
-                    <span className="text-foreground">{user.appointments_count}</span>
+                {user.branchNames && user.branchNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {user.branchNames.map((branch) => (
+                      <span
+                        key={`${user.id}-branch-${branch.id}`}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-border/70 bg-background-secondary"
+                      >
+                        {branch.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-foreground-muted italic">
+                    Acceso a todas las sucursales
                   </div>
                 )}
 
@@ -241,7 +260,8 @@ export default function UsersPage() {
         <UserModal
           user={editingUser}
           permissions={permissions}
-          rolesData={rolesData}
+          branches={branches}
+          branchesLoading={branchesLoading}
           onClose={() => {
             setShowModal(false);
             setEditingUser(null);
@@ -258,15 +278,30 @@ export default function UsersPage() {
 }
 
 // Modal para crear/editar usuario
-function UserModal({ user, permissions, rolesData, onClose, onSave }) {
-  const [formData, setFormData] = useState({
+function UserModal({ user, permissions, branches, branchesLoading, onClose, onSave }) {
+  const initialState = {
     email: user?.email || "",
     password: "",
     role: user?.role || "staff",
     is_active: user?.is_active !== undefined ? user.is_active : true,
-    permissions: user?.permissions || {}
-  });
+    permissions: user?.permissions || {},
+    branch_access_mode: user?.branch_access_mode || user?.branchAccessMode || "all",
+    branch_ids: user?.branchIds || [],
+  };
+  const [formData, setFormData] = useState(initialState);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      email: user?.email || "",
+      password: "",
+      role: user?.role || "staff",
+      is_active: user?.is_active !== undefined ? user.is_active : true,
+      permissions: user?.permissions || {},
+      branch_access_mode: user?.branch_access_mode || user?.branchAccessMode || "all",
+      branch_ids: user?.branchIds || [],
+    });
+  }, [user]);
 
   // Agrupar permisos por módulo
   const permissionsByModule = (permissions || []).reduce((acc, perm) => {
@@ -317,17 +352,29 @@ function UserModal({ user, permissions, rolesData, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (
+      formData.branch_access_mode === "custom" &&
+      (!formData.branch_ids || formData.branch_ids.length === 0)
+    ) {
+      toast.error("Seleccioná al menos una sucursal para este usuario.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       // Preparar datos para enviar
-      const payload = { ...formData };
-      
+      const payload = {
+        ...formData,
+        branchIds: formData.branch_ids,
+        branchAccessMode: formData.branch_access_mode,
+      };
+
       // Si es edición y la contraseña está vacía, no incluirla en el payload
       if (user && (!payload.password || payload.password.trim() === "")) {
         delete payload.password;
       }
-      
+
       if (user) {
         await apiClient.put(`/api/users/${user.id}`, payload);
         toast.success("Usuario actualizado");
@@ -385,7 +432,7 @@ function UserModal({ user, permissions, rolesData, onClose, onSave }) {
 
         {/* Contenido con scroll */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-foreground mb-2">
@@ -448,6 +495,90 @@ function UserModal({ user, permissions, rolesData, onClose, onSave }) {
                 />
                 <span className="text-sm text-foreground">Usuario activo</span>
               </label>
+            </div>
+          </div>
+
+          {/* Acceso a sucursales */}
+          <div>
+            <h3 className="font-semibold text-foreground mb-3 sm:mb-4 text-base sm:text-lg">
+              Acceso a Sucursales
+            </h3>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="branch-access"
+                  value="all"
+                  checked={formData.branch_access_mode === "all"}
+                  onChange={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      branch_access_mode: "all",
+                      branch_ids: [],
+                    }))
+                  }
+                  className="w-4 h-4 rounded-full border-border text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">Acceso a todas las sucursales</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="branch-access"
+                  value="custom"
+                  checked={formData.branch_access_mode === "custom"}
+                  onChange={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      branch_access_mode: "custom",
+                      branch_ids: prev.branch_ids || [],
+                    }))
+                  }
+                  className="w-4 h-4 rounded-full border-border text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">
+                  Seleccionar sucursales específicas
+                </span>
+              </label>
+
+              {formData.branch_access_mode === "custom" && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-foreground">
+                    Sucursales permitidas
+                  </label>
+                  <div className="relative">
+                    <select
+                      multiple
+                      className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 min-h-[140px]"
+                      value={(formData.branch_ids || []).map(String)}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          branch_ids: Array.from(e.target.selectedOptions).map((opt) =>
+                            Number(opt.value)
+                          ),
+                        }))
+                      }
+                      disabled={branchesLoading}
+                    >
+                      {branchesLoading ? (
+                        <option>Cargando sucursales...</option>
+                      ) : branches.length === 0 ? (
+                        <option>No hay sucursales disponibles</option>
+                      ) : (
+                        branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  <p className="text-xs text-foreground-muted">
+                    Mantené Ctrl/Cmd para seleccionar múltiples sucursales.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -518,7 +649,7 @@ function UserModal({ user, permissions, rolesData, onClose, onSave }) {
           </button>
           <button
             type="submit"
-            onClick={handleSubmit}
+            form="user-form"
             className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             disabled={loading}
           >

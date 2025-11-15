@@ -12,7 +12,11 @@ import {
   ArrowRight,
   Star,
   Menu,
-  X
+  X,
+  MessageSquare,
+  FileSpreadsheet,
+  Building2,
+  UserPlus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "../components/ThemeToggle";
@@ -57,48 +61,93 @@ export default function LandingPage() {
 
   const pricingPlans = [
     {
-      name: "Básico",
-      price: "$9.999",
+      name: "Esencial",
+      price: "$14.900",
       period: "mes",
-      description: "Perfecto para salones pequeños",
+      description: "Para salones que están comenzando",
       features: [
-        "Hasta 2 estilistas",
-        "Calendario de turnos",
-        "Base de clientes",
-        "Notificaciones básicas",
-        "Soporte por email"
+        "Hasta 2 profesionales",
+        "Agenda inteligente de turnos",
+        "Recordatorios automáticos",
+        "Clientes ilimitados",
+        "Reportes básicos"
       ],
       popular: false
     },
     {
-      name: "Profesional",
-      price: "$19.999",
+      name: "Crecimiento",
+      price: "$24.900",
       period: "mes",
-      description: "Ideal para salones en crecimiento",
+      description: "Ideal para equipos en expansión",
       features: [
-        "Hasta 5 estilistas",
-        "Todas las funciones básicas",
-        "Pagos con Mercado Pago",
-        "Bot de WhatsApp",
-        "Comisiones y reportes",
+        "Hasta 6 profesionales",
+        "Pagos y señas con Mercado Pago",
+        "WhatsApp Bot para reservas",
+        "Control de stock y comisiones",
+        "Tableros y reportes pro",
         "Soporte prioritario"
       ],
       popular: true
     },
     {
-      name: "Empresarial",
-      price: "$39.999",
+      name: "Escala",
+      price: "$44.900",
       period: "mes",
-      description: "Para múltiples sucursales",
+      description: "Operaciones con varias sucursales",
       features: [
-        "Estilistas ilimitados",
-        "Múltiples sucursales",
-        "Reportes avanzados",
-        "API personalizada",
-        "Soporte 24/7",
-        "Capacitación incluida"
+        "Profesionales ilimitados",
+        "Hasta 2 sucursales operando en simultáneo",
+        "Multi-sucursal con roles avanzados",
+        "Automatizaciones y campañas",
+        "Integración AFIP / ARCA",
+        "Dashboards financieros",
+        "WhatsApp avanzado + flujos especiales",
+        "Onboarding guiado"
       ],
       popular: false
+    },
+    {
+      name: "Pro a medida",
+      price: "Consultar",
+      period: "",
+      description: "Implementación custom y acompañamiento dedicado",
+      features: [
+        "Arquitectura multi-tenant",
+        "Sucursales ilimitadas a medida",
+        "API y flujos personalizados",
+        "Integraciones externas",
+        "Capacitación in-company",
+        "SLA y soporte 24/7",
+        "Launch plan con especialista"
+      ],
+      popular: false
+    }
+  ];
+
+  const addonOptions = [
+    {
+      name: "WhatsApp Bot avanzado",
+      price: "+$5.000",
+      description: "Flujos conversacionales inteligentes y respuestas rápidas con IA.",
+      icon: MessageSquare
+    },
+    {
+      name: "Facturación ARCA",
+      price: "+$7.000",
+      description: "Documentos fiscales automáticos con homologación oficial.",
+      icon: FileSpreadsheet
+    },
+    {
+      name: "Sucursal adicional",
+      price: "+$5.000",
+      description: "Cada nueva sede con reportes y controles independientes.",
+      icon: Building2
+    },
+    {
+      name: "Profesional extra",
+      price: "+$500",
+      description: "Amplía tu equipo sin cambiar de plan base.",
+      icon: UserPlus
     }
   ];
 
@@ -391,7 +440,7 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {pricingPlans.map((plan, index) => (
               <motion.div
                 key={index}
@@ -417,7 +466,9 @@ export default function LandingPage() {
                   <p className="text-foreground-secondary text-sm mb-4">{plan.description}</p>
                   <div className="flex items-baseline">
                     <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                    <span className="text-foreground-secondary ml-2">/{plan.period}</span>
+                    {plan.period && (
+                      <span className="text-foreground-secondary ml-2">/{plan.period}</span>
+                    )}
                   </div>
                 </div>
                 <ul className="space-y-3 mb-8">
@@ -449,6 +500,61 @@ export default function LandingPage() {
             className="text-center text-foreground-secondary mt-8"
           >
             Todos los planes incluyen prueba gratuita de 14 días. Sin tarjeta de crédito.
+          </motion.p>
+        </div>
+      </section>
+
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Potenciá tu plan con add-ons
+            </h3>
+            <p className="text-lg text-foreground-secondary">
+              Sumá solo lo que necesitás y aumentá tu ticket promedio sin tocar tus planes.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {addonOptions.map((addon, index) => {
+              const Icon = addon.icon;
+              return (
+                <motion.div
+                  key={addon.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="card p-6 flex items-start gap-4"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-primary-light dark:bg-primary/15 flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <h4 className="text-xl font-semibold text-foreground">{addon.name}</h4>
+                      <span className="text-lg font-bold text-foreground">{addon.price}</span>
+                    </div>
+                    <p className="text-foreground-secondary mt-2">{addon.description}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center text-foreground-secondary mt-10"
+          >
+            Combiná add-ons según tu estrategia y escale en la medida justa.
           </motion.p>
         </div>
       </section>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
+import { useAuth } from "../../context/AuthContext";
 import { 
   Package, 
   Plus, 
@@ -23,6 +24,28 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const { user } = useAuth();
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setBranchesLoading(true);
+        const response = await apiClient.listActiveBranches();
+        if (!mounted) return;
+        setBranches(Array.isArray(response?.data) ? response.data : []);
+      } catch (error) {
+        console.error("[ProductsPage] loadBranches error", error);
+        toast.error("No se pudieron cargar las sucursales");
+      } finally {
+        if (mounted) setBranchesLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Cargar productos
   const { data: products = [], loading, error, refetch } = useQuery(
@@ -291,6 +314,12 @@ export default function ProductsPage() {
                       <span className="text-foreground-secondary">Precio:</span>
                       <span className="text-foreground font-semibold">${Number(product.price).toLocaleString('es-AR')}</span>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground-secondary">Sucursal:</span>
+                      <span className="text-foreground text-xs font-medium">
+                        {product.branch_name || "Sin asignar"}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                       <span className="text-foreground-secondary">Estado:</span>
                       <div className={`inline-flex items-center gap-1 ${status.color}`}>
@@ -313,6 +342,7 @@ export default function ProductsPage() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Producto</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Código</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Categoría</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Sucursal</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Stock</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Precio</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">Estado</th>
@@ -340,6 +370,9 @@ export default function ProductsPage() {
                         <td className="py-3 px-4 text-sm text-foreground-secondary">
                           {product.category_name || "-"}
                         </td>
+                    <td className="py-3 px-4 text-sm text-foreground-secondary">
+                      {product.branch_name || "Sin asignar"}
+                    </td>
                         <td className="py-3 px-4 text-right">
                           <div className="font-medium text-foreground">{product.stock_quantity}</div>
                           {product.min_stock > 0 && (
@@ -393,6 +426,9 @@ export default function ProductsPage() {
         <ProductModal
           product={editingProduct}
           categories={categories}
+          branches={branches}
+          branchesLoading={branchesLoading}
+          defaultBranchId={user?.currentBranchId || user?.current_branch_id || null}
           onClose={() => {
             setShowModal(false);
             setEditingProduct(null);
@@ -417,7 +453,7 @@ export default function ProductsPage() {
 }
 
 // Modal para crear/editar producto
-function ProductModal({ product, categories, onClose, onSave }) {
+function ProductModal({ product, categories, branches, branchesLoading, defaultBranchId, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: product?.name || "",
     code: product?.code || "",
@@ -433,6 +469,7 @@ function ProductModal({ product, categories, onClose, onSave }) {
     barcode: product?.barcode || "",
     sku: product?.sku || "",
     image_url: product?.image_url || "",
+    branch_id: product?.branch_id || defaultBranchId || "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -441,11 +478,16 @@ function ProductModal({ product, categories, onClose, onSave }) {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        branchId: formData.branch_id || null,
+      };
+
       if (product) {
-        await apiClient.put(`/api/stock/products/${product.id}`, formData);
+        await apiClient.put(`/api/stock/products/${product.id}`, payload);
         toast.success("Producto actualizado");
       } else {
-        await apiClient.post("/api/stock/products", formData);
+        await apiClient.post("/api/stock/products", payload);
         toast.success("Producto creado");
       }
       onSave();
@@ -500,6 +542,34 @@ function ProductModal({ product, categories, onClose, onSave }) {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  Sucursal
+                </label>
+                <select
+                  value={formData.branch_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, branch_id: e.target.value }))
+                  }
+                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  disabled={branchesLoading || branches.length === 0}
+                >
+                  {branches.length === 0 ? (
+                    <option value="">
+                      {branchesLoading ? "Cargando..." : "No hay sucursales activas"}
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">Seleccionar sucursal</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
               {/* Nombre - Full width */}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-foreground mb-2">

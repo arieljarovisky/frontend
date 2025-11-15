@@ -71,6 +71,8 @@ export default function AppointmentModal({ open, onClose, event }) {
   const {
     services = [],
     instructors = [],
+    branches = [],
+    branchesLoading = false,
     updateAppointment,
     deleteAppointment,
     cancelAppointmentSeries,
@@ -99,6 +101,7 @@ export default function AppointmentModal({ open, onClose, event }) {
       instructorId: _a.instructor_id || _a.instructorId || "",
       startsLocal: isoToLocalInput(event?.start || _a.starts_at || _a.startsAt),
       status: _a.status || "scheduled",
+      branchId: _a.branch_id || _a.branchId ? String(_a.branch_id || _a.branchId) : "",
     };
   });
 
@@ -162,6 +165,7 @@ export default function AppointmentModal({ open, onClose, event }) {
       instructorId: _a.instructor_id || _a.instructorId || "",
       startsLocal: localInput,
       status: _a.status || "scheduled",
+      branchId: _a.branch_id || _a.branchId ? String(_a.branch_id || _a.branchId) : "",
     });
 
     setApplySeries(seriesId ? "future" : "none");
@@ -222,6 +226,7 @@ export default function AppointmentModal({ open, onClose, event }) {
         endsAt,
         status: form.status,
         applySeries: seriesId ? applySeries : undefined,
+        branchId: form.branchId ? Number(form.branchId) : null,
       });
       if (!result?.ok) {
         throw new Error(result?.error || "No se pudo guardar el turno");
@@ -658,6 +663,30 @@ export default function AppointmentModal({ open, onClose, event }) {
               ))}
             </select>
           </div>
+
+          {!isClassSession && (
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${textColor}`}>Sucursal</label>
+              <select
+                className={`w-full rounded-xl border px-3 py-2 text-sm ${inputBg}`}
+                value={form.branchId || ""}
+                onChange={onChange("branchId")}
+                disabled={branchesLoading || branches.length === 0}
+              >
+                {branchesLoading ? (
+                  <option value="">Cargando sucursales...</option>
+                ) : branches.length === 0 ? (
+                  <option value="">No hay sucursales activas</option>
+                ) : (
+                  branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className={`block text-sm font-medium mb-1 ${textColor}`}>Fecha y hora</label>

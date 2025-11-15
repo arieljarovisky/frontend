@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat } from "lucide-react";
+import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2 } from "lucide-react";
 import ClassEnrollForm from "./ClassEnrollForm";
 
 function Section({ title, children, right, icon: Icon }) {
@@ -40,6 +40,8 @@ export default function BookingWidget() {
   const {
     services = [],
     instructors = [],
+    branches = [],
+    branchesLoading = false,
     metaLoading,
     metaError,
     booking,
@@ -187,7 +189,7 @@ export default function BookingWidget() {
         icon={Scissors}
         right={metaLoading ? <span className="text-xs text-slate-500">cargando...</span> : null}
       >
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <ServiceSelect 
             services={services} 
             value={booking.serviceId} 
@@ -198,6 +200,33 @@ export default function BookingWidget() {
             value={booking.instructorId} 
             onChange={(v) => updateBooking({ instructorId: v })} 
           />
+          <div>
+            <label className="text-xs uppercase tracking-wide text-slate-400 block mb-2 flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Sucursal
+            </label>
+            <select
+              className="w-full rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 disabled:opacity-60"
+              value={booking.branchId || ""}
+              onChange={(e) => updateBooking({ branchId: e.target.value })}
+              disabled={branchesLoading || branches.length === 0}
+            >
+              {branchesLoading ? (
+                <option value="">Cargando sucursales...</option>
+              ) : branches.length === 0 ? (
+                <option value="">No hay sucursales activas</option>
+              ) : (
+                branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))
+              )}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              El turno se registrará en la sucursal seleccionada. Podés cambiarla manualmente.
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -368,7 +397,7 @@ export default function BookingWidget() {
       </Section>
 
       {/* Resumen */}
-      {(selectedService || selectedInstructor) && (
+      {(selectedService || selectedInstructor || booking.branchId) && (
         <div className="mt-4 px-4 py-3 rounded-xl bg-slate-800/30 border border-slate-700/30">
           <div className="text-xs text-slate-400 mb-2">Resumen de tu reserva:</div>
           <div className="flex flex-wrap gap-4 text-sm">
@@ -383,6 +412,15 @@ export default function BookingWidget() {
               <div className="flex items-center gap-2">
                 <span className="text-slate-500">Estilista:</span>
                 <span className="font-semibold text-slate-200">{selectedInstructor.name}</span>
+              </div>
+            )}
+            {booking.branchId && (
+              <div className="flex items-center gap-2 text-slate-300">
+                <Building2 className="w-4 h-4" />
+                <span>
+                  Sucursal:{" "}
+                  {branches.find((b) => String(b.id) === String(booking.branchId))?.name || "Sin asignar"}
+                </span>
               </div>
             )}
             {booking.repeatEnabled && (

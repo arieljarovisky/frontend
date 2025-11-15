@@ -43,6 +43,7 @@ import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
 import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
 import InstructorsPage from "./routes/Admin/InstructorsPage.jsx";
 import MembershipPlansPage from "./routes/Admin/MembershipPlansPage.jsx";
+import BranchesPage from "./routes/Admin/BranchesPage.jsx";
 import FeatureGate from "./components/FeatureGate.jsx";
 import { AppProvider } from "./context/AppProvider.jsx";
 
@@ -170,6 +171,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <InstructorsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/branches",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <BranchesPage />
           </PrivateRoute>
         ),
       },
