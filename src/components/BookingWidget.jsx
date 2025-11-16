@@ -52,6 +52,7 @@ export default function BookingWidget() {
     createAppointment,
     classesEnabled,
   } = useApp();
+  const { appointmentsEnabled } = useApp();
 
   const selectedService = useMemo(
     () => (Array.isArray(services) ? services : []).find((s) => String(s.id) === String(booking.serviceId)),
@@ -141,6 +142,7 @@ export default function BookingWidget() {
 
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-800/50 p-6 mb-6">
+      {appointmentsEnabled && (<>
       <header className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           <div className="p-3 bg-indigo-500/10 rounded-xl">
@@ -437,6 +439,10 @@ export default function BookingWidget() {
           </div>
         </div>
       )}
+      )}
+
+      {/** Fin formulario de turnos */}
+      </>)}
 
       {classesEnabled && (
         <Section title="Inscribir en clase (opcional)" icon={Users}>

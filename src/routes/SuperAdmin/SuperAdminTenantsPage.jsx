@@ -16,15 +16,17 @@ import {
   Clock,
   Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client.js";
 import { useQuery } from "../../shared/useQuery.js";
 import { useDebouncedValue } from "../../shared/useDebouncedValue.js";
 
-const FEATURE_KEYS = ["appointments", "stock", "invoicing", "multiBranch"];
+const FEATURE_KEYS = ["appointments", "stock", "invoicing", "classes", "multiBranch"];
 const FEATURE_LABELS = {
   appointments: "Turnos",
   stock: "Gestión de stock",
   invoicing: "Facturación",
+  classes: "Clases grupales",
   multiBranch: "Operación multi-sucursal",
 };
 
@@ -77,7 +79,7 @@ export default function SuperAdminTenantsPage() {
   const [page, setPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
-  const [detailTenantId, setDetailTenantId] = useState(null);
+  const navigate = useNavigate();
 
   const {
     data: tenantsResponse,
@@ -127,16 +129,9 @@ export default function SuperAdminTenantsPage() {
     setShowCreateModal(true);
   };
 
-  const openEditFromDetail = (detail) => {
-    const tenantData = detail?.tenant || detail || { id: detailTenantId };
-    setDetailTenantId(null);
-    openEditModal(tenantData);
-  };
-
   const closeModals = () => {
     setShowCreateModal(false);
     setEditingTenant(null);
-    setDetailTenantId(null);
   };
 
   const handleStatusChange = async (tenant, newStatus) => {
@@ -252,8 +247,8 @@ export default function SuperAdminTenantsPage() {
           <p className="text-foreground-secondary">No se encontraron tenants con los filtros seleccionados.</p>
         </div>
       ) : (
-        <div className="card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="card p-0" style={{ overflow: "visible" }}>
+          <div className="w-full" style={{ overflow: "visible" }}>
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-background-secondary/60">
                 <tr>
@@ -310,7 +305,7 @@ export default function SuperAdminTenantsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setDetailTenantId(tenant.id)}
+                          onClick={() => navigate(`/super-admin/tenants/${tenant.id}`)}
                           className="p-2 rounded-lg border border-border hover:bg-background transition-colors"
                           title="Ver detalle"
                         >
@@ -348,13 +343,6 @@ export default function SuperAdminTenantsPage() {
         />
       )}
 
-      {detailTenantId && (
-        <TenantDetailModal
-          tenantId={detailTenantId}
-          onClose={closeModals}
-          onEdit={openEditFromDetail}
-        />
-      )}
     </div>
   );
 }

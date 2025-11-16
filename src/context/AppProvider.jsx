@@ -102,6 +102,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
   const [features, setFeatures] = useState({});
   const [featuresLoading, setFeaturesLoading] = useState(false);
   const classesEnabled = useMemo(() => features?.classes !== false, [features]);
+  const appointmentsEnabled = useMemo(() => features?.appointments !== false, [features]);
 
   const loadBranches = useCallback(async () => {
     try {
@@ -606,6 +607,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
       features,
       featuresLoading,
       classesEnabled,
+      appointmentsEnabled,
       refreshFeatures,
       loadBranches,
       branches,
@@ -635,6 +637,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
       features,
       featuresLoading,
       classesEnabled,
+      appointmentsEnabled,
       refreshFeatures,
       loadBranches,
       branches,

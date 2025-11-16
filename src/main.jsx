@@ -37,6 +37,7 @@ import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
 import UsersPage from "./routes/Users/UsersPage.jsx";
 import SuperAdminLayout from "./routes/SuperAdmin/SuperAdminLayout.jsx";
 import SuperAdminTenantsPage from "./routes/SuperAdmin/SuperAdminTenantsPage.jsx";
+import SuperAdminTenantDetail from "./routes/SuperAdmin/SuperAdminTenantDetail.jsx";
 import SuperAdminRoute from "./components/SuperAdminRoute.jsx";
 import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
 import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
@@ -218,6 +219,10 @@ const router = createBrowserRouter([
       {
         path: "tenants",
         element: <SuperAdminTenantsPage />,
+      },
+      {
+        path: "tenants/:tenantId",
+        element: <SuperAdminTenantDetail />,
       },
     ],
   },
