@@ -285,7 +285,7 @@ export default function BookingWidget() {
       {/* 4) Datos + Confirmación */}
       <Section title="Paso 4: Confirmá tus datos" icon={User}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Field label="Nombre (opcional)" error={errors.customerName?.message}>
+          <Field label="Nombre" error={errors.customerName?.message}>
             <input
               {...register("customerName")}
               placeholder="Juan Pérez"
@@ -440,12 +440,13 @@ export default function BookingWidget() {
         </div>
       )}
       )}
+      
 
       {/** Fin formulario de turnos */}
       </>)}
 
       {classesEnabled && (
-        <Section title="Inscribir en clase (opcional)" icon={Users}>
+        <Section title="Inscribir en clase" icon={Users}>
           <ClassEnrollForm
             defaultName={booking.customerName}
             defaultPhone={booking.customerPhone}

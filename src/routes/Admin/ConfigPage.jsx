@@ -2083,51 +2083,7 @@ export default function ConfigPage() {
         </ConfigSection>
       </div>
 
-      {/* NOTIFICATIONS */}
-      <div id="notifications">
-        <ConfigSection
-          title="Configuración de Notificaciones"
-          description="Controlá qué notificaciones recibís"
-          icon={Bell}
-        >
-          <div className="space-y-2">
-            <SwitchField
-              label="Señas por vencer"
-              description="Te avisamos cuando una seña está próxima a expirar"
-              checked={notifications.expiringSoon}
-              onChange={(e) => setNotifications({ ...notifications, expiringSoon: e.target.checked })}
-            />
-
-            <SwitchField
-              label="Señas vencidas"
-              description="Te avisamos cuando una seña ha expirado"
-              checked={notifications.expired}
-              onChange={(e) => setNotifications({ ...notifications, expired: e.target.checked })}
-            />
-
-            <SwitchField
-              label="Pagos recibidos"
-              description="Te avisamos cuando se recibe un pago de seña"
-              checked={notifications.paid}
-              onChange={(e) => setNotifications({ ...notifications, paid: e.target.checked })}
-            />
-
-            <SwitchField
-              label="Nuevos turnos"
-              description="Te avisamos cuando se crea un nuevo turno"
-              checked={notifications.newAppointment}
-              onChange={(e) => setNotifications({ ...notifications, newAppointment: e.target.checked })}
-            />
-
-            <SwitchField
-              label="Turnos cancelados"
-              description="Te avisamos cuando se cancela un turno"
-              checked={notifications.cancelled}
-              onChange={(e) => setNotifications({ ...notifications, cancelled: e.target.checked })}
-            />
-          </div>
-        </ConfigSection>
-      </div>
+      {/* NOTIFICATIONS — sección temporalmente deshabilitada a pedido */}
 
       {/* Footer */}
       <div className="card p-6">
