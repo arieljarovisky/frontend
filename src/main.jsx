@@ -46,12 +46,18 @@ import MembershipPlansPage from "./routes/Admin/MembershipPlansPage.jsx";
 import BranchesPage from "./routes/Admin/BranchesPage.jsx";
 import FeatureGate from "./components/FeatureGate.jsx";
 import { AppProvider } from "./context/AppProvider.jsx";
+import EnterpriseRequest from "./routes/EnterpriseRequest.jsx";
+import ForgotPasswordPage from "./routes/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./routes/ResetPasswordPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
   { path: "/", element: <LandingPage /> },
   { path: "/docs", element: <DocsPage /> },
   { path: "/login", element: <LoginPage /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
+  { path: "/enterprise-request", element: <EnterpriseRequest /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
   { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },

@@ -307,7 +307,15 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
-          <div className="text-center text-sm text-foreground-muted">
+          <div className="text-center space-y-2 text-sm text-foreground-muted">
+            <p>
+              <button
+                onClick={() => navigate("/forgot-password")}
+                className="text-primary hover:text-primary-hover font-medium"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </p>
             <p>
               ¿Necesitás ayuda?{" "}
               <a href="#" className="text-primary hover:text-primary-hover font-medium">

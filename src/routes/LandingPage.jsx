@@ -124,33 +124,6 @@ export default function LandingPage() {
     }
   ];
 
-  const addonOptions = [
-    {
-      name: "WhatsApp Bot avanzado",
-      price: "+$5.000",
-      description: "Flujos conversacionales inteligentes y respuestas rápidas con IA.",
-      icon: MessageSquare
-    },
-    {
-      name: "Facturación ARCA",
-      price: "+$7.000",
-      description: "Documentos fiscales automáticos con homologación oficial.",
-      icon: FileSpreadsheet
-    },
-    {
-      name: "Sucursal adicional",
-      price: "+$5.000",
-      description: "Cada nueva sede con reportes y controles independientes.",
-      icon: Building2
-    },
-    {
-      name: "Profesional extra",
-      price: "+$500",
-      description: "Amplía tu equipo sin cambiar de plan base.",
-      icon: UserPlus
-    }
-  ];
-
   const testimonials = [
     {
       name: "María González",
@@ -480,7 +453,13 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => navigate("/onboarding")}
+                  onClick={() => {
+                    if (plan.name === "Pro a medida") {
+                      navigate("/enterprise-request");
+                    } else {
+                      navigate("/onboarding");
+                    }
+                  }}
                   className={`w-full py-3 rounded-lg font-semibold transition-colors ${
                     plan.popular
                       ? "bg-primary text-white hover:bg-primary-hover"
@@ -500,61 +479,6 @@ export default function LandingPage() {
             className="text-center text-foreground-secondary mt-8"
           >
             Todos los planes incluyen prueba gratuita de 14 días. Sin tarjeta de crédito.
-          </motion.p>
-        </div>
-      </section>
-
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Potenciá tu plan con add-ons
-            </h3>
-            <p className="text-lg text-foreground-secondary">
-              Sumá solo lo que necesitás y aumentá tu ticket promedio sin tocar tus planes.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {addonOptions.map((addon, index) => {
-              const Icon = addon.icon;
-              return (
-                <motion.div
-                  key={addon.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="card p-6 flex items-start gap-4"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-primary-light dark:bg-primary/15 flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <h4 className="text-xl font-semibold text-foreground">{addon.name}</h4>
-                      <span className="text-lg font-bold text-foreground">{addon.price}</span>
-                    </div>
-                    <p className="text-foreground-secondary mt-2">{addon.description}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center text-foreground-secondary mt-10"
-          >
-            Combiná add-ons según tu estrategia y escale en la medida justa.
           </motion.p>
         </div>
       </section>
