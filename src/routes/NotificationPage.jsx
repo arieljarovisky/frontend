@@ -103,24 +103,24 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
         {/* Contenido */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-semibold text-dark-900 flex items-center gap-2">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
               {notification.title}
               {!notification.is_read && (
                 <span className="inline-block w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
               )}
             </h3>
-            <span className="text-xs text-dark-500 whitespace-nowrap">
+            <span className="text-xs text-foreground-muted whitespace-nowrap">
               {formatRelativeTime(notification.created_at)}
             </span>
           </div>
 
-          <p className="text-sm text-dark-700 mb-3">
+          <p className="text-sm text-foreground-secondary mb-3">
             {notification.message}
           </p>
 
           {/* Datos adicionales */}
           {notification.data && (
-            <div className="text-xs text-dark-500 mb-3">
+            <div className="text-xs text-foreground-muted mb-3">
               {notification.data.appointmentId && (
                 <span>Turno #{notification.data.appointmentId}</span>
               )}
@@ -197,18 +197,18 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
   if (totalPages <= 1) return null;
 
   const stickyClass = isSticky 
-    ? "sticky top-[4.5rem] z-40 bg-slate-950/95 backdrop-blur-xl border-y border-dark-200/50 shadow-lg" 
+    ? "sticky top-[4.5rem] z-40 bg-background/95 backdrop-blur-xl border-y border-border/40 shadow-lg" 
     : variant === "top" 
-      ? "border-b border-dark-200/50" 
-      : "border-t border-dark-200/50";
+      ? "border-b border-border/40" 
+      : "border-t border-border/40";
 
   return (
     <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 ${stickyClass}`}>
       {/* Info de items */}
-      <div className="text-sm text-dark-600">
-        Mostrando <span className="font-medium text-dark-900">{startItem}</span> a{" "}
-        <span className="font-medium text-dark-900">{endItem}</span> de{" "}
-        <span className="font-medium text-dark-900">{totalItems}</span> notificaciones
+      <div className="text-sm text-foreground-secondary">
+        Mostrando <span className="font-medium text-foreground">{startItem}</span> a{" "}
+        <span className="font-medium text-foreground">{endItem}</span> de{" "}
+        <span className="font-medium text-foreground">{totalItems}</span> notificaciones
       </div>
 
       {/* Controles de paginación */}
@@ -217,7 +217,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="p-2 rounded-lg border border-border hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           title="Primera página"
         >
           <ChevronsLeft className="w-4 h-4" />
@@ -227,7 +227,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="p-2 rounded-lg border border-border hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           title="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -237,7 +237,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         <div className="hidden sm:flex items-center gap-1">
           {getPageNumbers().map((page, idx) => (
             page === '...' ? (
-              <span key={`ellipsis-${idx}`} className="px-3 py-2 text-dark-500">
+              <span key={`ellipsis-${idx}`} className="px-3 py-2 text-foreground-muted">
                 ...
               </span>
             ) : (
@@ -248,7 +248,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
                   px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${currentPage === page
                     ? 'bg-gradient-primary text-white shadow-glow'
-                    : 'border border-dark-300 hover:bg-dark-200/50 text-dark-700'
+                    : 'border border-border hover:bg-background-secondary text-foreground-secondary'
                   }
                 `}
               >
@@ -259,7 +259,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         </div>
 
         {/* Indicador móvil */}
-        <div className="sm:hidden px-3 py-2 rounded-lg border border-dark-300 text-sm font-medium">
+        <div className="sm:hidden px-3 py-2 rounded-lg border border-border text-sm font-medium">
           {currentPage} / {totalPages}
         </div>
 
@@ -267,7 +267,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="p-2 rounded-lg border border-border hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           title="Página siguiente"
         >
           <ChevronRight className="w-4 h-4" />
@@ -277,7 +277,7 @@ function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
-          className="p-2 rounded-lg border border-dark-300 hover:bg-dark-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="p-2 rounded-lg border border-border hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           title="Última página"
         >
           <ChevronsRight className="w-4 h-4" />
@@ -523,11 +523,11 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <Bell className="w-8 h-8 text-primary-400" />
             Notificaciones
           </h1>
-          <p className="text-dark-600 mt-1">
+          <p className="text-foreground-secondary mt-1">
             Mantente al día con las actualizaciones del sistema
           </p>
         </div>
@@ -572,8 +572,8 @@ export default function NotificationsPage() {
               <Bell className="w-5 h-5 text-primary-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-600">Total</p>
-              <p className="text-2xl font-bold text-dark-900">
+              <p className="text-sm text-foreground-secondary">Total</p>
+              <p className="text-2xl font-bold text-foreground">
                 {notifications.length}
               </p>
             </div>
@@ -586,8 +586,8 @@ export default function NotificationsPage() {
               <AlertTriangle className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-600">Sin leer</p>
-              <p className="text-2xl font-bold text-dark-900">
+              <p className="text-sm text-foreground-secondary">Sin leer</p>
+              <p className="text-2xl font-bold text-foreground">
                 {unreadCount}
               </p>
             </div>
@@ -600,8 +600,8 @@ export default function NotificationsPage() {
               <CheckCheck className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-600">Leídas</p>
-              <p className="text-2xl font-bold text-dark-900">
+              <p className="text-sm text-foreground-secondary">Leídas</p>
+              <p className="text-2xl font-bold text-foreground">
                 {notifications.length - unreadCount}
               </p>
             </div>
@@ -611,13 +611,13 @@ export default function NotificationsPage() {
 
       {/* Filtros */}
       <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-dark-500" />
+        <Filter className="w-4 h-4 text-foreground-muted" />
         <button
           onClick={() => setFilter("all")}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
             filter === "all"
               ? "bg-gradient-primary text-white shadow-glow"
-              : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
+              : "text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
           }`}
         >
           Todas
@@ -627,7 +627,7 @@ export default function NotificationsPage() {
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
             filter === "unread"
               ? "bg-gradient-primary text-white shadow-glow"
-              : "text-dark-700 hover:text-dark-900 hover:bg-dark-200/50"
+              : "text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
           }`}
         >
           Sin leer ({unreadCount})
@@ -658,14 +658,14 @@ export default function NotificationsPage() {
             </div>
           ) : currentNotifications.length === 0 ? (
             <div className="py-12 text-center">
-              <Bell className="w-12 h-12 mx-auto mb-3 text-dark-400" />
-              <p className="text-dark-600 mb-2">
+              <Bell className="w-12 h-12 mx-auto mb-3 text-foreground-muted" />
+              <p className="text-foreground-secondary mb-2">
                 {filter === "unread" 
                   ? "No tenés notificaciones sin leer" 
                   : "No tenés notificaciones"
                 }
               </p>
-              <p className="text-sm text-dark-500">
+              <p className="text-sm text-foreground-muted">
                 Te avisaremos cuando haya novedades
               </p>
             </div>

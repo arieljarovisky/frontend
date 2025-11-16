@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../context/UseApp";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
@@ -63,10 +64,10 @@ function isoToLocalInput(isoOrLocal) {
 export default function AppointmentModal({ open, onClose, event }) {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-  const [darkMode] = useState(() => {
-    const saved = localStorage.getItem("calendar:darkMode");
-    return saved ? JSON.parse(saved) : true;
-  });
+  // Seguir el tema global (clase 'dark' en <html>) para light/dark mode
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false
+  );
 
   const {
     services = [],
@@ -151,6 +152,33 @@ export default function AppointmentModal({ open, onClose, event }) {
     }, 3000);
     return () => clearTimeout(t);
   }, [msg, error]);
+
+  // Escuchar cambios de tema (toggle agrega/remueve 'dark' en <html>)
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () => setDarkMode(root.classList.contains("dark"));
+    update();
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === "class") {
+          update();
+          break;
+        }
+      }
+    });
+    observer.observe(root, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  // Bloquear scroll del body cuando la modal está abierta para evitar "saltos" al hacer hover fuera
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow || "";
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -543,7 +571,7 @@ export default function AppointmentModal({ open, onClose, event }) {
   };
 
   if (!open) return null;
-  if (isClassSession) return renderClassContent();
+  if (isClassSession) return createPortal(renderClassContent(), document.body);
 
   const modalBg = darkMode ? "bg-slate-900" : "bg-white";
   const borderColor = darkMode ? "border-slate-700" : "border-gray-200";
@@ -553,17 +581,15 @@ export default function AppointmentModal({ open, onClose, event }) {
   const buttonPrimary = darkMode ? "bg-emerald-600 hover:bg-emerald-700" : "bg-black hover:bg-black/90";
   const buttonSecondary = darkMode ? "bg-slate-800 hover:bg-slate-700 border-slate-600" : "bg-white hover:bg-gray-50 border-gray-300";
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 60,
+        zIndex: 9999,
         backdropFilter: "blur(4px)",
+        pointerEvents: "auto",
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -571,7 +597,19 @@ export default function AppointmentModal({ open, onClose, event }) {
     >
       <div
         className={`${modalBg} ${borderColor} border rounded-2xl shadow-2xl`}
-        style={{ width: 620, maxWidth: "95vw", maxHeight: "90vh", overflow: "auto", padding: 24 }}
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 680,
+          maxWidth: "calc(100vw - 48px)",
+          maxHeight: "calc(100vh - 48px)",
+          overflow: "auto",
+          padding: 24,
+          willChange: "transform",
+          pointerEvents: "auto",
+        }}
       >
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -865,6 +903,7 @@ export default function AppointmentModal({ open, onClose, event }) {
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

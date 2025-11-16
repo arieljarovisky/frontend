@@ -216,13 +216,7 @@ export default function AppLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`arja-sidebar ${sidebarOpen ? "is-open" : ""}`}
-        style={{
-          background:
-            "linear-gradient(190deg, rgba(6, 14, 28, 0.98), rgba(9, 24, 44, 0.98))",
-          borderRight: "1px solid rgba(24, 118, 168, 0.3)",
-          boxShadow: "18px 0 40px rgba(4, 10, 20, 0.55)",
-        }}
+        className={`arja-sidebar ${sidebarOpen ? "is-open" : ""} bg-background border-r border-border shadow-2xl`}
       >
         {/* Logo Header */}
         <div className="arja-sidebar__section arja-sidebar__header">

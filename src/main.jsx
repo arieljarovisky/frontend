@@ -3,7 +3,6 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
-import "./calendar-dark.css";
 import "./styles/arja-theme.css";
 
 // Layout y páginas

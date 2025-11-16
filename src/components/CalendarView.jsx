@@ -199,18 +199,13 @@ export default function CalendarView() {
     // armamos mapa id->color
     const map = buildInstructorColorMap(instructors);
     const rules = Object.entries(map).map(([id, hex]) => {
-      const light = hexToRgba(hex, 0.07); // intensidad del fondo
-      // Header y cuerpo de la columna del resource (instructor)
+      const light = hexToRgba(hex, 0.04); // sutil para encabezado
+      // Solo teñimos el header; el cuerpo queda neutro para evitar “lavado” verde
       return `
-      /* header de la columna */
-      .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
-        background: ${light};
-      }
-      /* celdas del grid (cuerpo) */
-      .fc-resource-timegrid .fc-timegrid-col[data-resource-id="${id}"] {
-        background: ${light};
-      }
-    `;
+        .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
+          background: ${light};
+        }
+      `;
     }).join("\n");
 
     styleEl.textContent = rules;
@@ -227,9 +222,9 @@ export default function CalendarView() {
         ? `${ep.enrolled_count}/${ep.capacity_max}`
         : null;
     return (
-      <div className="flex flex-col gap-1 p-1">
-        <div className="text-xs font-semibold leading-tight line-clamp-1">{arg.event.title}</div>
-        <div className="flex flex-wrap gap-1">
+      <div className="flex flex-col gap-1 p-3 min-h-[72px]">
+        <div className="text-xs font-semibold leading-snug whitespace-normal break-words">{arg.event.title}</div>
+        <div className="flex flex-wrap gap-1 items-center">
           {ep.instructor_name && (
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
@@ -246,11 +241,11 @@ export default function CalendarView() {
               {occupancy} alumnos
             </span>
           )}
-          {type !== "class_session" && status === "pending_deposit" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-100">Seña pendiente</span>
-          )}
           {type !== "class_session" && status === "deposit_paid" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-100">Seña pagada</span>
+            <span
+              className="ml-1 inline-flex items-center justify-center w-2 h-2 rounded-full bg-emerald-400"
+              title="Seña pagada"
+            />
           )}
           {status === "cancelled" && (
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-[rgba(154,160,166,0.2)] text-accent">Cancelado</span>
@@ -283,7 +278,7 @@ export default function CalendarView() {
     <div className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0" />
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-10">
-        <div className="bg-[rgba(12,24,38,0.78)] backdrop-blur-2xl border border-[rgba(79,108,152,0.25)] shadow-[0_30px_60px_rgba(4,10,18,0.45)] rounded-3xl p-6 transition-all duration-500 hover:border-[rgba(106,142,184,0.35)] hover:shadow-[0_40px_70px_rgba(6,16,28,0.55)]">
+        <div className="bg-background border border-border rounded-3xl p-6 transition-all duration-500 shadow-lg">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -303,26 +298,25 @@ export default function CalendarView() {
                   className="
                     relative w-full pl-10 pr-4 py-2.5
                     rounded-xl
-                    bg-[rgba(15,35,59,0.35)]
-                    border border-[rgba(106,142,184,0.3)]
+                    bg-background-secondary
+                    border border-border
                     text-foreground text-sm
-                    backdrop-blur-md
                     placeholder:text-foreground-muted
                     focus:outline-none
-                    focus:ring-2 focus:ring-[rgba(106,142,184,0.5)]
-                    focus:border-[rgba(79,108,152,0.6)]
+                    focus:ring-2 focus:ring-primary/40
+                    focus:border-primary
                     transition-all duration-200
-                    hover:border-[rgba(106,142,184,0.6)]
+                    hover:border-border/80
                     disabled:opacity-50 disabled:cursor-not-allowed
                   "
                 >
-                  <option className="bg-[rgba(8,17,32,0.95)]" value="">
+                  <option className="bg-background" value="">
                     {Array.isArray(instructors) && instructors.length > 0
                       ? "Todos los profesionales"
                       : "Sin filtro de profesional"}
                   </option>
                   {(instructors || []).map((s) => (
-                    <option key={s.id} className="bg-[rgba(8,17,32,0.95)]" value={s.id}>
+                    <option key={s.id} className="bg-background" value={s.id}>
                       {s.name}
                     </option>
                   ))}
@@ -343,7 +337,7 @@ export default function CalendarView() {
               <button
                 onClick={() => setHideCancelled(v => !v)}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-                border ${hideCancelled ? "bg-[rgba(15,35,59,0.55)] border-[rgba(79,108,152,0.5)] text-white" : "bg-[rgba(12,24,38,0.35)] border-[rgba(79,108,152,0.35)] text-foreground"}
+                border ${hideCancelled ? "bg-background-secondary border-border text-foreground" : "bg-background-secondary border-border text-foreground"}
                 hover:scale-[1.01]`}
                 title={hideCancelled ? "Mostrar cancelados" : "Ocultar cancelados"}
               >
@@ -354,28 +348,30 @@ export default function CalendarView() {
 
           {/* Errores */}
           {eventsError && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-sm">
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-sm">
               {eventsError}
             </div>
           )}
 
           {/* Calendario + overlay */}
-          <div className="relative rounded-2xl border border-[rgba(79,108,152,0.25)] bg-[rgba(10,20,32,0.6)] p-2 overflow-visible">
+          <div className="relative rounded-2xl border border-border bg-background-secondary p-2 overflow-visible">
             {eventsLoading && (
-              <div className="absolute inset-0 bg-[rgba(8,17,32,0.65)] backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
-                <div className="animate-pulse text-foreground-muted font-medium">Actualizando calendario…</div>
+              <div className="absolute right-3 top-3 z-20 pointer-events-none">
+                <div className="animate-pulse text-foreground-muted font-medium">Cargando…</div>
               </div>
             )}
             {!eventsLoading && fullEvents.length === 0 && (
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[rgba(106,142,184,0.35)] bg-[rgba(10,20,32,0.65)] text-center text-sm text-foreground-muted z-10 px-6">
-                <p>No hay eventos en este rango.</p>
-                <p className="text-xs text-foreground-muted/70">
-                  Programá una nueva clase o turno para que aparezca acá.
-                </p>
+              <div className="pointer-events-none absolute inset-0 grid place-items-center text-center text-sm text-foreground-muted z-0 px-6">
+                <div>
+                  <p>No hay eventos en este rango.</p>
+                  <p className="text-xs text-foreground-muted/70">
+                    Programá una nueva clase o turno para que aparezca acá.
+                  </p>
+                </div>
               </div>
             )}
 
-            <div className="calendar-dark w-full min-w-0 overflow-visible rounded-2xl">
+            <div className="w-full min-w-0 overflow-hidden rounded-2xl">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
@@ -406,6 +402,11 @@ export default function CalendarView() {
                 events={fullEvents}
                 eventClick={eventClick}
                 eventContent={eventContent}
+                eventDidMount={(info) => {
+                  try {
+                    info.el.style.minHeight = "72px";
+                  } catch {}
+                }}
                 dayMaxEvents={isMobile ? 2 : 3}
                 displayEventTime={true}
                 eventClassNames="rounded-xl shadow-md border-0"

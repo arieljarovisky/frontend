@@ -10,12 +10,12 @@
 :root {
   /* Identidad ARJA ERP (teal + azul) */
   --background: 245 249 252;
-  --background-secondary: 226 242 248;
-  --foreground: 14 48 74;
-  --foreground-secondary: 49 92 120;
-  --foreground-muted: 96 132 154;
-  --border: 198 218 228;
-  --border-hover: 168 198 214;
+  --background-secondary: 210 230 240; /* más contraste con texto */
+  --foreground: 5 20 32;               /* casi negro para máxima legibilidad */
+  --foreground-secondary: 24 56 84;    /* títulos/labels más oscuros */
+  --foreground-muted: 56 84 104;       /* secundarios más legibles */
+  --border: 184 206 218;               /* bordes un poco más definidos */
+  --border-hover: 160 190 206;         /* hover con mejor definición */
   --primary: 18 181 204;
   --primary-hover: 12 150 178;
   --primary-light: 206 244 248;
@@ -169,6 +169,11 @@
 
 .fc .fc-day-today {
   @apply bg-primary-light/50;
+}
+
+/* Evitar que el contenido del evento se recorte en la vista de tiempo */
+.fc .fc-timegrid-event .fc-event-main {
+  overflow: visible;
 }
 
 /* ============================================

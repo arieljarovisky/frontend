@@ -180,14 +180,14 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-300">
+        <div className="text-sm text-foreground-secondary">
           Inscribí al cliente actual en una clase grupal. Podés hacerlo después de confirmar el turno.
         </div>
         <button
           type="button"
           onClick={loadSessions}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-200 hover:border-indigo-500/40 hover:text-white transition disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-background-secondary px-3 py-1.5 text-xs text-foreground hover:border-primary/40 hover:text-foreground transition disabled:opacity-40"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Actualizar
@@ -195,18 +195,18 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {summary && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-4 space-y-3">
-          <div className="text-sm text-emerald-200 font-semibold">
+          <div className="text-sm text-emerald-700 font-semibold">
             Se confirmaron {summary.total} {summary.total === 1 ? "inscripción" : "inscripciones"}.
           </div>
           {summary.sessions?.length ? (
-            <ul className="space-y-1 text-xs text-emerald-100">
+            <ul className="space-y-1 text-xs text-emerald-800">
               {summary.sessions.slice(0, 5).map((item) => {
                 const date = item.startsAt ? new Date(item.startsAt.replace(" ", "T")) : null;
                 const label = date
@@ -237,7 +237,7 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
               variant="ghost"
               onClick={handleCancelSeries}
               disabled={cancelling}
-              className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-200 hover:border-red-500/60 hover:text-red-100 transition disabled:opacity-40"
+                className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-700 hover:border-red-500/60 hover:text-red-800 transition disabled:opacity-40"
             >
               <Trash2 className="w-4 h-4" />
               {cancelling ? "Cancelando…" : "Cancelar todas las inscripciones futuras"}
@@ -252,7 +252,7 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
             value={form.sessionId}
             onChange={handleChange("sessionId")}
             disabled={loading || sessions.length === 0}
-            className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50"
+            className="w-full rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50"
           >
             <option value="">Seleccioná una clase</option>
             {sessions.map((session) => {
@@ -275,7 +275,7 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
               value={form.customerName}
               onChange={handleChange("customerName")}
               placeholder="Nombre del alumno"
-              className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+              className="input px-4 py-3 text-sm"
             />
           </Field>
           <Field label="Teléfono" hint="Formato internacional, ej. +54911..." required>
@@ -283,7 +283,7 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
               value={form.customerPhone}
               onChange={handleChange("customerPhone")}
               placeholder="+54911..."
-              className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+              className="input px-4 py-3 text-sm"
             />
           </Field>
         </div>
@@ -294,19 +294,19 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
             onChange={handleChange("notes")}
             rows={3}
             placeholder="Notas sobre el alumno…"
-            className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+            className="w-full rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
           />
         </Field>
 
-        <div className="rounded-xl border border-slate-700/40 bg-slate-900/60 px-4 py-4">
-          <label className="flex items-center justify-between text-sm font-medium text-slate-300">
+        <div className="rounded-xl border border-border bg-background-secondary px-4 py-4">
+          <label className="flex items-center justify-between text-sm font-medium text-foreground">
             <span className="flex items-center gap-2">
               <Repeat className="w-4 h-4 text-indigo-400" />
               Inscribir en todas las clases de la serie
             </span>
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500"
+              className="h-4 w-4 rounded border-border bg-background-secondary text-primary focus:ring-primary"
               checked={form.repeatEnabled}
               onChange={(e) =>
                 setForm((prev) => ({
@@ -318,9 +318,9 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
           </label>
 
           {form.repeatEnabled && (
-            <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm text-slate-200">
+            <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm text-foreground">
               <div>
-                <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                <label className="block text-xs uppercase tracking-wide text-foreground-muted mb-1">
                   Cantidad máxima
                 </label>
                 <input
@@ -334,14 +334,14 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
                       repeatCount: e.target.value ? Number(e.target.value) : "",
                     }))
                   }
-                  className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                  className="w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                 />
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-foreground-muted">
                   Si usás fecha límite, se ignora esta cantidad.
                 </p>
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-wide text-slate-400 mb-1">
+                <label className="block text-xs uppercase tracking-wide text-foreground-muted mb-1">
                   Fecha límite (opcional)
                 </label>
                 <input
@@ -353,13 +353,13 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
                       repeatUntil: e.target.value,
                     }))
                   }
-                  className="w-full rounded-lg border border-slate-700/50 bg-slate-900/70 px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40"
+                  className="w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                 />
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-foreground-muted">
                   Inscribiremos al cliente hasta esa fecha inclusive.
                 </p>
               </div>
-              <div className="md:col-span-2 rounded-lg bg-slate-900/60 border border-slate-700/40 px-3 py-2 text-xs text-slate-300 leading-relaxed">
+              <div className="md:col-span-2 rounded-lg bg-background-secondary border border-border px-3 py-2 text-xs text-foreground leading-relaxed">
                 Vamos a reservar cupo en cada clase de la misma serie. Si alguna está completa, frenamos el proceso y no se guardan cambios.
               </div>
             </div>
@@ -376,27 +376,27 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
         </Button>
       </form>
 
-      <div className="rounded-xl border border-slate-700/40 bg-slate-900/50 px-4 py-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+      <div className="rounded-xl border border-border bg-background-secondary px-4 py-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted mb-2">
           <CalendarClock className="w-4 h-4" />
           Próximas clases
         </div>
         {loading ? (
-          <div className="flex items-center gap-2 text-slate-300 text-sm">
+          <div className="flex items-center gap-2 text-foreground text-sm">
             <RefreshCw className="w-4 h-4 animate-spin" />
             Cargando…
           </div>
         ) : upcoming.length === 0 ? (
-          <div className="text-sm text-slate-400">No hay clases agendadas dentro de los próximos días.</div>
+          <div className="text-sm text-foreground-secondary">No hay clases agendadas dentro de los próximos días.</div>
         ) : (
-          <ul className="space-y-2 text-sm text-slate-200">
+          <ul className="space-y-2 text-sm text-foreground">
             {upcoming.map((session) => {
               const occupied = Number(session.enrolled_count ?? 0);
               const capacity = Number(session.capacity_max ?? 0);
               return (
                 <li key={`upcoming-${session.id}`} className="flex items-center justify-between gap-2">
                   <span>{formatSessionLabel(session)}</span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-foreground-secondary">
                     Cupo {occupied}/{capacity || "∞"}
                   </span>
                 </li>

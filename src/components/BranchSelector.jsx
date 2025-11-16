@@ -91,36 +91,36 @@ export default function BranchSelector() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-purple-600/20 bg-purple-600/10 hover:bg-purple-600/20 transition"
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-border bg-background-secondary hover:bg-muted transition"
         disabled={loading}
       >
         <div className="flex items-center gap-2 text-left">
-          <span className="p-1.5 rounded-lg bg-purple-600/20 text-purple-200">
+          <span className="p-1.5 rounded-lg bg-muted text-foreground/70">
             <Building2 className="w-4 h-4" />
           </span>
           <div>
-            <p className="text-xs text-purple-200/80">Sucursal activa</p>
-            <p className="text-sm font-semibold text-purple-100">
+            <p className="text-xs text-foreground/70">Sucursal activa</p>
+            <p className="text-sm font-semibold text-foreground">
               {viewMode === "all"
                 ? "Todas las sucursales"
                 : currentBranch?.name || "Seleccionar sucursal"}
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-purple-200 transition ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-4 h-4 text-foreground/70 transition ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute mt-2 right-0 left-0 z-50 rounded-xl border border-dark-300 bg-dark-100 shadow-2xl max-h-72 overflow-auto">
+          <div className="absolute mt-2 right-0 left-0 z-50 rounded-xl border border-border bg-background shadow-2xl max-h-72 overflow-auto">
             {loading ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-sm text-dark-500">
+              <div className="flex items-center gap-2 px-4 py-3 text-sm text-foreground/70">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Cargando sucursales...
               </div>
             ) : branches.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-dark-500">
+              <div className="px-4 py-3 text-sm text-foreground/70">
                 No tenés sucursales activas habilitadas.
               </div>
             ) : (
@@ -132,12 +132,12 @@ export default function BranchSelector() {
                         key="all"
                         type="button"
                         onClick={() => handleViewModeChange("all")}
-                        className={`w-full flex items-center justify-between px-4 py-2 text-left transition text-white ${
-                          viewMode === "all" ? "bg-purple-600/20" : "hover:bg-dark-200/60"
+                        className={`w-full flex items-center justify-between px-4 py-2 text-left transition text-foreground ${
+                          viewMode === "all" ? "bg-accent/40" : "hover:bg-muted"
                         }`}
                       >
                         <span className="text-sm font-medium">Todas las sucursales</span>
-                        {viewMode === "all" ? <Check className="w-4 h-4 text-purple-200" /> : null}
+                        {viewMode === "all" ? <Check className="w-4 h-4 text-primary" /> : null}
                       </button>
                     );
                   }
@@ -149,15 +149,15 @@ export default function BranchSelector() {
                       type="button"
                       onClick={() => handleSelect(branch.id)}
                       disabled={saving}
-                      className={`w-full flex items-center justify-between px-4 py-2 text-left transition text-white ${
-                        isActive ? "bg-purple-600/20" : "hover:bg-dark-200/60"
+                      className={`w-full flex items-center justify-between px-4 py-2 text-left transition text-foreground ${
+                        isActive ? "bg-accent/40" : "hover:bg-muted"
                       }`}
                     >
                       <div>
                         <p className="text-sm font-medium">{branch.name}</p>
-                        <p className="text-xs text-purple-200/70">{branch.slug}</p>
+                        <p className="text-xs text-foreground/70">{branch.slug}</p>
                       </div>
-                      {isActive ? <Check className="w-4 h-4 text-purple-200" /> : null}
+                      {isActive ? <Check className="w-4 h-4 text-primary" /> : null}
                     </button>
                   );
                 })}

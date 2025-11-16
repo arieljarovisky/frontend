@@ -22,9 +22,9 @@ const EMPTY_FORM = {
 
 function BranchBadge({ label, variant = "default" }) {
   const variants = {
-    default: "bg-slate-500/10 text-slate-200 border-slate-500/30",
-    success: "bg-emerald-500/15 text-emerald-200 border-emerald-500/40",
-    warning: "bg-amber-500/15 text-amber-100 border-amber-500/30",
+    default: "bg-background-secondary text-foreground-secondary border-border",
+    success: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30",
+    warning: "bg-amber-500/12 text-amber-700 border-amber-500/30",
   };
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${variants[variant]}`}>

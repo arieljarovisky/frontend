@@ -28,17 +28,14 @@ export default function DatePicker({ value, onChange }) {
   };
 
   return (
-    <div className="relative flex-1">
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-        <Calendar className="w-5 h-5 text-slate-500" />
-      </div>
+    <div className="flex-1">
       <input
         type="date"
         value={value}
         onChange={handleChange}
         min={minDate}
         max={maxDate}
-        className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-700/50 bg-slate-800/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 cursor-pointer hover:border-slate-600/50 transition-all [color-scheme:dark]"
+        className="input h-12 pr-12 w-full cursor-pointer transition-all [color-scheme:light]"
         aria-label="Seleccionar fecha"
       />
     </div>

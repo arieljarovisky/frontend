@@ -55,9 +55,9 @@ function StatCard({ icon: Icon, title, value, subtitle, trend, color = "primary"
         )}
       </div>
       <div>
-        <p className="text-sm text-dark-600 mb-1">{title}</p>
-        <p className="text-3xl font-bold text-dark-900">{value}</p>
-        {subtitle && <p className="text-xs text-dark-500 mt-2">{subtitle}</p>}
+        <p className="text-sm text-foreground-secondary mb-1">{title}</p>
+        <p className="text-3xl font-bold text-foreground">{value}</p>
+        {subtitle && <p className="text-xs text-foreground-muted mt-2">{subtitle}</p>}
       </div>
     </div>
   );
@@ -101,21 +101,21 @@ function DepositRow({ deposit, onAction, onRefresh }) {
   };
 
   return (
-    <div className="card p-4 mb-3 hover:shadow-dark-lg transition-all">
+    <div className="card p-4 mb-3 transition-all">
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-dark-900 truncate">
+          <div className="font-semibold text-foreground truncate">
             {deposit.customer_name || "Sin nombre"}
           </div>
-          <div className="text-xs text-dark-500 flex items-center gap-2 mt-1">
+          <div className="text-xs text-foreground-muted flex items-center gap-2 mt-1">
             <Users className="w-3 h-3" />
             {deposit.phone_e164}
           </div>
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-dark-800">{deposit.service_name || deposit.service}</div>
-          <div className="text-xs text-dark-500 flex items-center gap-2 mt-1">
+          <div className="text-sm text-foreground">{deposit.service_name || deposit.service}</div>
+          <div className="text-xs text-foreground-muted flex items-center gap-2 mt-1">
             <Users className="w-3 h-3" />
             {deposit.instructor_name || deposit.instructor}
           </div>
@@ -125,7 +125,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
           <div className="text-sm font-bold text-emerald-400">
             ${Number(deposit.deposit_decimal || 0).toFixed(2)}
           </div>
-          <div className="text-xs text-dark-500 flex items-center gap-1 mt-1">
+          <div className="text-xs text-foreground-muted flex items-center gap-1 mt-1">
             <Calendar className="w-3 h-3" />
             {new Date(deposit.starts_at).toLocaleDateString("es-AR")}
           </div>
@@ -138,7 +138,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
         <div className="flex gap-2">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-2 rounded-xl bg-dark-200/50 hover:bg-dark-300/50 transition-all"
+            className="p-2 rounded-xl bg-background-secondary hover:bg-border/40 transition-all"
             title={expanded ? "Ocultar detalles" : "Ver detalles"}
           >
             {expanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -177,10 +177,10 @@ function DepositRow({ deposit, onAction, onRefresh }) {
       </div>
 
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-dark-200/30 grid grid-cols-3 gap-4 text-sm">
+        <div className="mt-4 pt-4 border-t border-border/40 grid grid-cols-3 gap-4 text-sm">
           <div>
-            <div className="text-dark-600 mb-1">Hora del turno</div>
-            <div className="text-dark-900 font-medium">
+            <div className="text-foreground-secondary mb-1">Hora del turno</div>
+            <div className="text-foreground font-medium">
               {new Date(deposit.starts_at).toLocaleTimeString("es-AR", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -188,12 +188,12 @@ function DepositRow({ deposit, onAction, onRefresh }) {
             </div>
           </div>
           <div>
-            <div className="text-dark-600 mb-1">Estado del pago</div>
-            <div className="text-dark-900 font-medium">Pendiente</div>
+            <div className="text-foreground-secondary mb-1">Estado del pago</div>
+            <div className="text-foreground font-medium">Pendiente</div>
           </div>
           <div>
-            <div className="text-dark-600 mb-1">ID del turno</div>
-            <div className="text-dark-900 font-medium font-mono text-xs">#{deposit.id}</div>
+            <div className="text-foreground-secondary mb-1">ID del turno</div>
+            <div className="text-foreground font-medium font-mono text-xs">#{deposit.id}</div>
           </div>
         </div>
       )}
@@ -293,8 +293,8 @@ export default function DepositsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark-900">Gestión de Señas</h1>
-          <p className="text-dark-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Gestión de Señas</h1>
+          <p className="text-foreground-secondary mt-1">
             Monitoreo en tiempo real de pagos del sistema
           </p>
         </div>
@@ -368,7 +368,7 @@ export default function DepositsPage() {
       {/* Recent Payments */}
       {dashboard?.recentPayments?.length > 0 && (
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-dark-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             Pagos recientes (24hs)
           </h2>
@@ -376,20 +376,20 @@ export default function DepositsPage() {
             {dashboard.recentPayments.map((payment) => (
               <div
                 key={payment.id}
-                className="flex justify-between py-2 border-b border-dark-200/30 last:border-0"
+                className="flex justify-between py-2 border-b border-border/40 last:border-0"
               >
                 <div>
-                  <span className="font-medium text-dark-900">
+                  <span className="font-medium text-foreground">
                     {payment.customer_name}
                   </span>
                   {" • "}
-                  <span className="text-dark-600">{payment.service_name}</span>
+                  <span className="text-foreground-secondary">{payment.service_name}</span>
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-emerald-400">
                     ${Number(payment.deposit_decimal || 0).toFixed(2)}
                   </div>
-                  <div className="text-xs text-dark-500">
+                  <div className="text-xs text-foreground-muted">
                     {new Date(payment.deposit_paid_at).toLocaleTimeString(
                       "es-AR",
                       {
@@ -406,13 +406,13 @@ export default function DepositsPage() {
       )}
 
       {/* Pending Deposits */}
-      <div className="card p-6">
+        <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-dark-900">
+          <h2 className="text-lg font-semibold text-foreground">
             Señas pendientes ({pagination.total || 0})
           </h2>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-dark-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
               <input
                 type="checkbox"
                 checked={includeExpired}
@@ -420,7 +420,7 @@ export default function DepositsPage() {
                   setIncludeExpired(e.target.checked);
                   setPage(1);
                 }}
-                className="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
               />
               Incluir vencidas
             </label>
@@ -625,7 +625,7 @@ export default function DepositsPage() {
         ) : !deposits || deposits.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-400" />
-            <p className="text-dark-600">✅ No hay señas pendientes</p>
+            <p className="text-foreground-secondary">✅ No hay señas pendientes</p>
           </div>
         ) : (
           <>
@@ -643,14 +643,14 @@ export default function DepositsPage() {
             {/* Paginado */}
             {pagination.totalPages > 1 && (
               <div className="mt-6 flex items-center justify-between">
-                <div className="text-sm text-dark-600">
+                <div className="text-sm text-foreground-secondary">
                   Mostrando {(page - 1) * limit + 1} - {Math.min(page * limit, pagination.total)} de {pagination.total}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="p-2 rounded-lg bg-dark-200 hover:bg-dark-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg bg-background-secondary hover:bg-border/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -674,8 +674,8 @@ export default function DepositsPage() {
                           onClick={() => setPage(pageNum)}
                           className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                             page === pageNum
-                              ? "bg-primary-600 text-white"
-                              : "bg-dark-200 hover:bg-dark-300 text-dark-700"
+                              ? "bg-primary text-white"
+                              : "bg-background-secondary hover:bg-border/40 text-foreground-secondary"
                           }`}
                         >
                           {pageNum}
@@ -687,7 +687,7 @@ export default function DepositsPage() {
                   <button
                     onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
                     disabled={page === pagination.totalPages}
-                    className="p-2 rounded-lg bg-dark-200 hover:bg-dark-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg bg-background-secondary hover:bg-border/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

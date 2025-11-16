@@ -7,7 +7,7 @@ export default function BookingPage() {
   return (
     <AppProvider>
       {/* Wrapper de página con fondo que cubre todo */}
-      <div className="min-h-screen  from-slate-950 via-slate-900 to-slate-950">
+      <div className="min-h-screen bg-background">
 
         {/* Header */}
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
