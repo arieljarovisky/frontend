@@ -87,7 +87,7 @@ export default function ConfigPage() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const { tenantInfo, refreshFeatures } = useApp();
   const [active, setActive] = useState("general");
   const barRef = useRef(null);
@@ -148,12 +148,34 @@ export default function ConfigPage() {
 
   // Estados
   const [general, setGeneral] = useState({
-    businessName: "Studio Central",
+    businessName: "",
     timezone: "America/Argentina/Buenos_Aires",
     currency: "ARS",
     dateFormat: "DD/MM/YYYY",
     timeFormat: "24h",
   });
+  const [generalHydrated, setGeneralHydrated] = useState(false);
+
+  // Sincronizar el nombre real del tenant al cargar la página (solo una vez)
+  useEffect(() => {
+    if (generalHydrated) return;
+    const nameFromAuth =
+      (tenant && !tenant.is_system && (tenant.name || tenant.subdomain)) || "";
+    const nameFromInfo =
+      tenantInfo?.tenant?.name ||
+      tenantInfo?.tenant?.subdomain ||
+      tenantInfo?.name ||
+      tenantInfo?.subdomain ||
+      "";
+    const resolved = nameFromAuth || nameFromInfo;
+    if (resolved) {
+      setGeneral((prev) => ({
+        ...prev,
+        businessName: prev.businessName || resolved,
+      }));
+      setGeneralHydrated(true);
+    }
+  }, [tenant, tenantInfo, generalHydrated]);
 
 
   const [contact, setContact] = useState({
@@ -295,8 +317,14 @@ export default function ConfigPage() {
           apiClient.getAppointmentsConfig().catch(() => ({})),
         ]);
 
+        // Prefiere siempre el nombre real del tenant si está disponible
+        const tenantName =
+          (tenant && !tenant.is_system && (tenant.name || tenant.subdomain)) ||
+          (tenantInfo?.tenant?.name || tenantInfo?.tenant?.subdomain) ||
+          null;
+
         setGeneral({
-          businessName: g.businessName ?? "Mi Negocio",
+          businessName: tenantName ?? g.businessName ?? "Mi Negocio",
           timezone: g.timezone ?? "America/Argentina/Buenos_Aires",
           currency: g.currency ?? "ARS",
           dateFormat: g.dateFormat ?? "DD/MM/YYYY",

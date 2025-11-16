@@ -439,9 +439,7 @@ export default function BookingWidget() {
           </div>
         </div>
       )}
-      )}
-      
-
+    
       {/** Fin formulario de turnos */}
       </>)}
 
