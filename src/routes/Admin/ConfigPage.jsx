@@ -878,8 +878,15 @@ export default function ConfigPage() {
     return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
+  // Filtrar tabs según permisos del usuario
+  const visibleTabs = TABS.filter((t) => {
+    if (t.external) return false;
+    if (t.adminOnly && user?.role !== "admin") return false;
+    return true;
+  });
+
   useEffect(() => {
-    const ids = TABS.filter((t) => !t.external).map((t) => t.id);
+    const ids = visibleTabs.map((t) => t.id);
 
     const calcActive = () => {
       const refY = navOffset + SCROLL_MARGIN;
@@ -946,7 +953,7 @@ export default function ConfigPage() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
-  }, [navOffset, TABS]);
+  }, [navOffset, visibleTabs]);
 
   const goTo = (id) => {
     const el = document.getElementById(id);
@@ -1028,12 +1035,12 @@ export default function ConfigPage() {
         }
       >
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-primary/25 bg-[rgba(10,32,48,0.9)] shadow-md backdrop-blur-xl px-6 py-3">
+          <div className="rounded-2xl border border-primary/25 bg-[rgba(10,32,48,0.9)] shadow-md backdrop-blur-xl px-6 py-3 inline-block">
             <nav
               ref={navScrollRef}
-              className="hidden md:flex items-center gap-2 flex-nowrap overflow-x-auto scrollbar-hide"
+              className="hidden md:flex items-center justify-start gap-2 flex-nowrap overflow-x-auto scrollbar-hide"
             >
-              {TABS.map(({ id, label, Icon, external }) => {
+              {visibleTabs.map(({ id, label, Icon, external }) => {
                 const isActive = active === id;
                 const base = "group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all min-w-max";
                 const on = "bg-gradient-to-r from-[#13b5cf] to-[#0d7fd4] text-white shadow-lg ring-2 ring-white/10";
@@ -1042,7 +1049,7 @@ export default function ConfigPage() {
               })}
             </nav>
             <div className="hidden">
-              {TABS.map(({ id, label, Icon, external }) => {
+              {visibleTabs.map(({ id, label, Icon, external }) => {
                 const isActive = active === id;
                 return <button type="button" key={id} onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${isActive ? "bg-gradient-to-r from-[#13b5cf] to-[#0d7fd4] text-white shadow-lg ring-2 ring-white/10" : "text-slate-200/80 hover:text-white hover:bg-white/10 ring-1 ring-transparent"}`}><Icon className="w-4 h-4 opacity-80" /> <span>{label}</span></button>;
               })}
