@@ -609,10 +609,6 @@ export function AppProvider({ children, pollMs = 15000 }) {
       classesEnabled,
       appointmentsEnabled,
       refreshFeatures,
-      loadBranches,
-      branches,
-      branchesLoading,
-      branchesError,
     }),
     [
       services,
