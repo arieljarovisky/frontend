@@ -271,9 +271,9 @@ export default function PlansPage() {
                 disabled={loading || (!mpConnected && !plan.custom)}
                 className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                   plan.popular
-                    ? "btn-primary"
-                    : "btn-secondary"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    ? "bg-primary text-white hover:bg-primary-hover shadow-md"
+                    : "bg-white dark:bg-background-secondary text-gray-900 dark:text-foreground border-2 border-gray-300 dark:border-border hover:border-primary hover:bg-primary-light dark:hover:bg-border"
+                } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-inherit disabled:hover:border-inherit`}
               >
                 {loading ? (
                   <>
