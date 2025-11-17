@@ -73,6 +73,7 @@ export default function LoginPage() {
 
       if (!resp?.ok) {
         setError(resp?.error || "Credenciales incorrectas");
+        setLoading(false);
         return;
       }
 
@@ -89,6 +90,7 @@ export default function LoginPage() {
         }
         setAvailableTenants(tenants);
         setShowTenantSelector(true);
+        setLoading(false);
         return;
       }
 
@@ -100,7 +102,25 @@ export default function LoginPage() {
       goAfterLogin(resp);
     } catch (err) {
       console.error("Error en login:", err);
-      setError("No se pudo conectar con el servidor");
+      
+      // Extraer mensaje de error del backend si está disponible
+      let errorMessage = "No se pudo conectar con el servidor";
+      
+      if (err?.response?.data?.error) {
+        // Error del backend con mensaje específico
+        errorMessage = err.response.data.error;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        // Error de red o axios
+        if (err.message.includes("Network Error") || err.message.includes("timeout")) {
+          errorMessage = "No se pudo conectar con el servidor. Verificá tu conexión a internet.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -114,6 +134,7 @@ export default function LoginPage() {
 
       if (!resp?.ok) {
         setError(resp?.error || "Error al iniciar sesión");
+        setLoading(false);
         return;
       }
 
@@ -125,7 +146,23 @@ export default function LoginPage() {
       goAfterLogin(resp, slug);
     } catch (err) {
       console.error("Error en login tenant:", err);
-      setError("Error al conectar con el servidor");
+      
+      // Extraer mensaje de error del backend si está disponible
+      let errorMessage = "Error al conectar con el servidor";
+      
+      if (err?.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        if (err.message.includes("Network Error") || err.message.includes("timeout")) {
+          errorMessage = "No se pudo conectar con el servidor. Verificá tu conexión a internet.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -318,9 +355,12 @@ export default function LoginPage() {
             </p>
             <p>
               ¿Necesitás ayuda?{" "}
-              <a href="#" className="text-primary hover:text-primary-hover font-medium">
+              <button
+                onClick={() => navigate("/contact")}
+                className="text-primary hover:text-primary-hover font-medium"
+              >
                 Contactanos
-              </a>
+              </button>
             </p>
           </div>
         </div>

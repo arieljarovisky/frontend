@@ -290,20 +290,12 @@ export default function OnboardingPage() {
         console.warn("[ONBOARDING] refreshSession warning:", err);
       }
 
+      // Redirigir directo al dashboard sin pedir pago (trial de 14 días)
       if (tenantSlug) {
-        navigate(
-          `/onboarding/payment?tenant=${tenantSlug}${
-            response.session?.id ? `&session=${response.session.id}` : ""
-          }`,
-          { replace: true }
-        );
+        navigate(`/${tenantSlug}/dashboard`, { replace: true });
       } else {
-        navigate(
-          `/onboarding/payment${
-            response.session?.id ? `?session=${response.session.id}` : ""
-          }`,
-          { replace: true }
-        );
+        // Si no hay slug, intentar login y redirigir
+        navigate("/login", { replace: true });
       }
     } catch (err) {
       console.error("[ONBOARDING] finish error", err);

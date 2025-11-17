@@ -210,20 +210,57 @@ const authApi = {
    * Login
    */
   async login(email, password) {
-    const { data } = await apiClient.post("/auth/login", { email, password });
+    try {
+      const { data } = await apiClient.post("/auth/login", { email, password });
 
-    if (data?.ok) {
-      // Caso 1: Multi-tenant (necesita elegir tenant)
-      if (data.multiTenant) {
-        return data; // { ok, multiTenant, email, tenants }
+      if (data?.ok) {
+        // Caso 1: Multi-tenant (necesita elegir tenant)
+        if (data.multiTenant) {
+          return data; // { ok, multiTenant, email, tenants }
+        }
+
+        // Caso 2: Single tenant (login exitoso)
+        if (data.access) {
+          setAccessToken(data.access);
+          setAuthEmail(data?.user?.email || email);
+
+          // ✅ Guardar tenantId y user data
+          if (data.user) {
+            setUserData(data.user);
+          }
+          if (data.tenant?.id) {
+            setTenantId(data.tenant.id);
+          }
+        }
       }
 
-      // Caso 2: Single tenant (login exitoso)
-      if (data.access) {
+      return data;
+    } catch (error) {
+      // Si es un error HTTP del backend, devolver el formato esperado
+      if (error?.response?.data) {
+        return error.response.data;
+      }
+      // Si no, propagar el error para que se maneje en el componente
+      throw error;
+    }
+  },
+
+  /**
+   * Login con tenant específico
+   */
+  async loginTenant(email, password, slug) {
+    try {
+      const { data } = await apiClient.post("/auth/login-tenant", {
+        email,
+        password,
+        slug,
+      });
+
+      if (data?.ok && data?.access) {
         setAccessToken(data.access);
         setAuthEmail(data?.user?.email || email);
 
-        // ✅ Guardar tenantId y user data
+        // ✅ Guardar datos completos
         if (data.user) {
           setUserData(data.user);
         }
@@ -231,35 +268,16 @@ const authApi = {
           setTenantId(data.tenant.id);
         }
       }
-    }
 
-    return data;
-  },
-
-  /**
-   * Login con tenant específico
-   */
-  async loginTenant(email, password, slug) {
-    const { data } = await apiClient.post("/auth/login-tenant", {
-      email,
-      password,
-      slug,
-    });
-
-    if (data?.ok && data?.access) {
-      setAccessToken(data.access);
-      setAuthEmail(data?.user?.email || email);
-
-      // ✅ Guardar datos completos
-      if (data.user) {
-        setUserData(data.user);
+      return data;
+    } catch (error) {
+      // Si es un error HTTP del backend, devolver el formato esperado
+      if (error?.response?.data) {
+        return error.response.data;
       }
-      if (data.tenant?.id) {
-        setTenantId(data.tenant.id);
-      }
+      // Si no, propagar el error para que se maneje en el componente
+      throw error;
     }
-
-    return data;
   },
 
   /**

@@ -1,0 +1,302 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CheckCircle2, CreditCard, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { apiClient } from "../api/client";
+import { toast } from "sonner";
+import Logo from "../components/Logo";
+import ThemeToggle from "../components/ThemeToggle";
+
+const PLANS = [
+  {
+    code: "esencial",
+    name: "Esencial",
+    price: 14900,
+    period: "mes",
+    description: "Para salones que están comenzando",
+    features: [
+      "Hasta 2 profesionales",
+      "Agenda inteligente de turnos",
+      "Recordatorios automáticos",
+      "Clientes ilimitados",
+      "Reportes básicos"
+    ],
+    popular: false
+  },
+  {
+    code: "crecimiento",
+    name: "Crecimiento",
+    price: 24900,
+    period: "mes",
+    description: "Ideal para equipos en expansión",
+    features: [
+      "Hasta 6 profesionales",
+      "Pagos y señas con Mercado Pago",
+      "WhatsApp Bot para reservas",
+      "Control de stock y comisiones",
+      "Tableros y reportes pro",
+      "Soporte prioritario"
+    ],
+    popular: true
+  },
+  {
+    code: "escala",
+    name: "Escala",
+    price: 44900,
+    period: "mes",
+    description: "Operaciones con varias sucursales",
+    features: [
+      "Profesionales ilimitados",
+      "Hasta 2 sucursales operando en simultáneo",
+      "Multi-sucursal con roles avanzados",
+      "Automatizaciones y campañas",
+      "Integración AFIP / ARCA",
+      "Dashboards financieros",
+      "WhatsApp avanzado + flujos especiales",
+      "Onboarding guiado"
+    ],
+    popular: false
+  },
+  {
+    code: "pro",
+    name: "Pro a medida",
+    price: null,
+    period: "",
+    description: "Implementación custom y acompañamiento dedicado",
+    features: [
+      "Arquitectura multi-tenant",
+      "Sucursales ilimitadas a medida",
+      "API y flujos personalizados",
+      "Integraciones externas",
+      "Capacitación in-company",
+      "SLA y soporte 24/7",
+      "Launch plan con especialista"
+    ],
+    popular: false,
+    custom: true
+  }
+];
+
+export default function PlansPage() {
+  const { tenantSlug } = useParams();
+  const { user, tenant } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState(null);
+  const [mpConnected, setMpConnected] = useState(false);
+
+  useEffect(() => {
+    loadCurrentSubscription();
+    checkMpConnection();
+  }, []);
+
+  const loadCurrentSubscription = async () => {
+    try {
+      const response = await apiClient.get("/api/business-types/tenant/business-type");
+      // Aquí podrías obtener información de la suscripción actual si existe
+    } catch (error) {
+      console.error("Error cargando suscripción:", error);
+    }
+  };
+
+  const checkMpConnection = async () => {
+    try {
+      // Verificar si hay token de Mercado Pago configurado
+      // El endpoint de suscripción verificará si está conectado
+      // Por ahora asumimos que si el usuario puede acceder, puede intentar suscribirse
+      // La verificación real se hará al intentar crear la suscripción
+      setMpConnected(true); // Permitir intentar suscribirse
+    } catch (error) {
+      console.error("Error verificando Mercado Pago:", error);
+      setMpConnected(false);
+    }
+  };
+
+  const handleSubscribe = async (plan) => {
+    if (plan.custom) {
+      // Plan Pro a medida - redirigir al formulario
+      navigate("/enterprise-request");
+      return;
+    }
+
+    if (!mpConnected) {
+      toast.error("Necesitás conectar Mercado Pago primero");
+      navigate(`/${tenantSlug}/admin/config?tab=mercadopago`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post("/api/config/platform-subscription/create", {
+        plan: plan.code
+      });
+
+      if (response?.data?.ok && response?.data?.init_point) {
+        // Redirigir a Mercado Pago
+        window.location.href = response.data.init_point;
+      } else {
+        toast.error(response?.data?.error || "Error al crear la suscripción");
+      }
+    } catch (error) {
+      console.error("Error suscribiéndose:", error);
+      toast.error(
+        error?.response?.data?.error ||
+        "No se pudo crear la suscripción. Verificá tu conexión a Mercado Pago."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatPrice = (price) => {
+    if (price === null) return "Consultar";
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-background-secondary/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(tenantSlug ? `/${tenantSlug}/dashboard` : "/")}
+                className="p-2 hover:bg-border rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <Logo size="default" showText />
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Elige tu plan
+          </h1>
+          <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+            Seleccioná el plan que mejor se adapte a tu negocio. Podés cambiar o cancelar en cualquier momento.
+          </p>
+        </motion.div>
+
+        {/* Alerta si Mercado Pago no está conectado */}
+        {!mpConnected && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 max-w-4xl mx-auto"
+          >
+            <div className="card p-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground mb-2">
+                    Conectá Mercado Pago para suscribirte
+                  </h3>
+                  <p className="text-sm text-foreground-secondary mb-4">
+                    Necesitás conectar tu cuenta de Mercado Pago antes de suscribirte a un plan.
+                  </p>
+                  <button
+                    onClick={() => navigate(`/${tenantSlug}/admin/config?tab=mercadopago`)}
+                    className="btn-primary text-sm"
+                  >
+                    Conectar Mercado Pago
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          {PLANS.map((plan, index) => (
+            <motion.div
+              key={plan.code}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`card p-8 relative ${
+                plan.popular
+                  ? "ring-2 ring-primary scale-105"
+                  : ""
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold">
+                    Más Popular
+                  </span>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
+                <p className="text-foreground-secondary text-sm mb-4">{plan.description}</p>
+                <div className="flex items-baseline">
+                  <span className="text-4xl font-bold text-foreground">
+                    {formatPrice(plan.price)}
+                  </span>
+                  {plan.period && (
+                    <span className="text-foreground-secondary ml-2">/{plan.period}</span>
+                  )}
+                </div>
+              </div>
+
+              <ul className="space-y-3 mb-8">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start">
+                    <CheckCircle2 className="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+                    <span className="text-foreground-secondary text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => handleSubscribe(plan)}
+                disabled={loading || (!mpConnected && !plan.custom)}
+                className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                  plan.popular
+                    ? "btn-primary"
+                    : "btn-secondary"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : plan.custom ? (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Consultar
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Suscribirme
+                  </>
+                )}
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+

@@ -7,6 +7,8 @@ import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import BranchSelector from "../components/BranchSelector";
+import TrialWarning from "../components/TrialWarning";
+import TrialExpiredBlock from "../components/TrialExpiredBlock";
 import { useQuery } from "../shared/useQuery";
 import { useApp } from "../context/UseApp.js";
 import {
@@ -306,6 +308,9 @@ export default function AppLayout() {
 
       {/* Main Content Area */}
       <div className="arja-main">
+        {/* Trial Warning Banner */}
+        <TrialWarning />
+
         {/* Mobile Header */}
         <header className="arja-main__header arja-main__header--mobile">
           <div className="arja-main__header-inner">
@@ -325,9 +330,11 @@ export default function AppLayout() {
         {/* Main Content */}
         <main className="arja-main__content">
           <div className="arja-main__content-inner">
-            <div className="animate-fade-in">
-              <Outlet />
-            </div>
+            <TrialExpiredBlock>
+              <div className="animate-fade-in">
+                <Outlet />
+              </div>
+            </TrialExpiredBlock>
           </div>
         </main>
 

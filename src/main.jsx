@@ -49,6 +49,11 @@ import { AppProvider } from "./context/AppProvider.jsx";
 import EnterpriseRequest from "./routes/EnterpriseRequest.jsx";
 import ForgotPasswordPage from "./routes/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./routes/ResetPasswordPage.jsx";
+import HelpPage from "./routes/HelpPage.jsx";
+import ContactPage from "./routes/ContactPage.jsx";
+import TermsPage from "./routes/TermsPage.jsx";
+import PrivacyPage from "./routes/PrivacyPage.jsx";
+import PlansPage from "./routes/PlansPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -58,6 +63,10 @@ const router = createBrowserRouter([
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/enterprise-request", element: <EnterpriseRequest /> },
+  { path: "/help", element: <HelpPage /> },
+  { path: "/contact", element: <ContactPage /> },
+  { path: "/terms", element: <TermsPage /> },
+  { path: "/privacy", element: <PrivacyPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
   { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },
@@ -133,6 +142,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <ConfigPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "plans",
+        element: (
+          <PrivateRoute>
+            <PlansPage />
           </PrivateRoute>
         ),
       },
