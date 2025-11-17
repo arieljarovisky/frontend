@@ -26,6 +26,11 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Cambiar el título de la página
+  useEffect(() => {
+    document.title = "ARJA ERP | Sistema de Gestión Empresarial";
+  }, []);
+
   const features = [
     {
       icon: Calendar,
