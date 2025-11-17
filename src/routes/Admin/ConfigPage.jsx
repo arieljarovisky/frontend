@@ -143,7 +143,6 @@ export default function ConfigPage() {
     { id: "contact", label: "ARCA", Icon: Receipt },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
     { id: "commissions", label: "Comisiones", Icon: Percent },
-    { id: "notifications", label: "Notificaciones", Icon: Bell },
   ];
 
   // Estados
