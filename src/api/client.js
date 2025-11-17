@@ -1081,6 +1081,60 @@ apiClient.testArcaInvoice = async function () {
 };
 
 /* =========================
+   DASHBOARD API
+========================= */
+
+apiClient.getAdminDashboard = async function ({ date, from, to } = {}) {
+  const params = {};
+  if (date) params.date = date;
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const { data } = await apiClient.get("/api/dashboard/summary", { params });
+  
+  // Transformar la respuesta para que coincida con lo que espera el frontend
+  if (data?.ok && data?.data) {
+    const byStatus = data.data.byStatus || {};
+    return {
+      ok: true,
+      data: {
+        today: {
+          total: Object.values(byStatus).reduce((sum, val) => sum + Number(val || 0), 0),
+          confirmed: Number(byStatus.confirmed || 0) + Number(byStatus.completed || 0),
+          pending: Number(byStatus.pending_deposit || 0),
+          scheduled: Number(byStatus.scheduled || 0),
+        },
+        upcoming: data.data.upcoming || [],
+        customersTotal: data.data.customersTotal || 0,
+        amountToday: data.data.amountToday || 0,
+        deposits: {
+          rangeAmount: data.data.amountToday || 0, // Para compatibilidad con semana
+        }
+      }
+    };
+  }
+  return data;
+};
+
+apiClient.getTopServices = async function ({ months = 3, limit = 6 } = {}) {
+  const { data } = await apiClient.get("/api/admin/charts/top-services", {
+    params: { months, limit }
+  });
+  return data?.data || [];
+};
+
+apiClient.getIncomeByMonth = async function (year) {
+  const { data } = await apiClient.get("/api/admin/charts/income-by-month", {
+    params: { year }
+  });
+  return data?.data || [];
+};
+
+apiClient.getAgendaToday = async function () {
+  const { data } = await apiClient.get("/api/admin/agenda/today");
+  return data?.data || [];
+};
+
+/* =========================
    EXPORT
 ========================= */
 

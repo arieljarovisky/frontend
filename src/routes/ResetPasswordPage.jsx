@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Lock, ArrowRight, AlertCircle, CheckCircle2, Check, X } from "lucide-react";
 import apiClient from "../api/client";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import { validatePassword, getPasswordRequirements } from "../utils/passwordValidation.js";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -19,6 +20,14 @@ export default function ResetPasswordPage() {
 
   const token = searchParams.get("token");
   const email = searchParams.get("email");
+
+  // Validar contraseña en tiempo real
+  const passwordValidation = useMemo(() => {
+    if (!password) return null;
+    return validatePassword(password);
+  }, [password]);
+
+  const requirements = getPasswordRequirements();
 
   useEffect(() => {
     if (!token || !email) {
@@ -35,8 +44,10 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
+    // Validar contraseña con restricciones
+    const validation = validatePassword(password);
+    if (!validation.valid) {
+      setError(validation.error);
       return;
     }
 
@@ -164,10 +175,16 @@ export default function ResetPasswordPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input input--with-icon input--with-icon-right"
+                  className={`input input--with-icon input--with-icon-right ${
+                    password && passwordValidation && !passwordValidation.valid
+                      ? "border-red-500 focus:border-red-500"
+                      : password && passwordValidation && passwordValidation.valid
+                      ? "border-green-500 focus:border-green-500"
+                      : ""
+                  }`}
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                   autoFocus
                 />
                 <button
@@ -187,6 +204,87 @@ export default function ResetPasswordPage() {
                   )}
                 </button>
               </div>
+              
+              {/* Mostrar requisitos de contraseña */}
+              {password && (
+                <div className="mt-3 p-3 rounded-lg bg-background-secondary border border-border">
+                  <p className="text-xs font-semibold text-foreground mb-2">
+                    Requisitos de contraseña:
+                  </p>
+                  <ul className="space-y-1 text-xs">
+                    {passwordValidation && passwordValidation.missingRequirements ? (
+                      <>
+                        <li className={`flex items-center gap-2 ${
+                          passwordValidation.missingRequirements.minLength
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-foreground-secondary"
+                        }`}>
+                          {passwordValidation.missingRequirements.minLength ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          Al menos 8 caracteres
+                        </li>
+                        <li className={`flex items-center gap-2 ${
+                          passwordValidation.missingRequirements.hasUpperCase
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-foreground-secondary"
+                        }`}>
+                          {passwordValidation.missingRequirements.hasUpperCase ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          Al menos una mayúscula (A-Z)
+                        </li>
+                        <li className={`flex items-center gap-2 ${
+                          passwordValidation.missingRequirements.hasLowerCase
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-foreground-secondary"
+                        }`}>
+                          {passwordValidation.missingRequirements.hasLowerCase ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          Al menos una minúscula (a-z)
+                        </li>
+                        <li className={`flex items-center gap-2 ${
+                          passwordValidation.missingRequirements.hasNumber
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-foreground-secondary"
+                        }`}>
+                          {passwordValidation.missingRequirements.hasNumber ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          Al menos un número (0-9)
+                        </li>
+                        <li className={`flex items-center gap-2 ${
+                          passwordValidation.missingRequirements.hasSpecialChar
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-foreground-secondary"
+                        }`}>
+                          {passwordValidation.missingRequirements.hasSpecialChar ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          Al menos un carácter especial
+                        </li>
+                      </>
+                    ) : (
+                      requirements.mustHave.map((req, idx) => (
+                        <li key={idx} className="text-foreground-secondary">
+                          • {req}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -204,7 +302,7 @@ export default function ResetPasswordPage() {
                   className="input input--with-icon input--with-icon-right"
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
                 <button
                   type="button"

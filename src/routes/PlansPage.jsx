@@ -134,9 +134,31 @@ export default function PlansPage() {
 
       if (response?.data?.ok && response?.data?.init_point) {
         // Redirigir a Mercado Pago
-        window.location.href = response.data.init_point;
+        const paymentUrl = response.data.init_point;
+        
+        // Detectar si está en una PWA instalada (standalone mode)
+        const isStandalone = window.navigator.standalone || 
+                            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        
+        if (isStandalone) {
+          // Si está en una PWA, mostrar mensaje y abrir en navegador
+          toast.info("Abriendo Mercado Pago en tu navegador...", { duration: 2000 });
+          
+          // Intentar abrir en el navegador del sistema usando window.open
+          const opened = window.open(paymentUrl, '_blank');
+          
+          // Si window.open falla o está bloqueado, usar location.href
+          if (!opened || opened.closed) {
+            window.location.href = paymentUrl;
+          }
+        } else {
+          // En navegador normal (móvil o desktop), usar location.href
+          // Esto funciona correctamente en navegadores móviles estándar
+          window.location.href = paymentUrl;
+        }
       } else {
         toast.error(response?.data?.error || "Error al crear la suscripción");
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error suscribiéndose:", error);

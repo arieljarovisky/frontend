@@ -26,11 +26,12 @@ export default function TrialExpiredBlock({ children }) {
 
   const expired = isTrialExpired;
 
-  // Permitir acceso a la página de configuración y contacto para que puedan suscribirse o pedir ayuda
+  // Permitir acceso a la página de configuración, planes y contacto para que puedan suscribirse o pedir ayuda
   const isConfigPage = location.pathname.includes("/admin/config");
   const isContactPage = location.pathname === "/contact" || location.pathname.includes("/contact");
+  const isPlansPage = location.pathname.includes("/plans");
 
-  if (!expired || isConfigPage || isContactPage) {
+  if (!expired || isConfigPage || isContactPage || isPlansPage) {
     return <>{children}</>;
   }
 

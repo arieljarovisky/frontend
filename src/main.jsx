@@ -54,6 +54,9 @@ import ContactPage from "./routes/ContactPage.jsx";
 import TermsPage from "./routes/TermsPage.jsx";
 import PrivacyPage from "./routes/PrivacyPage.jsx";
 import PlansPage from "./routes/PlansPage.jsx";
+import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
+import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
+import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -88,6 +91,8 @@ const router = createBrowserRouter([
       { path: "payment/success", element: <PaymentSuccess /> },
       { path: "payment/failure", element: <PaymentFailure /> },
       { path: "payment/pending", element: <PaymentSuccess /> },
+      { path: "subscription/success", element: <SubscriptionSuccess /> },
+      { path: "subscription/failure", element: <SubscriptionFailure /> },
       {
         path: "dashboard",
         element: (
@@ -170,6 +175,14 @@ const router = createBrowserRouter([
             <FeatureGate featureKey="invoicing">
               <InvoicingPage />
             </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "cash-register",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <CashRegisterPage />
           </PrivateRoute>
         ),
       },

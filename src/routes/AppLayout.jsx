@@ -26,7 +26,8 @@ import {
   Package,
   FileText,
   GraduationCap,
-  Shield
+  Shield,
+  Receipt
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -180,6 +181,13 @@ export default function AppLayout() {
       module: "invoicing",
       featureKey: "invoicing",
     },
+    {
+      to: `${base}/cash-register`,
+      label: "Cierre de Caja",
+      icon: Receipt,
+      active: pathname.startsWith(`${base}/cash-register`),
+      adminOnly: true,
+    },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
     { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
     { to: `${base}/admin/instructores`, label: navLabels.professionals, icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
@@ -331,9 +339,9 @@ export default function AppLayout() {
         <main className="arja-main__content">
           <div className="arja-main__content-inner">
             <TrialExpiredBlock>
-              <div className="animate-fade-in">
-                <Outlet />
-              </div>
+            <div className="animate-fade-in">
+              <Outlet />
+            </div>
             </TrialExpiredBlock>
           </div>
         </main>

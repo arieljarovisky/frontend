@@ -2,10 +2,11 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiClient, authApi } from "../../api/client";
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, X } from "lucide-react";
 import ThemeToggle from "../../components/ThemeToggle";
 import Logo from "../../components/Logo";
 import { useAuth } from "../../context/AuthContext";
+import { validatePassword } from "../../utils/passwordValidation.js";
 
 const STEP_IDS = ["owner", "business", "branding", "plan"];
 
@@ -115,8 +116,10 @@ export default function OnboardingPage() {
       if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) {
         return "Ingresá un email válido";
       }
-      if (!password || password.length < 6) {
-        return "La contraseña debe tener al menos 6 caracteres";
+      // Validar contraseña con restricciones de seguridad
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return passwordValidation.error || "La contraseña no cumple con los requisitos de seguridad";
       }
     } else if (currentStep === "business") {
       if (!formData.business.business_type) {
@@ -539,6 +542,12 @@ function InputField({ label, hint, ...props }) {
 }
 
 function OwnerStep({ data, onChange }) {
+  // Validar contraseña en tiempo real
+  const passwordValidation = useMemo(() => {
+    if (!data.password) return null;
+    return validatePassword(data.password);
+  }, [data.password]);
+
   return (
     <div className="space-y-6">
       <StepSection
@@ -564,13 +573,96 @@ function OwnerStep({ data, onChange }) {
           onChange={(e) => onChange("owner", "phone", e.target.value)}
           placeholder="+54 11 5555-5555"
         />
-        <InputField
-          label="Contraseña"
-          value={data.password}
-          onChange={(e) => onChange("owner", "password", e.target.value)}
-          placeholder="Mínimo 6 caracteres"
-          type="password"
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground">
+            Contraseña
+          </label>
+          <input
+            type="password"
+            value={data.password}
+            onChange={(e) => onChange("owner", "password", e.target.value)}
+            placeholder="Mínimo 8 caracteres con mayúsculas, minúsculas, números y caracteres especiales"
+            className={`w-full rounded-2xl border ${
+              data.password && passwordValidation && !passwordValidation.valid
+                ? "border-red-500 focus:border-red-500"
+                : data.password && passwordValidation && passwordValidation.valid
+                ? "border-green-500 focus:border-green-500"
+                : "border-border/60"
+            } bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition shadow-sm`}
+            minLength={8}
+          />
+          
+          {/* Mostrar requisitos de contraseña */}
+          {data.password && passwordValidation && passwordValidation.missingRequirements && (
+            <div className="mt-3 p-3 rounded-lg bg-background-secondary border border-border">
+              <p className="text-xs font-semibold text-foreground mb-2">
+                Requisitos de contraseña:
+              </p>
+              <ul className="space-y-1 text-xs">
+                <li className={`flex items-center gap-2 ${
+                  passwordValidation.missingRequirements.minLength
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-foreground-secondary"
+                }`}>
+                  {passwordValidation.missingRequirements.minLength ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
+                  Al menos 8 caracteres
+                </li>
+                <li className={`flex items-center gap-2 ${
+                  passwordValidation.missingRequirements.hasUpperCase
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-foreground-secondary"
+                }`}>
+                  {passwordValidation.missingRequirements.hasUpperCase ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
+                  Al menos una mayúscula (A-Z)
+                </li>
+                <li className={`flex items-center gap-2 ${
+                  passwordValidation.missingRequirements.hasLowerCase
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-foreground-secondary"
+                }`}>
+                  {passwordValidation.missingRequirements.hasLowerCase ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
+                  Al menos una minúscula (a-z)
+                </li>
+                <li className={`flex items-center gap-2 ${
+                  passwordValidation.missingRequirements.hasNumber
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-foreground-secondary"
+                }`}>
+                  {passwordValidation.missingRequirements.hasNumber ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
+                  Al menos un número (0-9)
+                </li>
+                <li className={`flex items-center gap-2 ${
+                  passwordValidation.missingRequirements.hasSpecialChar
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-foreground-secondary"
+                }`}>
+                  {passwordValidation.missingRequirements.hasSpecialChar ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
+                  Al menos un carácter especial
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
       </StepSection>
     </div>
   );

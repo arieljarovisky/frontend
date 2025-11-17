@@ -240,7 +240,7 @@ export default function DepositsPage() {
   const { data: dashboard, loading: loadingDash } = useQuery(
     async () => {
       const { data } = await apiClient.get("/api/admin/deposits/dashboard");
-      return data.data;
+      return data?.data || data || {};
     },
     [refreshKey]
   );
@@ -286,7 +286,7 @@ export default function DepositsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const stats = dashboard?.stats || {};
+  const stats = dashboard || {};
 
   return (
     <div className="space-y-6 animate-fade-in">

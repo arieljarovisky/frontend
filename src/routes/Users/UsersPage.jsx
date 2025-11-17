@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import {
@@ -11,8 +11,11 @@ import {
   UserCheck,
   UserX,
   Key,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { validatePassword } from "../../utils/passwordValidation.js";
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
@@ -291,6 +294,12 @@ function UserModal({ user, permissions, branches, branchesLoading, onClose, onSa
   const [formData, setFormData] = useState(initialState);
   const [loading, setLoading] = useState(false);
 
+  // Validar contraseña en tiempo real
+  const passwordValidation = useMemo(() => {
+    if (!formData.password) return null;
+    return validatePassword(formData.password);
+  }, [formData.password]);
+
   useEffect(() => {
     setFormData({
       email: user?.email || "",
@@ -371,6 +380,15 @@ function UserModal({ user, permissions, branches, branchesLoading, onClose, onSa
       };
 
       // Si es edición y la contraseña está vacía, no incluirla en el payload
+      // Validar contraseña si se está creando un nuevo usuario o si se está actualizando con una nueva contraseña
+      if (payload.password && payload.password.trim() !== "") {
+        const validation = validatePassword(payload.password);
+        if (!validation.valid) {
+          toast.error(validation.error);
+          return;
+        }
+      }
+
       if (user && (!payload.password || payload.password.trim() === "")) {
         delete payload.password;
       }
@@ -457,10 +475,86 @@ function UserModal({ user, permissions, branches, branchesLoading, onClose, onSa
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
-                  placeholder={user ? "Dejar vacío para no cambiar" : "Mínimo 6 caracteres"}
+                  className={`w-full px-4 py-2.5 rounded-lg bg-background-secondary border ${
+                    formData.password && passwordValidation && !passwordValidation.valid
+                      ? "border-red-500 focus:border-red-500"
+                      : formData.password && passwordValidation && passwordValidation.valid
+                      ? "border-green-500 focus:border-green-500"
+                      : "border-border"
+                  } text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 text-sm sm:text-base`}
+                  placeholder={user ? "Dejar vacío para no cambiar" : "Mínimo 8 caracteres con mayúsculas, minúsculas, números y caracteres especiales"}
                   required={!user}
+                  minLength={user ? undefined : 8}
                 />
+                {formData.password && passwordValidation && passwordValidation.missingRequirements && (
+                  <div className="mt-2 p-3 rounded-lg bg-background-secondary border border-border">
+                    <p className="text-xs font-semibold text-foreground mb-2">
+                      Requisitos de contraseña:
+                    </p>
+                    <ul className="space-y-1 text-xs">
+                      <li className={`flex items-center gap-2 ${
+                        passwordValidation.missingRequirements.minLength
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-foreground-secondary"
+                      }`}>
+                        {passwordValidation.missingRequirements.minLength ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        Al menos 8 caracteres
+                      </li>
+                      <li className={`flex items-center gap-2 ${
+                        passwordValidation.missingRequirements.hasUpperCase
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-foreground-secondary"
+                      }`}>
+                        {passwordValidation.missingRequirements.hasUpperCase ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        Al menos una mayúscula (A-Z)
+                      </li>
+                      <li className={`flex items-center gap-2 ${
+                        passwordValidation.missingRequirements.hasLowerCase
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-foreground-secondary"
+                      }`}>
+                        {passwordValidation.missingRequirements.hasLowerCase ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        Al menos una minúscula (a-z)
+                      </li>
+                      <li className={`flex items-center gap-2 ${
+                        passwordValidation.missingRequirements.hasNumber
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-foreground-secondary"
+                      }`}>
+                        {passwordValidation.missingRequirements.hasNumber ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        Al menos un número (0-9)
+                      </li>
+                      <li className={`flex items-center gap-2 ${
+                        passwordValidation.missingRequirements.hasSpecialChar
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-foreground-secondary"
+                      }`}>
+                        {passwordValidation.missingRequirements.hasSpecialChar ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        Al menos un carácter especial
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -30,7 +30,7 @@ export default function LandingPage() {
     {
       icon: Calendar,
       title: "Gestión de Turnos",
-      description: "Calendario intuitivo para gestionar turnos, horarios y disponibilidad de tus estilistas."
+      description: "Calendario intuitivo para gestionar turnos, horarios y disponibilidad de tus profesionales y servicios."
     },
     {
       icon: Users,
@@ -64,7 +64,7 @@ export default function LandingPage() {
       name: "Esencial",
       price: "$14.900",
       period: "mes",
-      description: "Para salones que están comenzando",
+      description: "Para negocios que están comenzando",
       features: [
         "Hasta 2 profesionales",
         "Agenda inteligente de turnos",
@@ -133,13 +133,13 @@ export default function LandingPage() {
     },
     {
       name: "Carlos Rodríguez",
-      role: "Salón Men's Cut",
+      role: "Gerente General",
       content: "La integración con Mercado Pago es perfecta. Mis clientes pueden pagar la seña online y todo se actualiza automáticamente.",
       rating: 5
     },
     {
       name: "Ana Martínez",
-      role: "Beauty Studio",
+      role: "Emprendedora",
       content: "El bot de WhatsApp es increíble. Mis clientes pueden agendar turnos a cualquier hora sin que yo esté presente.",
       rating: 5
     }
@@ -497,7 +497,7 @@ export default function LandingPage() {
               Lo que dicen nuestros clientes
             </h2>
             <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
-              Más de 100 negocios confían en nosotros para gestionar sus turnos y operaciones
+              Cientos de negocios confían en nosotros para gestionar sus operaciones diarias
             </p>
           </motion.div>
 
