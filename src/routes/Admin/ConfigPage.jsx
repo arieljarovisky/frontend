@@ -290,6 +290,9 @@ export default function ConfigPage() {
     expiresAt: null,
     isExpired: false,
     liveMode: undefined,
+    accountInfo: null,
+    accountStatus: null,
+    accountError: null,
   });
 
   const [connectingMP, setConnectingMP] = useState(false);
@@ -418,6 +421,9 @@ export default function ConfigPage() {
         expiresAt: data.expiresAt,
         isExpired: data.isExpired || false,
         liveMode: data.liveMode,
+        accountInfo: data.accountInfo || null,
+        accountStatus: data.accountStatus || null,
+        accountError: data.accountError || null,
       });
     } catch (err) {
       console.error('Error verificando estado MP:', err);
@@ -427,6 +433,9 @@ export default function ConfigPage() {
         loading: false,
         expiresAt: null,
         isExpired: false,
+        accountInfo: null,
+        accountStatus: null,
+        accountError: null,
       });
     }
   };
@@ -1806,15 +1815,48 @@ export default function ConfigPage() {
                 <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-white font-medium">Cuenta conectada</p>
-                  <p className="text-sm text-gray-400">Usuario MP: {mpStatus.userId}</p>
-                  {mpStatus.expiresAt && (
+                  {mpStatus.accountInfo && (
+                    <>
+                      <p className="text-sm text-gray-400">
+                        {mpStatus.accountInfo.email || mpStatus.accountInfo.nickname || `Usuario MP: ${mpStatus.userId}`}
+                      </p>
+                      {mpStatus.accountInfo.firstName && mpStatus.accountInfo.lastName && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {mpStatus.accountInfo.firstName} {mpStatus.accountInfo.lastName}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {!mpStatus.accountInfo && (
+                    <p className="text-sm text-gray-400">Usuario MP: {mpStatus.userId}</p>
+                  )}
+                  {mpStatus.accountStatus && (
+                    <div className="mt-2 space-y-1">
+                      <p className={`text-xs font-medium ${
+                        mpStatus.accountStatus.status === 'ready' 
+                          ? 'text-green-400' 
+                          : 'text-amber-400'
+                      }`}>
+                        {mpStatus.accountStatus.mode}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {mpStatus.accountStatus.message}
+                      </p>
+                    </div>
+                  )}
+                  {!mpStatus.accountStatus && mpStatus.expiresAt && (
                     <p className="text-xs text-gray-500 mt-1">
                       Token expira: {new Date(mpStatus.expiresAt).toLocaleString('es-AR')}
                     </p>
                   )}
-                  {mpStatus.liveMode !== undefined && (
+                  {!mpStatus.accountStatus && mpStatus.liveMode !== undefined && (
                     <p className="text-xs text-gray-500">
                       Modo: {mpStatus.liveMode ? '🟢 Producción' : '🟡 Pruebas'}
+                    </p>
+                  )}
+                  {mpStatus.accountError && (
+                    <p className="text-xs text-red-400 mt-1">
+                      ⚠️ {mpStatus.accountError}
                     </p>
                   )}
                 </div>
@@ -1826,6 +1868,42 @@ export default function ConfigPage() {
                   Desconectar
                 </button>
               </div>
+
+              {/* Información adicional de estado de la cuenta */}
+              {mpStatus.accountStatus && mpStatus.accountStatus.status !== 'ready' && (
+                <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-amber-300 font-medium mb-1">Cuenta requiere atención</p>
+                    <p className="text-sm text-amber-200/80 mb-2">
+                      {mpStatus.accountStatus.message}
+                    </p>
+                    {!mpStatus.accountStatus.verified && (
+                      <p className="text-xs text-amber-200/70 mb-1">
+                        • Verifica que tu cuenta esté completamente verificada en Mercado Pago
+                      </p>
+                    )}
+                    {!mpStatus.accountStatus.canReceivePayments && mpStatus.liveMode && (
+                      <p className="text-xs text-amber-200/70 mb-1">
+                        • Verifica que la cuenta esté habilitada para recibir pagos online
+                      </p>
+                    )}
+                    {!mpStatus.liveMode && (
+                      <p className="text-xs text-amber-200/70 mb-1">
+                        • Tu cuenta está en modo PRUEBAS. Para recibir pagos reales, necesitas estar en modo PRODUCCIÓN
+                      </p>
+                    )}
+                    <a
+                      href="https://www.mercadopago.com.ar/home"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-amber-300 hover:text-amber-200 underline inline-flex items-center gap-1 mt-2"
+                    >
+                      Ver cuenta en Mercado Pago →
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {mpStatus.isExpired && (
                 <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6">
