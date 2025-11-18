@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Repeat,
   ShieldAlert,
+  Bell,
 } from "lucide-react";
 
 const CLASS_STATUS_STYLES = {
@@ -856,6 +857,30 @@ export default function AppointmentModal({ open, onClose, event }) {
           >
             Cancelar turno
           </button>
+          {!isClassSession && a.id && ["scheduled", "confirmed", "deposit_paid"].includes(a.status) && (
+            <button
+              onClick={async () => {
+                try {
+                  setSaving(true);
+                  const response = await apiClient.post(`/api/reminders/send/${a.id}`);
+                  if (response.data?.ok) {
+                    toast.success("Recordatorio enviado correctamente");
+                  } else {
+                    toast.error(response.data?.error || "Error al enviar recordatorio");
+                  }
+                } catch (error) {
+                  toast.error(error?.response?.data?.error || "Error al enviar recordatorio");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving}
+              className={`px-3 py-2 rounded-xl text-sm ${buttonSecondary} border flex items-center gap-2`}
+            >
+              <Bell className="w-4 h-4" />
+              Enviar recordatorio
+            </button>
+          )}
           <div className="flex-1" />
           <button onClick={() => onClose?.()} disabled={saving} className={`px-4 py-2 rounded-xl text-sm ${buttonSecondary} border`}>
             Cerrar

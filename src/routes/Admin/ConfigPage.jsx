@@ -213,6 +213,10 @@ export default function ConfigPage() {
     newAppointment: true,
     cancelled: false,
   });
+  const [remindersConfig, setRemindersConfig] = useState({
+    enabled: false,
+    advance_hours: 24,
+  });
   const [bookingConfig, setBookingConfig] = useState({
     require_membership: false,
   });
@@ -312,13 +316,14 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, c, n, contactData, w, booking] = await Promise.all([
+        const [g, c, n, contactData, w, booking, reminders] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
           apiClient.getConfigSection("contact").catch(() => ({})), // Si no existe, retornar objeto vacío
           apiClient.getWhatsAppConfig().catch(() => ({})),
           apiClient.getAppointmentsConfig().catch(() => ({})),
+          apiClient.get("/api/reminders/config").then(r => r.data?.data || {}).catch(() => ({})),
         ]);
 
         // Prefiere siempre el nombre real del tenant si está disponible
@@ -348,6 +353,11 @@ export default function ConfigPage() {
           paid: Boolean(n.paid ?? true),
           newAppointment: Boolean(n.newAppointment ?? true),
           cancelled: Boolean(n.cancelled ?? false),
+        });
+
+        setRemindersConfig({
+          enabled: Boolean(reminders.enabled ?? false),
+          advance_hours: Number(reminders.advance_hours ?? 24),
         });
         setBookingConfig({
           require_membership: Boolean(booking.require_membership),
@@ -776,6 +786,7 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
         apiClient.saveAppointmentsConfig(bookingConfig),
+        apiClient.put("/api/reminders/config", remindersConfig),
         // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
         savePayments(),
       ]);
@@ -2247,6 +2258,120 @@ export default function ConfigPage() {
                 </button>
               </span>
             </p>
+          </div>
+        </ConfigSection>
+      </div>
+
+      {/* RECORDATORIOS DE TURNOS */}
+      <div id="reminders" className="mt-12">
+        <ConfigSection
+          title="Recordatorios de Turnos"
+          description="Configurá recordatorios automáticos por WhatsApp para tus clientes"
+          icon={Bell}
+        >
+          <div className="space-y-6">
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/25">
+              <div className="flex items-center gap-3">
+                <Bell className="w-5 h-5 text-primary" />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Recordatorios automáticos</h4>
+                  <p className="text-xs text-foreground-secondary">
+                    Los recordatorios se envían automáticamente a tus clientes antes de sus turnos. Podés configurar cuántas horas antes se envían.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <SwitchField
+                label="Activar recordatorios automáticos"
+                description="Si está activado, se enviarán recordatorios automáticamente a los clientes antes de sus turnos"
+                checked={remindersConfig.enabled}
+                onChange={(checked) => setRemindersConfig(prev => ({ ...prev, enabled: checked }))}
+              />
+
+              {remindersConfig.enabled && (
+                <FieldGroup
+                  label="Horas de anticipación"
+                  hint="¿Cuántas horas antes del turno se debe enviar el recordatorio? (0-168 horas = 7 días)"
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      max="168"
+                      value={remindersConfig.advance_hours}
+                      onChange={(e) => {
+                        const value = Math.max(0, Math.min(168, Number(e.target.value) || 24));
+                        setRemindersConfig(prev => ({ ...prev, advance_hours: value }));
+                      }}
+                      className="input w-32 text-base font-medium"
+                    />
+                    <span className="text-sm text-foreground-secondary">
+                      {remindersConfig.advance_hours === 1 
+                        ? "hora antes" 
+                        : remindersConfig.advance_hours === 24
+                        ? "día antes"
+                        : remindersConfig.advance_hours > 24
+                        ? `${Math.round(remindersConfig.advance_hours / 24)} días antes`
+                        : "horas antes"}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-foreground-muted">
+                    Ejemplos: 24 horas = 1 día antes, 48 horas = 2 días antes, 2 horas = 2 horas antes
+                  </div>
+                </FieldGroup>
+              )}
+
+              {remindersConfig.enabled && (
+                <>
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-300 mb-1">Cómo funcionan los recordatorios</p>
+                        <ul className="text-xs text-amber-200/90 space-y-1 list-disc list-inside">
+                          <li>Se envían automáticamente por WhatsApp a los clientes</li>
+                          <li>Solo se envían para turnos confirmados o programados</li>
+                          <li>Cada turno recibe un solo recordatorio</li>
+                          <li>Se envían dentro de una ventana de 1 hora antes del tiempo configurado</li>
+                          <li>Requiere que WhatsApp esté configurado y activo</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const response = await apiClient.post("/api/reminders/send");
+                          const data = response.data || response;
+                          if (data.ok) {
+                            toast.success(
+                              data.sent > 0
+                                ? `Se enviaron ${data.sent} recordatorios`
+                                : "No hay turnos que requieran recordatorio en este momento"
+                            );
+                          } else {
+                            toast.error(data.error || "Error al enviar recordatorios");
+                          }
+                        } catch (error) {
+                          toast.error(error?.response?.data?.error || "Error al enviar recordatorios");
+                        }
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Bell className="w-4 h-4" />
+                      Enviar recordatorios ahora
+                    </Button>
+                    <span className="text-xs text-foreground-secondary">
+                      Envía recordatorios manualmente para turnos que están dentro de la ventana configurada
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </ConfigSection>
       </div>
