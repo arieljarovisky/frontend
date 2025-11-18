@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { useAuth } from "../../context/AuthContext";
+import { useParams } from "react-router-dom";
 import { 
   Package, 
   Plus, 
@@ -14,13 +15,20 @@ import {
   Filter,
   Folder,
   X,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Calendar,
+  Bell,
+  DollarSign,
+  Navigation
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function ProductsPage() {
+  const { tenantSlug } = useParams();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showTotalStock, setShowTotalStock] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -38,7 +46,12 @@ export default function ProductsPage() {
         setBranchesLoading(true);
         const response = await apiClient.listActiveBranches();
         if (!mounted) return;
-        setBranches(Array.isArray(response?.data) ? response.data : []);
+        const branchesData = Array.isArray(response?.data) ? response.data : [];
+        setBranches(branchesData);
+        // Si no hay branchFilter y hay sucursales, seleccionar la primera
+        if (!branchFilter && branchesData.length > 0 && !showTotalStock) {
+          setBranchFilter(String(branchesData[0].id));
+        }
       } catch (error) {
         console.error("[ProductsPage] loadBranches error", error);
         toast.error("No se pudieron cargar las sucursales");
@@ -51,6 +64,16 @@ export default function ProductsPage() {
     };
   }, []);
 
+  // Limpiar branchFilter cuando se activa showTotalStock
+  useEffect(() => {
+    if (showTotalStock) {
+      setBranchFilter("");
+    } else if (!branchFilter && branches.length > 0) {
+      // Si se desactiva showTotalStock y no hay branchFilter, seleccionar la primera sucursal
+      setBranchFilter(String(branches[0].id));
+    }
+  }, [showTotalStock]);
+
   // Cargar productos
   const { data: products = [], loading, error, refetch } = useQuery(
     async () => {
@@ -58,12 +81,23 @@ export default function ProductsPage() {
       if (search) params.append("search", search);
       if (categoryFilter) params.append("category", categoryFilter);
       if (showLowStock) params.append("min_stock", "true");
-      if (showTotalStock) params.append("mode", "all");
       
-      const response = await apiClient.get(`/api/stock/products?${params}`);
+      // Si hay un filtro de sucursal específico, usarlo (prioridad sobre stock total)
+      if (branchFilter && branchFilter.trim() !== "" && branchFilter !== "all") {
+        const branchId = Number(branchFilter);
+        if (Number.isFinite(branchId) && branchId > 0) {
+          params.append("branchId", String(branchId));
+          // NO enviar mode=all si hay un filtro de sucursal específico
+        }
+      } else if (showTotalStock) {
+        // Solo enviar mode=all si NO hay filtro de sucursal
+        params.append("mode", "all");
+      }
+      
+      const response = await apiClient.get(`/api/stock/products?${params.toString()}`);
       return response.data?.data || [];
     },
-    [search, categoryFilter, showLowStock, showTotalStock]
+    [search, categoryFilter, showLowStock, showTotalStock, branchFilter]
   );
 
   // Cargar categorías
@@ -87,12 +121,33 @@ export default function ProductsPage() {
     []
   );
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return;
+  // Modal de alertas de stock
+  const [showAlertsModal, setShowAlertsModal] = useState(false);
+  const [hasShownAlerts, setHasShownAlerts] = useState(false);
+  
+  // Mostrar modal de alertas cuando hay productos con stock bajo (solo una vez por sesión)
+  useEffect(() => {
+    if (lowStockProducts && lowStockProducts.length > 0 && !hasShownAlerts) {
+      setShowAlertsModal(true);
+      setHasShownAlerts(true);
+    }
+  }, [lowStockProducts, hasShownAlerts]);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+
+  const handleDeleteClick = (id) => {
+    setProductToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
     try {
-      await apiClient.delete(`/api/stock/products/${id}`);
+      await apiClient.delete(`/api/stock/products/${productToDelete}`);
       toast.success("Producto eliminado");
+      setShowDeleteModal(false);
+      setProductToDelete(null);
       refetch();
     } catch (error) {
       toast.error(error.response?.data?.error || "Error al eliminar");
@@ -140,22 +195,66 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Alertas de stock bajo */}
-      {lowStockProducts && lowStockProducts.length > 0 && (
-        <div className="card p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+      {/* Navegación rápida a otras secciones de stock */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Link
+          to={`/${tenantSlug}/stock/reservations`}
+          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+        >
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
             <div>
-              <p className="font-semibold text-foreground">
-                {lowStockProducts.length} producto{lowStockProducts.length > 1 ? 's' : ''} con stock bajo
-              </p>
-              <p className="text-sm text-foreground-secondary">
-                Revisa el inventario para evitar desabastecimiento
-              </p>
+              <p className="text-sm font-semibold text-foreground">Reservas</p>
+              <p className="text-xs text-foreground-muted">Gestionar reservas</p>
             </div>
           </div>
-        </div>
-      )}
+        </Link>
+        <Link
+          to={`/${tenantSlug}/stock/transfers`}
+          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
+              <ArrowRightLeft className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Transferencias</p>
+              <p className="text-xs text-foreground-muted">Entre sucursales</p>
+            </div>
+          </div>
+        </Link>
+        <Link
+          to={`/${tenantSlug}/stock/alerts`}
+          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+              <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Alertas</p>
+              <p className="text-xs text-foreground-muted">Stock bajo</p>
+            </div>
+          </div>
+        </Link>
+        <Link
+          to={`/${tenantSlug}/stock/valuation`}
+          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Valuación</p>
+              <p className="text-xs text-foreground-muted">Valor inventario</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
 
       {/* Filtros */}
       <div className="card border border-primary/15 bg-gradient-to-br from-background-secondary/70 via-background-secondary/40 to-primary/5 p-5 shadow-[0_18px_40px_rgba(8,20,36,0.35)] backdrop-blur-sm">
@@ -212,6 +311,42 @@ export default function ProductsPage() {
             </div>
           </div>
 
+          {branches.length > 1 && !showTotalStock && (
+            <div className="w-full sm:w-60">
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                Sucursal
+              </span>
+              <div className="relative">
+                <select
+                  value={branchFilter || (branches.length > 0 ? String(branches[0].id) : "")}
+                  onChange={(e) => setBranchFilter(e.target.value)}
+                  className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
+                  required
+                >
+                  {(branches || []).map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-5 w-5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="w-full sm:w-auto">
             <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
               Estado
@@ -254,6 +389,7 @@ export default function ProductsPage() {
                     ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
                     : "bg-background/65 border-transparent hover:border-primary/25"
                 }`}
+                title={showTotalStock ? "Mostrando stock total de todas las sucursales" : "Mostrando stock por sucursal"}
               >
                 <span className="relative inline-flex h-5 w-10 items-center">
                   <input
@@ -265,13 +401,20 @@ export default function ProductsPage() {
                   <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
                   <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
                 </span>
-                <span
-                  className={`text-sm font-medium transition-colors ${
-                    showTotalStock ? "text-primary/90" : "text-foreground-secondary"
-                  }`}
-                >
-                  Stock total
-                </span>
+                <div className="flex flex-col">
+                  <span
+                    className={`text-sm font-medium transition-colors ${
+                      showTotalStock ? "text-primary/90" : "text-foreground-secondary"
+                    }`}
+                  >
+                    Stock total
+                  </span>
+                  {showTotalStock && (
+                    <span className="text-xs text-primary/70">
+                      Suma de todas las sucursales
+                    </span>
+                  )}
+                </div>
               </label>
             </div>
           )}
@@ -339,7 +482,7 @@ export default function ProductsPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDeleteClick(product.id)}
                         className="p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         title="Eliminar"
                       >
@@ -367,8 +510,10 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-foreground-secondary">Sucursal:</span>
                       <span className="text-foreground text-xs font-medium">
-                        {showTotalStock && product.branch_name && product.branch_name.includes(',') 
-                          ? "Múltiples sucursales" 
+                        {showTotalStock 
+                          ? (product.branch_name && product.branch_name.includes(',') 
+                            ? "Múltiples sucursales" 
+                            : "Todas las sucursales")
                           : (product.branch_name || "Sin asignar")}
                       </span>
                     </div>
@@ -425,8 +570,10 @@ export default function ProductsPage() {
                           {product.category_name || "-"}
                         </td>
                     <td className="py-3 px-4 text-sm text-foreground-secondary">
-                      {showTotalStock && product.branch_name && product.branch_name.includes(',') 
-                        ? "Múltiples sucursales" 
+                      {showTotalStock 
+                        ? (product.branch_name && product.branch_name.includes(',') 
+                          ? "Múltiples sucursales" 
+                          : "Todas las sucursales")
                         : (product.branch_name || "Sin asignar")}
                     </td>
                         <td className="py-3 px-4 text-right">
@@ -471,7 +618,7 @@ export default function ProductsPage() {
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(product.id)}
+                              onClick={() => handleDeleteClick(product.id)}
                               className="p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                               title="Eliminar"
                             >
@@ -531,6 +678,167 @@ export default function ProductsPage() {
             setTransferProduct(null);
           }}
         />
+      )}
+
+      {/* Modal de alertas de stock bajo */}
+      {showAlertsModal && lowStockProducts && lowStockProducts.length > 0 && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
+          style={{
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setShowAlertsModal(false)}
+        >
+          <div 
+            className="bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
+            style={{
+              border: '1px solid rgb(var(--border))',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div 
+              className="flex items-center justify-between px-6 py-5 border-b bg-amber-50 dark:bg-amber-900/20"
+              style={{ borderColor: 'rgb(var(--border))' }}
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                    Alertas de Stock Bajo
+                  </h2>
+                  <p className="text-sm text-foreground-secondary">
+                    {lowStockProducts.length} producto{lowStockProducts.length > 1 ? 's' : ''} requiere atención
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAlertsModal(false)}
+                className="p-1.5 rounded-lg hover:bg-background-secondary transition-all duration-200 text-foreground-muted hover:text-foreground"
+                aria-label="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Lista de productos */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="space-y-3">
+                {lowStockProducts.map((product) => {
+                  const status = getStockStatus(product);
+                  const StatusIcon = status.icon;
+                  return (
+                    <div 
+                      key={product.id} 
+                      className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <StatusIcon className={`w-5 h-5 ${status.color}`} />
+                            <h3 className="font-semibold text-foreground">{product.name}</h3>
+                            {product.code && (
+                              <span className="text-xs text-foreground-muted">({product.code})</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-foreground-secondary space-y-1">
+                            {product.branch_name && (
+                              <p>Sucursal: <span className="font-medium">{product.branch_name}</span></p>
+                            )}
+                            <p>
+                              Stock actual: <span className="font-bold text-amber-600 dark:text-amber-400">{product.stock_quantity}</span>
+                              {product.min_stock > 0 && (
+                                <span className="ml-2">
+                                  | Mínimo: <span className="font-medium">{product.min_stock}</span>
+                                </span>
+                              )}
+                            </p>
+                            <p className={status.color}>{status.label}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setEditingProduct(product);
+                            setShowModal(true);
+                            setShowAlertsModal(false);
+                          }}
+                          className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                          title="Editar producto"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div 
+              className="flex justify-end gap-3 px-6 py-4 border-t"
+              style={{ borderColor: 'rgb(var(--border))' }}
+            >
+              <button
+                onClick={() => setShowAlertsModal(false)}
+                className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
+          style={{
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div 
+            className="bg-background rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
+            style={{
+              border: '1px solid rgb(var(--border))',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">Eliminar Producto</h2>
+              </div>
+              <p className="text-foreground-secondary mb-6">
+                ¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-all"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

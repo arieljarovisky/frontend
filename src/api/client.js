@@ -644,9 +644,16 @@ apiClient.getCalendarRange = async function ({ from, to, instructorId } = {}) {
 };
 apiClient.getUnreadCount = async function () {
   try {
-    const { data } = await apiClient.get("/api/notifications/count");
+    const response = await apiClient.get("/api/notifications/count");
+    const data = response.data;
+    // El backend devuelve { ok: true, count: ... }
+    if (data?.ok && typeof data.count === "number") {
+      return { count: data.count };
+    }
+    // Fallback para otras estructuras
     if (typeof data === "number") return { count: data };
-    return { count: Number(data?.count || 0) };
+    if (typeof data?.count === "number") return { count: data.count };
+    return { count: 0 };
   } catch (error) {
     console.error("Error obteniendo unread count:", error);
     return { count: 0 };
@@ -1136,6 +1143,92 @@ apiClient.getIncomeByMonth = async function (year) {
 
 apiClient.getAgendaToday = async function () {
   const { data } = await apiClient.get("/api/admin/agenda/today");
+  return data?.data || [];
+};
+
+/* =========================
+   STOCK RESERVATIONS API
+========================= */
+
+apiClient.listStockReservations = async function (params = {}) {
+  const { data } = await apiClient.get("/api/stock/reservations", { params });
+  return data?.data || [];
+};
+
+apiClient.createStockReservation = async function (payload) {
+  const { data } = await apiClient.post("/api/stock/reservations", payload);
+  return data;
+};
+
+apiClient.cancelStockReservation = async function (id) {
+  const { data } = await apiClient.put(`/api/stock/reservations/${id}/cancel`);
+  return data;
+};
+
+apiClient.fulfillStockReservation = async function (id) {
+  const { data } = await apiClient.put(`/api/stock/reservations/${id}/fulfill`);
+  return data;
+};
+
+/* =========================
+   STOCK TRANSFERS API
+========================= */
+
+apiClient.listStockTransfers = async function (params = {}) {
+  const { data } = await apiClient.get("/api/stock/transfers", { params });
+  return data?.data || [];
+};
+
+apiClient.createStockTransfer = async function (payload) {
+  const { data } = await apiClient.post("/api/stock/transfers", payload);
+  return data;
+};
+
+apiClient.confirmStockTransfer = async function (id) {
+  const { data } = await apiClient.put(`/api/stock/transfers/${id}/confirm`);
+  return data;
+};
+
+apiClient.cancelStockTransfer = async function (id, notes) {
+  const { data } = await apiClient.put(`/api/stock/transfers/${id}/cancel`, { notes });
+  return data;
+};
+
+/* =========================
+   STOCK ALERTS API
+========================= */
+
+apiClient.listStockAlerts = async function (params = {}) {
+  const { data } = await apiClient.get("/api/stock/alerts", { params });
+  return data?.data || [];
+};
+
+apiClient.generateStockAlerts = async function () {
+  const { data } = await apiClient.post("/api/stock/alerts/generate");
+  return data;
+};
+
+apiClient.acknowledgeStockAlert = async function (id) {
+  const { data } = await apiClient.put(`/api/stock/alerts/${id}/acknowledge`);
+  return data;
+};
+
+apiClient.dismissStockAlert = async function (id) {
+  const { data } = await apiClient.put(`/api/stock/alerts/${id}/dismiss`);
+  return data;
+};
+
+/* =========================
+   STOCK VALUATION API
+========================= */
+
+apiClient.getInventoryValuation = async function (params = {}) {
+  const { data } = await apiClient.get("/api/stock/valuation", { params });
+  return data?.data || {};
+};
+
+apiClient.getInventoryValuationDetail = async function (params = {}) {
+  const { data } = await apiClient.get("/api/stock/valuation/detail", { params });
   return data?.data || [];
 };
 

@@ -43,6 +43,16 @@ const NOTIFICATION_CONFIG = {
     color: "from-amber-600/20 to-amber-600/5 border-amber-600/30",
     iconColor: "text-amber-400",
   },
+  stock_movement: {
+    icon: RefreshCw,
+    color: "from-blue-600/20 to-blue-600/5 border-blue-600/30",
+    iconColor: "text-blue-400",
+  },
+  stock_alert: {
+    icon: AlertTriangle,
+    color: "from-amber-600/20 to-amber-600/5 border-amber-600/30",
+    iconColor: "text-amber-400",
+  },
   default: {
     icon: Info,
     color: "from-slate-600/20 to-slate-600/5 border-slate-600/30",
@@ -123,6 +133,14 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
             <div className="text-xs text-foreground-muted mb-3">
               {notification.data.appointmentId && (
                 <span>Turno #{notification.data.appointmentId}</span>
+              )}
+              {notification.data.productId && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span>Producto ID: {notification.data.productId}</span>
+                  {notification.data.branchId && (
+                    <span>• Sucursal ID: {notification.data.branchId}</span>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -333,10 +351,11 @@ export default function NotificationsPage() {
 
   const loadUnreadCount = async () => {
     try {
-      const res = await apiClient.get("/api/notifications/count");
-      setUnreadCount(res.data?.count || 0);
+      const result = await apiClient.getUnreadCount();
+      setUnreadCount(result?.count || 0);
     } catch (error) {
       console.error(error);
+      setUnreadCount(0);
     }
   };
 
@@ -344,6 +363,14 @@ export default function NotificationsPage() {
     loadNotifications();
     loadUnreadCount();
   }, [filter, refreshKey]);
+
+  // Actualizar contador periódicamente (cada 30 segundos)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadUnreadCount();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRefresh = () => {
     setRefreshKey((k) => k + 1);

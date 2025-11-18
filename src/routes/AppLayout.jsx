@@ -139,14 +139,15 @@ export default function AppLayout() {
   useEffect(() => {
     const loadUnreadCount = async () => {
       try {
-        const count = await apiClient.getUnreadCount();
-        setUnreadCount(count);
+        const result = await apiClient.getUnreadCount();
+        setUnreadCount(result?.count || 0);
       } catch (error) {
         console.error("Error loading unread count:", error);
+        setUnreadCount(0);
       }
     };
     loadUnreadCount();
-    const interval = setInterval(loadUnreadCount, 30000);
+    const interval = setInterval(loadUnreadCount, 30000); // Actualizar cada 30 segundos
     return () => clearInterval(interval);
   }, []);
 

@@ -32,6 +32,10 @@ import InstructorStats from "./routes/Admin/InstructorStats.jsx";
 import ConfigPage from "./routes/Admin/ConfigPage.jsx";
 import NotificationsPage from "./routes/NotificationPage.jsx";
 import ProductsPage from "./routes/Stock/ProductsPage.jsx";
+import StockReservationsPage from "./routes/Stock/StockReservationsPage.jsx";
+import StockTransfersPage from "./routes/Stock/StockTransfersPage.jsx";
+import StockAlertsPage from "./routes/Stock/StockAlertsPage.jsx";
+import StockValuationPage from "./routes/Stock/StockValuationPage.jsx";
 import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
 import UsersPage from "./routes/Users/UsersPage.jsx";
 import SuperAdminLayout from "./routes/SuperAdmin/SuperAdminLayout.jsx";
@@ -164,6 +168,46 @@ const router = createBrowserRouter([
           <PrivateRoute>
             <FeatureGate featureKey="stock">
               <ProductsPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "stock/reservations",
+        element: (
+          <PrivateRoute>
+            <FeatureGate featureKey="stock">
+              <StockReservationsPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "stock/transfers",
+        element: (
+          <PrivateRoute>
+            <FeatureGate featureKey="stock">
+              <StockTransfersPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "stock/alerts",
+        element: (
+          <PrivateRoute>
+            <FeatureGate featureKey="stock">
+              <StockAlertsPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "stock/valuation",
+        element: (
+          <PrivateRoute>
+            <FeatureGate featureKey="stock">
+              <StockValuationPage />
             </FeatureGate>
           </PrivateRoute>
         ),
