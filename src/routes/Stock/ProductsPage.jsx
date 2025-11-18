@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Filter,
   Folder,
-  X
+  X,
+  ArrowRightLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,7 +24,9 @@ export default function ProductsPage() {
   const [showLowStock, setShowLowStock] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [transferProduct, setTransferProduct] = useState(null);
   const { user } = useAuth();
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
@@ -278,6 +281,18 @@ export default function ProductsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 ml-2">
+                      {branches.length > 1 && (
+                        <button
+                          onClick={() => {
+                            setTransferProduct(product);
+                            setShowTransferModal(true);
+                          }}
+                          className="p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                          title="Transferir entre sucursales"
+                        >
+                          <ArrowRightLeft className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setEditingProduct(product);
@@ -392,6 +407,18 @@ export default function ProductsPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-2">
+                            {branches.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  setTransferProduct(product);
+                                  setShowTransferModal(true);
+                                }}
+                                className="p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                title="Transferir entre sucursales"
+                              >
+                                <ArrowRightLeft className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setEditingProduct(product);
@@ -446,6 +473,22 @@ export default function ProductsPage() {
           categories={categories}
           onClose={() => setShowCategoryModal(false)}
           onUpdated={() => refetchCategories()}
+        />
+      )}
+
+      {showTransferModal && (
+        <TransferModal
+          product={transferProduct}
+          branches={branches}
+          onClose={() => {
+            setShowTransferModal(false);
+            setTransferProduct(null);
+          }}
+          onSuccess={() => {
+            refetch();
+            setShowTransferModal(false);
+            setTransferProduct(null);
+          }}
         />
       )}
     </div>
@@ -971,6 +1014,255 @@ function CategoryModal({ categories = [], onClose, onUpdated }) {
               </div>
             </form>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para transferir stock entre sucursales
+function TransferModal({ product, branches, onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    from_branch_id: product?.branch_id || "",
+    to_branch_id: "",
+    quantity: "",
+    notes: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [availableStock, setAvailableStock] = useState(null);
+
+  useEffect(() => {
+    if (product && formData.from_branch_id) {
+      setAvailableStock(product.stock_quantity || 0);
+    }
+  }, [product, formData.from_branch_id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.from_branch_id || !formData.to_branch_id || !formData.quantity) {
+      toast.error("Completá todos los campos requeridos");
+      return;
+    }
+
+    if (formData.from_branch_id === formData.to_branch_id) {
+      toast.error("La sucursal origen y destino no pueden ser la misma");
+      return;
+    }
+
+    const quantityNum = Number(formData.quantity);
+    if (quantityNum <= 0) {
+      toast.error("La cantidad debe ser mayor a 0");
+      return;
+    }
+
+    if (availableStock !== null && quantityNum > availableStock) {
+      toast.error(`Stock insuficiente. Disponible: ${availableStock}`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post("/api/stock/transfers", {
+        product_id: product.id,
+        from_branch_id: Number(formData.from_branch_id),
+        to_branch_id: Number(formData.to_branch_id),
+        quantity: quantityNum,
+        notes: formData.notes || null
+      });
+
+      toast.success(
+        `Transferencia realizada: ${quantityNum} unidades de ${product.name}`
+      );
+      onSuccess();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Error al realizar la transferencia");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fromBranch = branches.find(b => b.id === Number(formData.from_branch_id));
+  const toBranch = branches.find(b => b.id === Number(formData.to_branch_id));
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
+      style={{
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-background rounded-2xl shadow-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
+        style={{
+          border: '1px solid rgb(var(--border))',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div 
+          className="flex items-center justify-between px-6 py-5 border-b"
+          style={{
+            borderColor: 'rgb(var(--border))',
+            background: 'linear-gradient(to right, rgb(var(--background)), rgb(var(--background-secondary)))'
+          }}
+        >
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+              Transferir Stock
+            </h2>
+            <p className="text-sm text-foreground-secondary mt-1">
+              {product?.name}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-background-secondary transition-all duration-200 text-foreground-muted hover:text-foreground"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {availableStock !== null && (
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Stock disponible en {fromBranch?.name || "sucursal origen"}: <span className="font-bold">{availableStock}</span>
+                </p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Sucursal Origen <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.from_branch_id}
+                onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                required
+                disabled={!!product?.branch_id}
+              >
+                <option value="">Seleccionar sucursal</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+              {product?.branch_id && (
+                <p className="text-xs text-foreground-muted mt-1">
+                  Sucursal asignada al producto
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Sucursal Destino <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.to_branch_id}
+                onChange={(e) => setFormData({ ...formData, to_branch_id: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                required
+              >
+                <option value="">Seleccionar sucursal</option>
+                {branches
+                  .filter(b => b.id !== Number(formData.from_branch_id))
+                  .map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Cantidad <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={availableStock || undefined}
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                placeholder="Cantidad a transferir"
+                required
+              />
+              {availableStock !== null && (
+                <p className="text-xs text-foreground-muted mt-1">
+                  Máximo: {availableStock} unidades
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Notas (opcional)
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 resize-none"
+                rows={3}
+                placeholder="Notas sobre la transferencia..."
+              />
+            </div>
+
+            {formData.from_branch_id && formData.to_branch_id && formData.quantity && (
+              <div className="p-4 rounded-lg bg-background-secondary border border-border">
+                <p className="text-sm font-medium text-foreground mb-2">Resumen de transferencia:</p>
+                <div className="space-y-1 text-sm text-foreground-secondary">
+                  <p>
+                    <span className="font-medium">{formData.quantity}</span> unidades de <span className="font-medium">{product?.name}</span>
+                  </p>
+                  <p>
+                    De: <span className="font-medium">{fromBranch?.name}</span>
+                  </p>
+                  <p>
+                    A: <span className="font-medium">{toBranch?.name}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div 
+          className="flex flex-col sm:flex-row justify-end gap-3 px-6 py-4 border-t"
+          style={{ borderColor: 'rgb(var(--border))' }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all duration-200"
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                Transfiriendo...
+              </span>
+            ) : (
+              "Transferir"
+            )}
+          </button>
         </div>
       </div>
     </div>
