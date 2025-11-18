@@ -37,6 +37,7 @@ const buildFormData = (customer) => ({
     ? String(customer.condicion_iva)
     : "",
   notes: customer?.notes ?? "",
+  exempt_deposit: customer?.exempt_deposit === true || customer?.exempt_deposit === 1,
 });
 
 const getOptionLabel = (options, value) => {
@@ -71,7 +72,7 @@ export default function CustomerDetailPage() {
         setFormData(buildFormData(data));
       }
     }
-  }, [data]);
+  }, [data, isEditing]);
 
   const appointments = useMemo(() => customer?.appointments ?? [], [customer]);
   const classEnrollments = useMemo(() => customer?.class_enrollments ?? [], [customer]);
@@ -117,7 +118,7 @@ export default function CustomerDetailPage() {
   };
 
   const handleChange = (field) => (event) => {
-    const value = event.target.value;
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -140,7 +141,13 @@ export default function CustomerDetailPage() {
     setSaveError("");
 
     try {
-      const updated = await apiClient.updateCustomer(id, formData);
+      // Preparar payload asegurando que exempt_deposit sea 1 o 0
+      const payload = {
+        ...formData,
+        exempt_deposit: formData.exempt_deposit === true || formData.exempt_deposit === 1 ? 1 : 0,
+      };
+      
+      const updated = await apiClient.updateCustomer(id, payload);
       const merged = { ...customer, ...updated };
       setCustomer(merged);
       setFormData(buildFormData(merged));
@@ -400,6 +407,23 @@ export default function CustomerDetailPage() {
             disabled={!isEditing}
           />
         </label>
+
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-background-secondary/40">
+          <input
+            type="checkbox"
+            id="exempt_deposit"
+            checked={Boolean(formData.exempt_deposit)}
+            onChange={handleChange("exempt_deposit")}
+            className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+            disabled={!isEditing}
+          />
+          <label htmlFor="exempt_deposit" className="flex-1 cursor-pointer">
+            <div className="text-sm font-medium text-foreground">Cliente habitual (exento de seña)</div>
+            <div className="text-xs text-foreground-secondary mt-1">
+              Si está marcado, este cliente no deberá pagar seña al reservar turnos
+            </div>
+          </label>
+        </div>
       </form>
 
       <section className="space-y-3">
