@@ -596,6 +596,11 @@ apiClient.disconnectMP = async function () {
   return data;
 };
 
+apiClient.getMPConnectedAccounts = async function () {
+  const { data } = await apiClient.get("/mp/oauth/connected-accounts");
+  return data;
+};
+
 /* =========================
    CUSTOMERS API
 ========================= */

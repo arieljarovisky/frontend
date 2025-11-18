@@ -297,6 +297,8 @@ export default function ConfigPage() {
 
   const [connectingMP, setConnectingMP] = useState(false);
   const [message, setMessage] = useState("");
+  const [connectedAccounts, setConnectedAccounts] = useState([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingArca, setTestingArca] = useState(false);
   const [arcaTestResult, setArcaTestResult] = useState(null);
@@ -440,11 +442,26 @@ export default function ConfigPage() {
     }
   };
 
+  // Cargar cuentas conectadas de MP
+  const loadConnectedAccounts = async () => {
+    if (user?.role !== "admin") return; // Solo admins pueden ver todas las cuentas
+    try {
+      setLoadingAccounts(true);
+      const data = await apiClient.getMPConnectedAccounts();
+      setConnectedAccounts(data.accounts || []);
+    } catch (err) {
+      console.error("Error cargando cuentas conectadas:", err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
   // Cargar estado de MP al montar
   useEffect(() => {
     checkMPStatus();
     loadPayments();
     checkArcaConnection();
+    loadConnectedAccounts();
   }, []);
 
   useEffect(() => {
@@ -521,6 +538,7 @@ export default function ConfigPage() {
         description: 'Ya podés empezar a recibir pagos de señas'
       });
       checkMPStatus(); // Recargar estado
+      loadConnectedAccounts(); // Recargar lista de cuentas conectadas
       // Limpiar URL
       navigate(`/${tenantSlug}/admin/config`, { replace: true });
     }
@@ -578,7 +596,11 @@ export default function ConfigPage() {
           loading: false,
           expiresAt: null,
           isExpired: false,
+          accountInfo: null,
+          accountStatus: null,
+          accountError: null,
         });
+        loadConnectedAccounts(); // Recargar lista de cuentas conectadas
         toast.success('Mercado Pago desconectado');
       }
     } catch (err) {
@@ -1815,23 +1837,50 @@ export default function ConfigPage() {
                 <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-white font-medium">Cuenta conectada</p>
-                  {mpStatus.accountInfo && (
-                    <>
-                      <p className="text-sm text-gray-400">
-                        {mpStatus.accountInfo.email || mpStatus.accountInfo.nickname || `Usuario MP: ${mpStatus.userId}`}
-                      </p>
-                      {mpStatus.accountInfo.firstName && mpStatus.accountInfo.lastName && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {mpStatus.accountInfo.firstName} {mpStatus.accountInfo.lastName}
+                  
+                  {/* Información de la cuenta */}
+                  {mpStatus.accountInfo ? (
+                    <div className="mt-2 space-y-1">
+                      {mpStatus.accountInfo.email && (
+                        <p className="text-sm text-gray-300 font-medium">
+                          📧 {mpStatus.accountInfo.email}
                         </p>
                       )}
-                    </>
+                      {mpStatus.accountInfo.firstName && mpStatus.accountInfo.lastName && (
+                        <p className="text-xs text-gray-400">
+                          👤 {mpStatus.accountInfo.firstName} {mpStatus.accountInfo.lastName}
+                        </p>
+                      )}
+                      {mpStatus.accountInfo.nickname && !mpStatus.accountInfo.email && (
+                        <p className="text-sm text-gray-400">
+                          @{mpStatus.accountInfo.nickname}
+                        </p>
+                      )}
+                      {mpStatus.userId && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID Usuario MP: {mpStatus.userId}
+                        </p>
+                      )}
+                      {mpStatus.accountInfo.countryId && (
+                        <p className="text-xs text-gray-500">
+                          🌍 País: {mpStatus.accountInfo.countryId === 'AR' ? 'Argentina' : mpStatus.accountInfo.countryId}
+                        </p>
+                      )}
+                    </div>
+                  ) : mpStatus.userId ? (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-400">Usuario MP: {mpStatus.userId}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        ⚠️ No se pudo obtener información detallada de la cuenta
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 mt-2">No se pudo identificar el usuario</p>
                   )}
-                  {!mpStatus.accountInfo && (
-                    <p className="text-sm text-gray-400">Usuario MP: {mpStatus.userId}</p>
-                  )}
+
+                  {/* Estado y modo */}
                   {mpStatus.accountStatus && (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
                       <p className={`text-xs font-medium ${
                         mpStatus.accountStatus.status === 'ready' 
                           ? 'text-green-400' 
@@ -1844,18 +1893,25 @@ export default function ConfigPage() {
                       </p>
                     </div>
                   )}
-                  {!mpStatus.accountStatus && mpStatus.expiresAt && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Token expira: {new Date(mpStatus.expiresAt).toLocaleString('es-AR')}
-                    </p>
+                  
+                  {/* Información adicional si no hay accountStatus */}
+                  {!mpStatus.accountStatus && (
+                    <div className="mt-2 space-y-1">
+                      {mpStatus.expiresAt && (
+                        <p className="text-xs text-gray-500">
+                          Token expira: {new Date(mpStatus.expiresAt).toLocaleString('es-AR')}
+                        </p>
+                      )}
+                      {mpStatus.liveMode !== undefined && (
+                        <p className="text-xs text-gray-500">
+                          Modo: {mpStatus.liveMode ? '🟢 Producción' : '🟡 Pruebas'}
+                        </p>
+                      )}
+                    </div>
                   )}
-                  {!mpStatus.accountStatus && mpStatus.liveMode !== undefined && (
-                    <p className="text-xs text-gray-500">
-                      Modo: {mpStatus.liveMode ? '🟢 Producción' : '🟡 Pruebas'}
-                    </p>
-                  )}
+
                   {mpStatus.accountError && (
-                    <p className="text-xs text-red-400 mt-1">
+                    <p className="text-xs text-red-400 mt-2">
                       ⚠️ {mpStatus.accountError}
                     </p>
                   )}
@@ -2196,6 +2252,124 @@ export default function ConfigPage() {
       </div>
 
       {/* NOTIFICATIONS — sección temporalmente deshabilitada a pedido */}
+
+      {/* Cuentas conectadas de Mercado Pago (solo para admins) */}
+      {user?.role === "admin" && (
+        <div id="mp-connected-accounts" className="mt-12">
+          <ConfigSection
+            title="Cuentas conectadas a la aplicación"
+            description="Lista de todas las cuentas de Mercado Pago conectadas vía OAuth"
+            icon={CreditCard}
+          >
+            {loadingAccounts ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
+              </div>
+            ) : connectedAccounts.length > 0 ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl mb-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-blue-300 font-medium mb-1">Información sobre cuentas conectadas</p>
+                      <p className="text-sm text-blue-200/80 mb-2">
+                        El panel de desarrolladores de Mercado Pago no muestra directamente qué usuarios se conectaron vía OAuth. 
+                        Esta lista muestra todas las cuentas conectadas a tu aplicación desde este sistema.
+                      </p>
+                      <a
+                        href="https://www.mercadopago.com.ar/developers/panel"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-300 hover:text-blue-200 underline inline-flex items-center gap-1 mt-2"
+                      >
+                        Abrir panel de desarrolladores de Mercado Pago →
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {connectedAccounts.map((account) => (
+                    <div
+                      key={`${account.tenantId}-${account.mpUserId}`}
+                      className="p-4 border border-border rounded-xl bg-background-secondary"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="text-sm font-semibold text-foreground">
+                              {account.tenantName || `Tenant ${account.tenantId}`}
+                            </h4>
+                            {account.isExpired && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 rounded">
+                                Token expirado
+                              </span>
+                            )}
+                            {!account.isExpired && (
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                account.liveMode
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : 'bg-yellow-500/20 text-yellow-400'
+                              }`}>
+                                {account.mode}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {account.accountInfo ? (
+                            <div className="space-y-1 text-sm">
+                              {account.accountInfo.email && (
+                                <p className="text-gray-300">
+                                  <span className="text-gray-500">📧 Email:</span> {account.accountInfo.email}
+                                </p>
+                              )}
+                              {account.accountInfo.firstName && account.accountInfo.lastName && (
+                                <p className="text-gray-300">
+                                  <span className="text-gray-500">👤 Nombre:</span> {account.accountInfo.firstName} {account.accountInfo.lastName}
+                                </p>
+                              )}
+                              {account.accountInfo.nickname && !account.accountInfo.email && (
+                                <p className="text-gray-300">
+                                  <span className="text-gray-500">@</span> {account.accountInfo.nickname}
+                                </p>
+                              )}
+                              {account.accountInfo.countryId && (
+                                <p className="text-gray-400 text-xs">
+                                  🌍 País: {account.accountInfo.countryId === 'AR' ? 'Argentina' : account.accountInfo.countryId}
+                                </p>
+                              )}
+                            </div>
+                          ) : account.accountError ? (
+                            <p className="text-xs text-red-400">
+                              ⚠️ {account.accountError}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-2 space-y-1 text-xs text-gray-500">
+                            <p>ID Usuario MP: {account.mpUserId}</p>
+                            {account.connectedAt && (
+                              <p>Conectada: {new Date(account.connectedAt).toLocaleDateString('es-AR')}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-center text-sm text-gray-400 mt-4">
+                  Total: {connectedAccounts.length} {connectedAccounts.length === 1 ? 'cuenta conectada' : 'cuentas conectadas'}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No hay cuentas de Mercado Pago conectadas</p>
+              </div>
+            )}
+          </ConfigSection>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="card p-6">
