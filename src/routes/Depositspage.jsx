@@ -270,16 +270,20 @@ export default function DepositsPage() {
 
   const handleAction = async (depositId, action) => {
     const endpoints = {
-      markPaid: `/api/admin/deposits/${depositId}/mark-paid`,
+      markPaid: `/api/admin/deposits/${depositId}/confirm`,
       cancel: `/api/admin/deposits/${depositId}/cancel`,
       extend: `/api/admin/deposits/${depositId}/extend`,
       remind: `/api/admin/deposits/${depositId}/remind`,
     };
 
     await apiClient.post(endpoints[action]);
+    // Refrescar inmediatamente después de la acción
+    handleRefresh();
   };
 
-  const handleRefresh = () => setRefresh((k) => k + 1);
+  const handleRefresh = () => {
+    setRefresh((k) => k + 1);
+  };
 
   useEffect(() => {
     const interval = setInterval(handleRefresh, 30000);
