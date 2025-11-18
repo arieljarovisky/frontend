@@ -22,6 +22,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
+  const [showTotalStock, setShowTotalStock] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -57,11 +58,12 @@ export default function ProductsPage() {
       if (search) params.append("search", search);
       if (categoryFilter) params.append("category", categoryFilter);
       if (showLowStock) params.append("min_stock", "true");
+      if (showTotalStock) params.append("mode", "all");
       
       const response = await apiClient.get(`/api/stock/products?${params}`);
       return response.data?.data || [];
     },
-    [search, categoryFilter, showLowStock]
+    [search, categoryFilter, showLowStock, showTotalStock]
   );
 
   // Cargar categorías
@@ -240,6 +242,39 @@ export default function ProductsPage() {
               </span>
             </label>
           </div>
+
+          {branches.length > 1 && (
+            <div className="w-full sm:w-auto">
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                Vista de Stock
+              </span>
+              <label
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer border transition-all duration-200 ${
+                  showTotalStock
+                    ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
+                    : "bg-background/65 border-transparent hover:border-primary/25"
+                }`}
+              >
+                <span className="relative inline-flex h-5 w-10 items-center">
+                  <input
+                    type="checkbox"
+                    checked={showTotalStock}
+                    onChange={(e) => setShowTotalStock(e.target.checked)}
+                    className="peer absolute h-full w-full cursor-pointer opacity-0"
+                  />
+                  <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
+                  <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
+                </span>
+                <span
+                  className={`text-sm font-medium transition-colors ${
+                    showTotalStock ? "text-primary/90" : "text-foreground-secondary"
+                  }`}
+                >
+                  Stock total
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       </div>
 
@@ -332,7 +367,9 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-foreground-secondary">Sucursal:</span>
                       <span className="text-foreground text-xs font-medium">
-                        {product.branch_name || "Sin asignar"}
+                        {showTotalStock && product.branch_name && product.branch_name.includes(',') 
+                          ? "Múltiples sucursales" 
+                          : (product.branch_name || "Sin asignar")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-border">
@@ -358,7 +395,9 @@ export default function ProductsPage() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Código</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Categoría</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Sucursal</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Stock</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">
+                      Stock {showTotalStock && branches.length > 1 && <span className="text-xs font-normal text-foreground-muted">(Total)</span>}
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Precio</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">Estado</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">Acciones</th>
@@ -386,7 +425,9 @@ export default function ProductsPage() {
                           {product.category_name || "-"}
                         </td>
                     <td className="py-3 px-4 text-sm text-foreground-secondary">
-                      {product.branch_name || "Sin asignar"}
+                      {showTotalStock && product.branch_name && product.branch_name.includes(',') 
+                        ? "Múltiples sucursales" 
+                        : (product.branch_name || "Sin asignar")}
                     </td>
                         <td className="py-3 px-4 text-right">
                           <div className="font-medium text-foreground">{product.stock_quantity}</div>
@@ -1032,10 +1073,28 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
   const [availableStock, setAvailableStock] = useState(null);
 
   useEffect(() => {
-    if (product && formData.from_branch_id) {
-      setAvailableStock(product.stock_quantity || 0);
-    }
-  }, [product, formData.from_branch_id]);
+    const fetchAvailableStock = async () => {
+      if (product?.id && formData.from_branch_id) {
+        try {
+          const response = await apiClient.get(
+            `/api/stock/products/${product.id}/stock/${formData.from_branch_id}`
+          );
+          if (response.data?.ok) {
+            setAvailableStock(response.data.data.available_stock);
+          } else {
+            setAvailableStock(0);
+          }
+        } catch (error) {
+          console.error("Error al obtener stock disponible:", error);
+          setAvailableStock(0);
+        }
+      } else {
+        setAvailableStock(null);
+      }
+    };
+
+    fetchAvailableStock();
+  }, [product?.id, formData.from_branch_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

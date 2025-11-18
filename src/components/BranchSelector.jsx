@@ -40,26 +40,38 @@ export default function BranchSelector() {
   }, []);
 
   const handleSelect = async (branchId) => {
-    if (branchId === currentBranchId) {
+    // Si ya está seleccionada esta sucursal y no estamos en modo "all", no hacer nada
+    if (viewMode !== "all" && branchId === currentBranchId) {
       setOpen(false);
       return;
     }
+    
+    // Si estamos en modo "all", cambiar primero el modo de vista
     if (viewMode === "all") {
       setBranchViewMode("single");
       setViewMode("single");
     }
+    
     setSaving(true);
     try {
+      // Establecer la sucursal actual en el backend
       await apiClient.setCurrentBranch(branchId);
+      // Refrescar la sesión para obtener los datos actualizados
       await refreshSession();
       toast.success("Sucursal activa actualizada");
       setOpen(false);
+      // Recargar la página para aplicar los cambios
       setTimeout(() => {
         window.location.reload();
       }, 150);
     } catch (error) {
       console.error("[BranchSelector] select error:", error);
       toast.error(error?.response?.data?.error || error?.message || "No se pudo cambiar de sucursal");
+      // Si falla, revertir el cambio de modo de vista
+      if (viewMode === "all") {
+        setBranchViewMode("all");
+        setViewMode("all");
+      }
     } finally {
       setSaving(false);
     }
@@ -143,15 +155,16 @@ export default function BranchSelector() {
                   }
                   const branch = option;
                   const isActive = viewMode !== "all" && branch.id === currentBranchId;
+                  const isDisabled = saving || (viewMode !== "all" && branch.id === currentBranchId);
                   return (
                     <button
                       key={branch.id}
                       type="button"
                       onClick={() => handleSelect(branch.id)}
-                      disabled={saving}
+                      disabled={isDisabled}
                       className={`w-full flex items-center justify-between px-4 py-2 text-left transition text-foreground ${
                         isActive ? "bg-accent/40" : "hover:bg-muted"
-                      }`}
+                      } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       <div>
                         <p className="text-sm font-medium">{branch.name}</p>
