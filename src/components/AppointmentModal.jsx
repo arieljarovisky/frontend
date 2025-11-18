@@ -857,7 +857,7 @@ export default function AppointmentModal({ open, onClose, event }) {
           >
             Cancelar turno
           </button>
-          {!isClassSession && a.id && ["scheduled", "confirmed", "deposit_paid"].includes(a.status) && (
+          {!isClassSession && a.id && ["scheduled", "confirmed", "deposit_paid", "pending_deposit"].includes(a.status) && (
             <button
               onClick={async () => {
                 try {
