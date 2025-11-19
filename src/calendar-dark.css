@@ -372,23 +372,19 @@
     transition: var(--fc-transition);
     box-shadow: var(--fc-shadow-sm);
   }
-  
-  .calendar-dark .fc .fc-list-event:hover {
-    transform: translateX(4px);
-    box-shadow: var(--fc-shadow-md);
-    background: var(--fc-hover-bg) !important;
+
+   .calendar-dark .fc .fc-scrollgrid  {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
   }
   
+  /* Estado normal - texto claro sobre fondo oscuro */
   .calendar-dark .fc .fc-list-event td {
     padding: 16px;
     border: none;
     background: transparent !important;
     background-color: transparent !important;
-  }
-  
-  .calendar-dark .fc .fc-list-event:hover td {
-    background: var(--fc-hover-bg) !important;
-    background-color: var(--fc-hover-bg) !important;
     color: var(--fc-text-primary) !important;
   }
   
@@ -399,25 +395,46 @@
     min-width: 80px;
   }
   
-  .calendar-dark .fc .fc-list-event:hover .fc-list-event-time {
-    color: var(--fc-accent-primary) !important;
-  }
-  
   .calendar-dark .fc .fc-list-event-title {
     color: var(--fc-text-primary) !important;
     font-weight: 500;
     padding-left: 16px;
   }
   
-  .calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
-    color: var(--fc-text-primary) !important;
+  /* Estado normal - todos los elementos con texto claro legible */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) td,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) td *,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) td span,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) td div,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) .fc-list-event-time,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:not(:hover) .fc-list-event-title {
+    color: #e2e8f0 !important;
   }
   
-  /* Forzar que todos los elementos dentro del evento tengan texto legible */
+  /* Hover - fondo negro con texto blanco */
+  .calendar-dark .fc .fc-list-event:hover {
+    transform: translateX(4px);
+    box-shadow: var(--fc-shadow-md);
+    background: #000000 !important;
+  }
+  
+  .calendar-dark .fc .fc-list-event:hover td {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
+  }
+  
+  .calendar-dark .fc .fc-list-event:hover .fc-list-event-time,
+  .calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+    color: #ffffff !important;
+  }
+  
+  /* Forzar que todos los elementos en hover tengan texto blanco */
   .calendar-dark .fc .fc-list-event:hover td *,
   .calendar-dark .fc .fc-list-event:hover td span,
-  .calendar-dark .fc .fc-list-event:hover td div {
-    color: var(--fc-text-primary) !important;
+  .calendar-dark .fc .fc-list-event:hover td div,
+  .calendar-dark .fc .fc-list-event:hover .text-foreground {
+    color: #ffffff !important;
     background: transparent !important;
     background-color: transparent !important;
   }
@@ -615,6 +632,7 @@
     }
   }
   
+  
   /* ==========================================
      MODO DE ALTO CONTRASTE
      ========================================== */
@@ -647,6 +665,28 @@
   /* Columnas de recursos con hover sutil */
   .calendar-dark .fc-resource-timegrid .fc-timegrid-col:hover {
     background: rgba(59, 130, 246, 0.03);
+  }
+  
+  /* Encabezados de columnas de recursos - fondo azul con texto blanco */
+  .calendar-dark .fc-col-header-cell.fc-resource {
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.15) 0%, 
+      rgba(59, 130, 246, 0.25) 100%) !important;
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.4);
+  }
+  
+  .calendar-dark .fc-col-header-cell.fc-resource .fc-col-header-cell-cushion {
+    color: #ffffff !important;
+    font-weight: 600;
+  }
+  
+  .calendar-dark .fc-col-header-cell.fc-resource .fc-scrollgrid-sync-inner {
+    color: #ffffff !important;
+  }
+  
+  .calendar-dark .fc-col-header-cell.fc-resource * {
+    color: #ffffff !important;
   }
   
   /* ==========================================
