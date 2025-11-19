@@ -209,6 +209,12 @@
   background-color: var(--fc-neutral-bg);
 }
 
+/* Asegurar legibilidad del texto en hover */
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-time,
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+  color: var(--fc-text) !important;
+}
+
 /* Scrollbar styling for scrollers */
 .calendar-dark .fc-scroller::-webkit-scrollbar {
   width: 8px;
@@ -525,6 +531,32 @@
   /* gris oscuro muy leve */
 }
 
+/* Asegurar que el texto sea legible en hover */
+.calendar-dark .fc .fc-list-event:hover td {
+  background: #141a22 !important;
+  color: #e2e8f0 !important;
+}
+
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-time,
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+  color: #e2e8f0 !important;
+  background: transparent !important;
+}
+
+/* Estilos específicos para elementos dentro del evento en hover */
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+  color: #e2e8f0 !important;
+}
+
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-time {
+  color: #94a3b8 !important;
+}
+
+/* Asegurar que todas las celdas tengan el mismo fondo en hover */
+.calendar-dark .fc .fc-list-event:hover td * {
+  color: #e2e8f0 !important;
+}
+
 /* Separador entre días */
 .calendar-dark .fc .fc-list-day:not(:last-child) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
@@ -805,6 +837,21 @@
   box-shadow: 0 10px 24px rgba(6, 13, 24, 0.38);
 }
 
+/* Asegurar legibilidad en hover de vista agenda */
+.calendar-dark .fc .fc-list-event:hover {
+  background-color: rgba(15, 35, 59, 0.22) !important;
+}
+
+.calendar-dark .fc .fc-list-event:hover td {
+  background-color: rgba(15, 35, 59, 0.22) !important;
+  color: var(--fc-text) !important;
+}
+
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-time,
+.calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+  color: var(--fc-text) !important;
+}
+
 .calendar-dark .fc .fc-timegrid-now-indicator-line,
 .calendar-dark .fc .fc-timegrid-now-indicator-arrow {
   border-color: var(--fc-accent-2);
@@ -816,4 +863,54 @@
 
 .calendar-dark .fc-scroller::-webkit-scrollbar-thumb:hover {
   background-color: var(--fc-scroll-thumb-hover);
+}
+
+/* ============================================
+   Vista Semana - Eliminar divisiones entre días en columnas de recursos
+   ============================================ */
+/* Ocultar bordes verticales entre días dentro de cada columna de recurso */
+.calendar-dark .fc-resource-timegrid .fc-timegrid-col {
+  border-right: none !important;
+}
+
+/* Ocultar bordes entre días dentro de la misma columna de recurso */
+.calendar-dark .fc-resource-timegrid .fc-timegrid-col .fc-timegrid-col-frame {
+  border-right: none !important;
+}
+
+/* Ocultar bordes entre días individuales dentro de cada recurso */
+.calendar-dark .fc-resource-timegrid .fc-timegrid-day {
+  border-right: none !important;
+}
+
+.calendar-dark .fc-resource-timegrid .fc-timegrid-day-frame {
+  border-right: none !important;
+}
+
+/* Ocultar bordes en las celdas de tiempo dentro de cada recurso */
+.calendar-dark .fc-resource-timegrid .fc-timegrid-slot {
+  border-right: none !important;
+}
+
+/* Solo mostrar bordes entre recursos (profesionales), no entre días */
+.calendar-dark .fc-resource-timegrid .fc-resource-cell {
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.calendar-dark .fc-resource-timegrid .fc-resource-cell:last-child {
+  border-right: none !important;
+}
+
+/* Ocultar bordes en el encabezado de días dentro de cada recurso */
+.calendar-dark .fc-resource-timegrid .fc-col-header-cell {
+  border-right: none !important;
+}
+
+/* Mantener solo el borde entre recursos completos */
+.calendar-dark .fc-resource-timegrid .fc-resource {
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.calendar-dark .fc-resource-timegrid .fc-resource:last-child {
+  border-right: none !important;
 }

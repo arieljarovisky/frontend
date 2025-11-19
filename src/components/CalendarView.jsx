@@ -50,7 +50,7 @@ function buildInstructorColorMap(instructors) {
 /* =========================
    Adaptador de eventos
 ========================= */
-function useCalendarEvents(events, instructorColors) {
+function useCalendarEvents(events, instructorColors, useResources = false) {
   return useMemo(
     () =>
       (Array.isArray(events) ? events : []).map((ev) => {
@@ -75,11 +75,14 @@ function useCalendarEvents(events, instructorColors) {
           opacity = 0.7;
         }
 
+        // Solo asignar resourceId si estamos usando vista de recursos
         let resourceId = undefined;
-        if (sid) {
-          resourceId = String(sid);
-        } else if (type === "class_session" || type === "appointment") {
-          resourceId = "unassigned";
+        if (useResources) {
+          if (sid) {
+            resourceId = String(sid);
+          } else if (type === "class_session" || type === "appointment") {
+            resourceId = "unassigned";
+          }
         }
 
         return {
@@ -91,7 +94,7 @@ function useCalendarEvents(events, instructorColors) {
           classNames: opacity < 1 ? ["fc-opacity"] : [],
         };
       }),
-    [events, instructorColors]
+    [events, instructorColors, useResources]
   );
 }
 
@@ -113,6 +116,7 @@ export default function CalendarView() {
   const calendarRef = useRef(null);
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
+  const [currentView, setCurrentView] = useState("resourceTimeGridDay");
 
   const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
 
@@ -155,7 +159,7 @@ export default function CalendarView() {
     }
     return list;
   }, [events, instructorFilter, hideCancelled]);
-  const fullEvents = useCalendarEvents(filtered, instructorColors);
+  const fullEvents = useCalendarEvents(filtered, instructorColors, currentView === "resourceTimeGridDay");
 
   // Rango sin desmontar
   const handleDatesSet = useCallback(
@@ -164,14 +168,31 @@ export default function CalendarView() {
       const end = new Date(arg.end);
       end.setSeconds(end.getSeconds() - 1);
       setRange({ fromIso, toIso: end.toISOString() });
+      // Actualizar la vista actual y ajustar recursos
+      if (arg.view) {
+        const viewType = arg.view.type;
+        setCurrentView(viewType);
+        // Activar recursos solo para vista de día con recursos
+        if (viewType === "resourceTimeGridDay") {
+          arg.view.calendar.setOption("resources", resources);
+        } else {
+          arg.view.calendar.setOption("resources", null);
+        }
+      }
     },
-    [setRange]
+    [setRange, resources]
   );
 
   // Cambia vista al redimensionar sin perder estado
   const handleWindowResize = useCallback((arg) => {
     const desired = window.innerWidth < 768 ? "listWeek" : "timeGridWeek";
-    if (arg.view.type !== desired) arg.view.calendar.changeView(desired);
+    if (arg.view.type !== desired) {
+      // Si cambiamos de vista de recursos a normal, quitar recursos
+      if (arg.view.type.includes("resource") && desired === "timeGridWeek") {
+        arg.view.calendar.setOption("resources", false);
+      }
+      arg.view.calendar.changeView(desired);
+    }
   }, []);
 
   const eventClick = useCallback((info) => {
@@ -259,7 +280,7 @@ export default function CalendarView() {
   const headerToolbar = useMemo(
     () => isMobile
       ? { left: "prev,next today", center: "title", right: "" }
-      : { left: "prev,next today", center: "title", right: "resourceTimeGridDay,resourceTimeGridWeek,dayGridMonth,listWeek" },
+      : { left: "prev,next today", center: "title", right: "resourceTimeGridDay,timeGridWeek,dayGridMonth,listWeek" },
     [isMobile]
   );
   // Día en dos líneas (DOW + DD/MM) en week/day/month
@@ -379,7 +400,8 @@ export default function CalendarView() {
                 headerToolbar={headerToolbar}
                 initialView="resourceTimeGridDay"
                 windowResize={handleWindowResize}
-                resources={resources}
+                resources={currentView === "resourceTimeGridDay" ? resources : null}
+                resourceGroupField="title"
                 buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día", list: "Agenda" }}
                 dayHeaderContent={dayHeaderContent}
                 allDaySlot={false}
@@ -399,6 +421,16 @@ export default function CalendarView() {
                 contentHeight="auto"
                 aspectRatio={isMobile ? 0.95 : 1.1}
                 datesSet={handleDatesSet}
+                viewDidMount={(arg) => {
+                  // Ajustar recursos cuando cambia la vista
+                  const viewType = arg.view.type;
+                  setCurrentView(viewType);
+                  if (viewType === "resourceTimeGridDay") {
+                    arg.view.calendar.setOption("resources", resources);
+                  } else {
+                    arg.view.calendar.setOption("resources", null);
+                  }
+                }}
                 events={fullEvents}
                 eventClick={eventClick}
                 eventContent={eventContent}
