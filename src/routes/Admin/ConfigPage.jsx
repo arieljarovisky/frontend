@@ -199,6 +199,18 @@ export default function ConfigPage() {
     updatedAt: null,
   });
 
+  const [botConfig, setBotConfig] = useState({
+    greeting: "",
+    greetingWithName: "",
+    welcomeMessage: "",
+    nameRequest: "",
+    branchSelectionMessage: "",
+    serviceSelectionHeader: "",
+    instructorSelectionBody: "",
+  });
+
+  const [savingBotConfig, setSavingBotConfig] = useState(false);
+
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [testingWhatsApp, setTestingWhatsApp] = useState(false);
   const [whatsappTest, setWhatsappTest] = useState({
@@ -314,7 +326,7 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, c, n, contactData, w, booking, reminders] = await Promise.all([
+        const [g, c, n, contactData, w, booking, reminders, bot] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
@@ -322,6 +334,7 @@ export default function ConfigPage() {
           apiClient.getWhatsAppConfig().catch(() => ({})),
           apiClient.getAppointmentsConfig().catch(() => ({})),
           apiClient.get("/api/reminders/config").then(r => r.data?.data || {}).catch(() => ({})),
+          apiClient.getConfigSection("bot").catch(() => ({})), // Configuración del bot
         ]);
 
         // Prefiere siempre el nombre real del tenant si está disponible
@@ -391,6 +404,17 @@ export default function ConfigPage() {
           ...prev,
           to: resolvedPhone,
         }));
+
+        // Cargar configuración del bot con valores por defecto
+        setBotConfig({
+          greeting: bot.greeting || "¡Hola! 👋",
+          greetingWithName: bot.greetingWithName || "¡Hola {name}! 👋",
+          welcomeMessage: bot.welcomeMessage || "¿Qué querés hacer?",
+          nameRequest: bot.nameRequest || "Para personalizar tu experiencia, decime tu *nombre*.\nEjemplo: *Soy Ariel*",
+          branchSelectionMessage: bot.branchSelectionMessage || "Elegí la sucursal donde querés atendete:",
+          serviceSelectionHeader: bot.serviceSelectionHeader || "Elegí un servicio",
+          instructorSelectionBody: bot.instructorSelectionBody || "¿Con quién preferís?",
+        });
       } catch (e) {
         console.error("Load config failed", e);
       }
@@ -712,6 +736,21 @@ export default function ConfigPage() {
       });
     } finally {
       setTestingWhatsApp(false);
+    }
+  };
+
+  const handleSaveBotConfig = async () => {
+    setSavingBotConfig(true);
+    try {
+      await apiClient.saveConfigSection("bot", botConfig);
+      toast.success("Configuración del bot guardada correctamente");
+    } catch (error) {
+      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
+      toast.error("No se pudo guardar la configuración del bot", {
+        description: errorMessage,
+      });
+    } finally {
+      setSavingBotConfig(false);
     }
   };
 
@@ -1480,6 +1519,133 @@ export default function ConfigPage() {
                     ? "Si es la primera vez, aceptá el mensaje desde WhatsApp Business para habilitar la conversación."
                     : "Activá el asistente para habilitar los envíos de prueba."}
                 </p>
+              </div>
+            </div>
+
+            {/* Configuración del Bot de WhatsApp */}
+            <div className="border-t border-border pt-6 mt-6">
+              <div className="mb-6">
+                <h4 className="text-base font-semibold text-foreground mb-2">
+                  Personalización del Bot
+                </h4>
+                <p className="text-sm text-foreground-secondary">
+                  Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1 rounded text-xs">{"{name}"}</code> para reemplazar el nombre del cliente.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <FieldGroup
+                  label="Saludo inicial"
+                  hint="Mensaje que aparece cuando el cliente escribe 'hola' por primera vez"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.greeting}
+                    onChange={(e) => setBotConfig({ ...botConfig, greeting: e.target.value })}
+                    className="input w-full"
+                    placeholder="¡Hola! 👋"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Saludo con nombre"
+                  hint="Mensaje cuando el cliente ya está registrado. Usá {name} para el nombre"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.greetingWithName}
+                    onChange={(e) => setBotConfig({ ...botConfig, greetingWithName: e.target.value })}
+                    className="input w-full"
+                    placeholder="¡Hola {name}! 👋"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Mensaje de bienvenida"
+                  hint="Texto que aparece en el menú principal del bot"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.welcomeMessage}
+                    onChange={(e) => setBotConfig({ ...botConfig, welcomeMessage: e.target.value })}
+                    className="input w-full"
+                    placeholder="¿Qué querés hacer?"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Solicitud de nombre"
+                  hint="Mensaje para pedirle el nombre al cliente nuevo"
+                >
+                  <textarea
+                    value={botConfig.nameRequest}
+                    onChange={(e) => setBotConfig({ ...botConfig, nameRequest: e.target.value })}
+                    className="input w-full min-h-[80px]"
+                    placeholder="Para personalizar tu experiencia, decime tu *nombre*.\nEjemplo: *Soy Ariel*"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Selección de sucursal"
+                  hint="Mensaje cuando hay múltiples sucursales disponibles"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.branchSelectionMessage}
+                    onChange={(e) => setBotConfig({ ...botConfig, branchSelectionMessage: e.target.value })}
+                    className="input w-full"
+                    placeholder="Elegí la sucursal donde querés atendete:"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Encabezado - Selección de servicio"
+                  hint="Título al mostrar la lista de servicios"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.serviceSelectionHeader}
+                    onChange={(e) => setBotConfig({ ...botConfig, serviceSelectionHeader: e.target.value })}
+                    className="input w-full"
+                    placeholder="Elegí un servicio"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Cuerpo - Selección de profesional"
+                  hint="Texto al mostrar la lista de profesionales/instructores"
+                >
+                  <input
+                    type="text"
+                    value={botConfig.instructorSelectionBody}
+                    onChange={(e) => setBotConfig({ ...botConfig, instructorSelectionBody: e.target.value })}
+                    className="input w-full"
+                    placeholder="¿Con quién preferís?"
+                  />
+                </FieldGroup>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <p className="text-xs text-foreground-muted">
+                    Los cambios se aplicarán inmediatamente al guardar
+                  </p>
+                  <Button
+                    onClick={handleSaveBotConfig}
+                    disabled={savingBotConfig}
+                    className="flex items-center gap-2"
+                  >
+                    {savingBotConfig ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Guardar configuración del bot
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
