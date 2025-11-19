@@ -218,7 +218,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
 // ============================================
 
 export default function DepositsPage() {
-  const [includeExpired, setIncludeExpired] = useState(false);
+  const [includeExpired, setIncludeExpired] = useState(true); // Por defecto mostrar todas incluyendo vencidas
   const [refreshKey, setRefresh] = useState(0);
   
   // Filtros y paginado
