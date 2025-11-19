@@ -19,7 +19,8 @@ import {
   Calendar,
   Bell,
   DollarSign,
-  Navigation
+  Navigation,
+  Lock
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -39,6 +40,9 @@ export default function ProductsPage() {
   const { user } = useAuth();
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+  const [hasStockPermission, setHasStockPermission] = useState(true);
+  const [hasBranchesPermission, setHasBranchesPermission] = useState(true);
+  
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -48,13 +52,18 @@ export default function ProductsPage() {
         if (!mounted) return;
         const branchesData = Array.isArray(response?.data) ? response.data : [];
         setBranches(branchesData);
+        setHasBranchesPermission(true);
         // Si no hay branchFilter y hay sucursales, seleccionar la primera
         if (!branchFilter && branchesData.length > 0 && !showTotalStock) {
           setBranchFilter(String(branchesData[0].id));
         }
       } catch (error) {
         console.error("[ProductsPage] loadBranches error", error);
-        toast.error("No se pudieron cargar las sucursales");
+        if (error?.response?.status === 403) {
+          setHasBranchesPermission(false);
+        } else {
+          toast.error("No se pudieron cargar las sucursales");
+        }
       } finally {
         if (mounted) setBranchesLoading(false);
       }
@@ -94,8 +103,17 @@ export default function ProductsPage() {
         params.append("mode", "all");
       }
       
-      const response = await apiClient.get(`/api/stock/products?${params.toString()}`);
-      return response.data?.data || [];
+      try {
+        const response = await apiClient.get(`/api/stock/products?${params.toString()}`);
+        setHasStockPermission(true);
+        return response.data?.data || [];
+      } catch (err) {
+        if (err?.response?.status === 403) {
+          setHasStockPermission(false);
+          throw new Error("403");
+        }
+        throw err;
+      }
     },
     [search, categoryFilter, showLowStock, showTotalStock, branchFilter]
   );
@@ -113,7 +131,7 @@ export default function ProductsPage() {
   );
 
   // Productos con stock bajo
-  const { data: lowStockProducts = [] } = useQuery(
+  const { data: lowStockProducts = [], loading: loadingLowStock } = useQuery(
     async () => {
       const response = await apiClient.get("/api/stock/low-stock");
       return response.data?.data || [];
@@ -123,15 +141,35 @@ export default function ProductsPage() {
 
   // Modal de alertas de stock
   const [showAlertsModal, setShowAlertsModal] = useState(false);
-  const [hasShownAlerts, setHasShownAlerts] = useState(false);
   
   // Mostrar modal de alertas cuando hay productos con stock bajo (solo una vez por sesión)
   useEffect(() => {
-    if (lowStockProducts && lowStockProducts.length > 0 && !hasShownAlerts) {
-      setShowAlertsModal(true);
-      setHasShownAlerts(true);
+    // No hacer nada mientras está cargando
+    if (loadingLowStock) {
+      return;
     }
-  }, [lowStockProducts, hasShownAlerts]);
+
+    // Verificar si ya se mostró la alerta en esta sesión
+    const hasShownAlertsInSession = sessionStorage.getItem('stockAlertsShown') === 'true';
+    
+    // Verificar si hay productos con stock bajo
+    const hasLowStock = lowStockProducts && Array.isArray(lowStockProducts) && lowStockProducts.length > 0;
+    
+    console.log('[StockAlerts] Estado:', {
+      loadingLowStock,
+      hasLowStock,
+      lowStockProductsCount: lowStockProducts?.length || 0,
+      hasShownAlertsInSession,
+      shouldShow: hasLowStock && !hasShownAlertsInSession
+    });
+    
+    if (hasLowStock && !hasShownAlertsInSession) {
+      console.log('[StockAlerts] Mostrando modal de alertas');
+      setShowAlertsModal(true);
+      // Marcar que ya se mostró la alerta en esta sesión
+      sessionStorage.setItem('stockAlertsShown', 'true');
+    }
+  }, [lowStockProducts, loadingLowStock]);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
@@ -163,6 +201,27 @@ export default function ProductsPage() {
     }
     return { color: "text-emerald-500", label: "En stock", icon: TrendingUp };
   };
+
+  // Mostrar vista de acceso restringido si no hay permisos de stock
+  if (!hasStockPermission || (error && error.includes("403"))) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-red-500/10 border border-red-500/30">
+              <Lock className="w-12 h-12 text-red-500" />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Acceso restringido</h2>
+            <p className="text-foreground-secondary">
+              No tenés permisos para acceder a la gestión de stock. Contactá a un administrador para que te asigne los permisos necesarios.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -681,7 +740,7 @@ export default function ProductsPage() {
       )}
 
       {/* Modal de alertas de stock bajo */}
-      {showAlertsModal && lowStockProducts && lowStockProducts.length > 0 && (
+      {showAlertsModal && Array.isArray(lowStockProducts) && lowStockProducts.length > 0 && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
           style={{

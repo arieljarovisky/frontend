@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Loader2, Mail, MapPin, Phone, Plus, ShieldCheck, Star, Trash2, X } from "lucide-react";
+import { Building2, Loader2, Mail, MapPin, Phone, Plus, ShieldCheck, Star, Trash2, X, User, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 import Button from "../../components/ui/Button";
 
 const EMPTY_FORM = {
@@ -18,6 +19,7 @@ const EMPTY_FORM = {
   country: "Argentina",
   isPrimary: false,
   isActive: true,
+  adminUserId: null,
 };
 
 function BranchBadge({ label, variant = "default" }) {
@@ -49,6 +51,13 @@ function BranchCard({ branch, onEdit, onSetPrimary, onToggleActive, onDelete, di
               <BranchBadge label="Secundaria" />
             )}
             <BranchBadge label={branch.isActive ? "Activa" : "Inactiva"} variant={branch.isActive ? "success" : "warning"} />
+            {branch.adminUserEmail && (
+              <BranchBadge 
+                label={`Admin: ${branch.adminUserEmail}`} 
+                variant="default"
+                className="inline-flex items-center gap-1"
+              />
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -132,7 +141,7 @@ function BranchCard({ branch, onEdit, onSetPrimary, onToggleActive, onDelete, di
   );
 }
 
-function BranchModal({ open, onClose, form, setForm, onSubmit, saving, editing }) {
+function BranchModal({ open, onClose, form, setForm, onSubmit, saving, editing, users = [], loadingUsers = false }) {
   if (!open) return null;
 
   const handleChange = (field) => (event) => {
@@ -239,6 +248,36 @@ function BranchModal({ open, onClose, form, setForm, onSubmit, saving, editing }
             <input className="input" value={form.country} onChange={handleChange("country")} />
           </label>
 
+          {editing && (
+            <label className="space-y-1 block">
+              <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Administrador de la sucursal
+              </span>
+              <select
+                className="input w-full"
+                value={form.adminUserId || ""}
+                onChange={(e) => setForm((prev) => ({ ...prev, adminUserId: e.target.value ? Number(e.target.value) : null }))}
+                disabled={loadingUsers}
+              >
+                <option value="">Sin administrador asignado</option>
+                {users
+                  .filter((u) => u.isActive || u.is_active === 1 || u.is_active === true)
+                  .map((user) => {
+                    const roleLabel = user.role === "admin" ? "(Admin)" : user.role === "staff" ? "(Empleado)" : "";
+                    return (
+                      <option key={user.id} value={user.id}>
+                        {user.email} {roleLabel}
+                      </option>
+                    );
+                  })}
+              </select>
+              <span className="text-xs text-foreground-muted">
+                Podés asignar cualquier usuario activo (admin o empleado) como administrador de la sucursal. Solo el administrador asignado podrá confirmar transferencias de stock recibidas en esta sucursal.
+              </span>
+            </label>
+          )}
+
           {editing ? (
             <div className="grid md:grid-cols-2 gap-4">
               <label className="flex items-center gap-3 p-3 border border-border rounded-xl">
@@ -302,6 +341,7 @@ function BranchModal({ open, onClose, form, setForm, onSubmit, saving, editing }
 }
 
 export default function BranchesPage() {
+  const { user } = useAuth();
   const [branches, setBranches] = useState([]);
   const [limitInfo, setLimitInfo] = useState({ multiBranch: false, maxBranches: 1 });
   const [loading, setLoading] = useState(true);
@@ -311,6 +351,29 @@ export default function BranchesPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Verificar permisos: solo administradores pueden ver esta página
+  if (user?.role !== "admin") {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-red-500/10 border border-red-500/30">
+              <Lock className="w-12 h-12 text-red-500" />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Acceso restringido</h2>
+            <p className="text-foreground-secondary">
+              No tenés permisos para acceder a la gestión de sucursales. Solo los administradores pueden ver y editar esta sección.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const activeBranches = useMemo(() => branches.filter((branch) => branch.isActive), [branches]);
   const reachedLimit =
@@ -332,9 +395,41 @@ export default function BranchesPage() {
     }
   }, []);
 
+  const loadUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      // Solicitar todos los usuarios (activos e inactivos) para el selector
+      const response = await apiClient.get("/api/users", {
+        params: { active_only: false }
+      });
+      
+      // El backend devuelve { ok: true, data: users }
+      // axios envuelve esto en { data: { ok: true, data: users } }
+      let usersList = [];
+      if (response?.data?.ok && Array.isArray(response.data.data)) {
+        usersList = response.data.data;
+      } else if (Array.isArray(response?.data)) {
+        usersList = response.data;
+      } else if (Array.isArray(response?.data?.data)) {
+        usersList = response.data.data;
+      }
+      
+      setUsers(usersList);
+    } catch (err) {
+      console.error("[BranchesPage] loadUsers error:", err);
+      console.error("[BranchesPage] loadUsers error response:", err?.response);
+      const errorMessage = err?.response?.data?.error || err?.message || "No se pudieron cargar los usuarios";
+      toast.error(errorMessage);
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadBranches();
-  }, [loadBranches]);
+    loadUsers();
+  }, [loadBranches, loadUsers]);
 
   const closeModal = () => {
     setModalOpen(false);
@@ -364,6 +459,7 @@ export default function BranchesPage() {
       country: branch.country || "",
       isPrimary: branch.isPrimary,
       isActive: branch.isActive,
+      adminUserId: branch.adminUserId || null,
     });
     setModalOpen(true);
   };
@@ -388,6 +484,9 @@ export default function BranchesPage() {
     if (editing) {
       payload.isPrimary = form.isPrimary;
       payload.isActive = form.isActive;
+      if (form.adminUserId !== undefined) {
+        payload.adminUserId = form.adminUserId || null;
+      }
     } else if (form.isPrimary) {
       payload.isPrimary = true;
     }
@@ -530,6 +629,8 @@ export default function BranchesPage() {
         onSubmit={handleSubmit}
         saving={saving}
         editing={editing}
+        users={users}
+        loadingUsers={loadingUsers}
       />
     </div>
   );

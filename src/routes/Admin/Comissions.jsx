@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "../../api/client";
 
-export default function Commissions() {
+function Commissions() {
   const [rows, setRows] = useState([]);
   const [busyId, setBusyId] = useState(null);
 
@@ -86,3 +86,5 @@ export default function Commissions() {
     </div>
   );
 }
+
+export default Commissions;

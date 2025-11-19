@@ -81,6 +81,8 @@ export function AuthProvider({ children }) {
       setUser(null);
       setAccessToken(null);
       setTenant(null);
+      // Limpiar sessionStorage al cerrar sesión
+      sessionStorage.removeItem('stockAlertsShown');
     }
   };
 

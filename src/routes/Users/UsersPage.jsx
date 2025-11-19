@@ -17,6 +17,24 @@ import {
 import { toast } from "sonner";
 import { validatePassword } from "../../utils/passwordValidation.js";
 
+// Traducciones de módulos y acciones
+const moduleTranslations = {
+  appointments: "Turnos",
+  customers: "Clientes",
+  stock: "Stock",
+  config: "Configuración",
+  invoicing: "Facturación",
+  users: "Usuarios",
+  classes: "Clases",
+};
+
+const actionTranslations = {
+  read: "Ver",
+  write: "Editar",
+  delete: "Eliminar",
+  admin: "Administrador",
+};
+
 export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -243,9 +261,16 @@ export default function UsersPage() {
                     <div className="mt-2 space-y-1">
                       {Object.entries(user.permissions).map(([module, perms]) => (
                         <div key={module} className="text-xs">
-                          <span className="font-medium text-foreground">{module}:</span>
+                          <span className="font-medium text-foreground">
+                            {moduleTranslations[module] || module}:
+                          </span>
                           <span className="text-foreground-secondary ml-1">
-                            {Array.isArray(perms) ? perms.join(", ") : "ninguno"}
+                            {Array.isArray(perms) 
+                              ? perms.map(p => {
+                                  const [mod, action] = p.split('.');
+                                  return actionTranslations[action] || action;
+                                }).join(", ")
+                              : "ninguno"}
                           </span>
                         </div>
                       ))}
@@ -687,7 +712,9 @@ function UserModal({ user, permissions, branches, branchesLoading, onClose, onSa
                 return (
                   <div key={module} className="card card--space-sm">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
-                      <h4 className="font-medium text-foreground capitalize text-sm sm:text-base">{module}</h4>
+                      <h4 className="font-medium text-foreground text-sm sm:text-base">
+                        {moduleTranslations[module] || module}
+                      </h4>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -713,8 +740,8 @@ function UserModal({ user, permissions, branches, branchesLoading, onClose, onSa
                               disabled={hasAdmin}
                               className="w-4 h-4 rounded border-border text-primary focus:ring-primary disabled:opacity-50"
                             />
-                            <span className="text-xs sm:text-sm text-foreground-secondary capitalize">
-                              {perm.action}
+                            <span className="text-xs sm:text-sm text-foreground-secondary">
+                              {actionTranslations[perm.action] || perm.action}
                             </span>
                           </label>
                         );

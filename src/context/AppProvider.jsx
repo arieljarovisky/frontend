@@ -51,7 +51,8 @@ export function AppProvider({ children, pollMs = 15000 }) {
   });
   const updateBooking = (patch) => setBooking((b) => ({ ...b, ...patch }));
 
-  const { user } = useAuth();
+  const authContext = useAuth();
+  const user = authContext?.user ?? null;
   const preferredBranchId = useMemo(
     () =>
       user?.currentBranchId || user?.current_branch_id
