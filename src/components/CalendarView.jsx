@@ -6,6 +6,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import esLocale from "@fullcalendar/core/locales/es";
+import "../calendar-light.css"; // Forzar siempre modo light en el calendario
 import { 
   Filter, 
   RefreshCw, 
@@ -557,7 +558,7 @@ export default function CalendarView() {
   }, []);
 
   return (
-    <div className="calendar-dark relative min-h-screen overflow-hidden">
+    <div className="calendar-light relative min-h-screen overflow-hidden">
       <div className="relative z-10">
         <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-6 transition-all duration-500 shadow-2xl">
           {/* Header mejorado */}
@@ -683,8 +684,8 @@ export default function CalendarView() {
           )}
 
           {/* Calendario con diseño premium */}
-          <div className="relative rounded-2xl border border-border bg-background-secondary/50 backdrop-blur-sm p-3 overflow-hidden
-                          shadow-inner">
+          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-3 overflow-hidden
+                          shadow-inner" style={{ backgroundColor: 'var(--fc-surface-bg, #0f1825)' }}>
             {/* Loading overlay mejorado */}
             {eventsLoading && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 
@@ -718,7 +719,7 @@ export default function CalendarView() {
               </div>
             )}
 
-            <div className="w-full min-w-0 overflow-hidden rounded-xl">
+            <div className="w-full min-w-0 overflow-hidden rounded-xl bg-background-secondary">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
