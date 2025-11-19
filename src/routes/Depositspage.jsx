@@ -68,6 +68,7 @@ function UrgencyBadge({ urgency }) {
     expired: { label: "Vencido", className: "badge-danger" },
     expiring: { label: "Por vencer", className: "badge-warning" },
     active: { label: "Activo", className: "badge-success" },
+    paid: { label: "Pagado", className: "badge-success" },
   };
 
   const config = configs[urgency] || configs.active;
@@ -144,7 +145,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
             {expanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
 
-          {deposit.urgency !== "expired" && (
+          {deposit.urgency !== "expired" && deposit.urgency !== "paid" && deposit.status !== 'deposit_paid' && deposit.status !== 'confirmed' && (
             <>
               <button
                 onClick={() => handleAction("markPaid")}
@@ -189,7 +190,18 @@ function DepositRow({ deposit, onAction, onRefresh }) {
           </div>
           <div>
             <div className="text-foreground-secondary mb-1">Estado del pago</div>
-            <div className="text-foreground font-medium">Pendiente</div>
+            <div className="text-foreground font-medium">
+              {deposit.status === 'deposit_paid' || deposit.status === 'confirmed' 
+                ? 'Pagado' 
+                : deposit.urgency === 'expired' 
+                ? 'Vencido' 
+                : 'Pendiente'}
+              {deposit.deposit_paid_at && (
+                <div className="text-xs text-foreground-muted mt-1">
+                  {new Date(deposit.deposit_paid_at).toLocaleString("es-AR")}
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <div className="text-foreground-secondary mb-1">ID del turno</div>
@@ -213,7 +225,8 @@ export default function DepositsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", "expired"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", "expired", "paid"
+  const [includePaid, setIncludePaid] = useState(false); // Incluir depósitos pagados
   const [serviceId, setServiceId] = useState("");
   const [instructorId, setInstructorId] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -249,6 +262,7 @@ export default function DepositsPage() {
     async () => {
       const params = {
         includeExpired: includeExpired ? "true" : "false",
+        includePaid: includePaid ? "true" : "false",
         page: page.toString(),
         limit: limit.toString(),
         status: statusFilter,
@@ -262,7 +276,7 @@ export default function DepositsPage() {
       const { data } = await apiClient.get("/api/admin/deposits/pending", { params });
       return data;
     },
-    [includeExpired, refreshKey, page, limit, search, statusFilter, serviceId, instructorId, fromDate, toDate]
+    [includeExpired, includePaid, refreshKey, page, limit, search, statusFilter, serviceId, instructorId, fromDate, toDate]
   );
 
   const deposits = depositsData?.data || [];
@@ -413,7 +427,11 @@ export default function DepositsPage() {
         <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-foreground">
-            Señas pendientes ({pagination.total || 0})
+            {statusFilter === "paid" 
+              ? `Señas pagadas (${pagination.total || 0})`
+              : includePaid || statusFilter === "all"
+              ? `Señas (${pagination.total || 0})`
+              : `Señas pendientes (${pagination.total || 0})`}
           </h2>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
@@ -427,6 +445,18 @@ export default function DepositsPage() {
                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
               />
               Incluir vencidas
+            </label>
+            <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includePaid}
+                onChange={(e) => {
+                  setIncludePaid(e.target.checked);
+                  setPage(1);
+                }}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+              />
+              Incluir pagadas
             </label>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -484,6 +514,7 @@ export default function DepositsPage() {
                   <option value="all">Todos</option>
                   <option value="active">Activas</option>
                   <option value="expired">Vencidas</option>
+                  <option value="paid">Pagadas</option>
                 </select>
               </div>
 
