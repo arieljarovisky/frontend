@@ -11,7 +11,7 @@
     --fc-page-bg: #0a0f1b;
     --fc-surface-bg: #0f1825;
     --fc-card-bg: #141f2e;
-    --fc-hover-bg: #1a2838;
+    --fc-hover-bg: #000000;
     --fc-selected-bg: #1e3247;
     
     /* Bordes y líneas con mejor contraste */
@@ -21,7 +21,7 @@
     --fc-divider: rgba(71, 85, 105, 0.4);
     
     /* Colores de texto mejorados */
-    --fc-text-primary: #f8fafc;
+    --fc-text-primary: #0062c4;
     --fc-text-secondary: #cbd5e1;
     --fc-text-muted: #94a3b8;
     --fc-text-disabled: #64748b;
@@ -212,7 +212,7 @@
   }
   
   .calendar-dark .fc .fc-daygrid-day:hover {
-    background: var(--fc-hover-bg);
+    background: var(--fc-hover-bg) !important;
     border-color: var(--fc-border-medium);
     z-index: 2;
     box-shadow: var(--fc-shadow-sm);
@@ -234,7 +234,7 @@
   }
   
   .calendar-dark .fc .fc-daygrid-day:hover .fc-daygrid-day-number {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(59, 130, 246, 0.1) !important;
     color: var(--fc-accent-primary);
   }
   
@@ -308,7 +308,7 @@
   }
   
   .calendar-dark .fc .fc-timegrid-col:hover {
-    background: rgba(59, 130, 246, 0.02);
+    background: rgba(59, 130, 246, 0.02) !important;
   }
   
   /* Indicador de hora actual mejorado */
@@ -364,7 +364,7 @@
   
   /* Eventos en lista con diseño card */
   .calendar-dark .fc .fc-list-event {
-    background: var(--fc-card-bg);
+    background: var(--fc-card-bg) !important;
     border-left: 4px solid transparent;
     margin: 8px 16px;
     border-radius: var(--fc-radius-md);
@@ -376,26 +376,50 @@
   .calendar-dark .fc .fc-list-event:hover {
     transform: translateX(4px);
     box-shadow: var(--fc-shadow-md);
-    background: var(--fc-hover-bg);
+    background: var(--fc-hover-bg) !important;
   }
   
   .calendar-dark .fc .fc-list-event td {
     padding: 16px;
     border: none;
-    background: transparent;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .calendar-dark .fc .fc-list-event:hover td {
+    background: var(--fc-hover-bg) !important;
+    background-color: var(--fc-hover-bg) !important;
+    color: var(--fc-text-primary) !important;
   }
   
   .calendar-dark .fc .fc-list-event-time {
-    color: var(--fc-accent-primary);
+    color: var(--fc-accent-primary) !important;
     font-weight: 600;
     font-size: 0.875rem;
     min-width: 80px;
   }
   
+  .calendar-dark .fc .fc-list-event:hover .fc-list-event-time {
+    color: var(--fc-accent-primary) !important;
+  }
+  
   .calendar-dark .fc .fc-list-event-title {
-    color: var(--fc-text-primary);
+    color: var(--fc-text-primary) !important;
     font-weight: 500;
     padding-left: 16px;
+  }
+  
+  .calendar-dark .fc .fc-list-event:hover .fc-list-event-title {
+    color: var(--fc-text-primary) !important;
+  }
+  
+  /* Forzar que todos los elementos dentro del evento tengan texto legible */
+  .calendar-dark .fc .fc-list-event:hover td *,
+  .calendar-dark .fc .fc-list-event:hover td span,
+  .calendar-dark .fc .fc-list-event:hover td div {
+    color: var(--fc-text-primary) !important;
+    background: transparent !important;
+    background-color: transparent !important;
   }
   
   /* Dot indicador en lista */
@@ -535,6 +559,10 @@
   
   .calendar-dark .fc-scroller::-webkit-scrollbar-thumb:hover {
     border-width: 1px;
+  }
+
+  .calendar-dark .fc-event.fc-list-event-time:hover {
+    color: #ff0000 !important;
   }
   
   /* ==========================================
@@ -691,4 +719,34 @@
   
   .calendar-dark.loading {
     animation: calendar-loading 1.5s ease-in-out infinite;
+  }
+  
+  /* ==========================================
+     CORRECCIÓN: Hover de eventos en vista Agenda - Fondo negro
+     ========================================== */
+  /* Solo afectar el hover de los eventos de lista, no otros elementos */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover {
+    background-color: #000000 !important;
+    background: #000000 !important;
+  }
+  
+  /* Celdas en hover - fondo negro */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td {
+    background-color: #000000 !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+  }
+  
+  /* Texto legible en hover - blanco sobre negro */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .fc-list-event-time,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .fc-list-event-title,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td *,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td span,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td div {
+    color: #ffffff !important;
+  }
+  
+  /* Asegurar que el contenido personalizado también sea visible */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .text-foreground {
+    color: #ffffff !important;
   }

@@ -313,6 +313,17 @@ export default function CalendarView() {
     [setRange, resources]
   );
 
+  // Actualizar recursos cuando cambien los instructores o la vista
+  useEffect(() => {
+    if (calendarRef.current && calendarRef.current.getApi) {
+      const calendarApi = calendarRef.current.getApi();
+      const currentViewType = calendarApi.view?.type;
+      if (currentViewType === "resourceTimeGridDay" && resources.length > 0) {
+        calendarApi.setOption("resources", resources);
+      }
+    }
+  }, [resources, currentView]);
+
   // Cambia vista al redimensionar sin perder estado
   const handleWindowResize = useCallback((arg) => {
     const desired = window.innerWidth < 768 ? "listWeek" : "timeGridWeek";
@@ -376,9 +387,42 @@ export default function CalendarView() {
     const isList = arg.view.type.includes('list');
     const isDayGrid = arg.view.type.includes('dayGrid');
     
-    // Para vista de lista, usar el contenido por defecto para evitar problemas
+    // Para vista de lista, mostrar información completa
     if (isList) {
-      return undefined; // Dejar que FullCalendar maneje el contenido
+      return (
+        <div className="flex flex-col gap-1 p-2 w-full">
+          <div className="text-sm font-semibold text-foreground">
+            {arg.event.title}
+          </div>
+          <div className="flex flex-wrap gap-1 items-center">
+            {ep.instructor_name && (
+              <span
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-white"
+                style={{
+                  backgroundColor: instructorColors[ep.instructor_id] || "#3b82f6",
+                }}
+              >
+                {ep.instructor_name}
+              </span>
+            )}
+            {occupancy && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-500/20 text-indigo-200 font-medium">
+                👥 {occupancy}
+              </span>
+            )}
+            {type !== "class_session" && status === "deposit_paid" && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-emerald-500/20 text-emerald-200 font-medium">
+                💰 Seña
+              </span>
+            )}
+            {status === "cancelled" && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-red-500/20 text-red-200 font-medium">
+                ❌ Cancelado
+              </span>
+            )}
+          </div>
+        </div>
+      );
     }
     
     return (
@@ -682,7 +726,7 @@ export default function CalendarView() {
                 headerToolbar={headerToolbar}
                 initialView={isMobile ? "listWeek" : "resourceTimeGridDay"}
                 windowResize={handleWindowResize}
-                resources={currentView === "resourceTimeGridDay" ? resources : null}
+                resources={isMobile ? null : resources}
                 resourceGroupField="title"
                 buttonText={{ 
                   today: "Hoy", 
@@ -714,6 +758,7 @@ export default function CalendarView() {
                   const viewType = arg.view.type;
                   setCurrentView(viewType);
                   if (viewType === "resourceTimeGridDay") {
+                    // Asegurar que los recursos se actualicen
                     arg.view.calendar.setOption("resources", resources);
                   } else {
                     arg.view.calendar.setOption("resources", null);
