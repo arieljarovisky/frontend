@@ -1984,11 +1984,24 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
 
       toast.success(`${selectedAppointments.length} turno(s) facturado(s) correctamente`);
       
-      // Recargar appointments y facturas
-      refetchAppointments();
-      refetch();
+      // Recargar appointments y facturas (no deben fallar el proceso si hay error)
+      try {
+        await refetchAppointments();
+      } catch (refetchError) {
+        console.warn("Error al recargar appointments:", refetchError);
+      }
       
-      onSave();
+      try {
+        await refetch();
+      } catch (refetchError) {
+        console.warn("Error al recargar facturas:", refetchError);
+      }
+      
+      try {
+        onSave();
+      } catch (onSaveError) {
+        console.warn("Error en onSave:", onSaveError);
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || "Error al facturar turnos");
     } finally {
