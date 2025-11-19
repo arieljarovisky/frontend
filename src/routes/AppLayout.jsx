@@ -93,12 +93,36 @@ export default function AppLayout() {
   const { pathname } = useLocation();
   const { tenantSlug } = useParams();
   const base = `/${tenantSlug || ""}`;
-  const { user, tenant, logout } = useAuth();
+  const authContext = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { features } = useApp();
+
+  // Manejar el caso cuando el contexto de autenticación no está disponible
+  if (!authContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-foreground-muted">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { user, tenant, logout, authLoaded } = authContext;
+
+  // Esperar a que la autenticación se cargue
+  if (!authLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-foreground-muted">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Obtener tipo de negocio
   const { data: businessTypeData } = useQuery(
@@ -362,7 +386,8 @@ export default function AppLayout() {
 
 function SidebarNavButton({ to, label, icon: Icon, active, onClick, badge, module }) {
   // Verificar permisos por módulo
-  const { user } = useAuth();
+  const authContext = useAuth();
+  const user = authContext?.user || null;
   const permissions = user?.permissions || {};
   const modulePerms = permissions[module] || [];
   
