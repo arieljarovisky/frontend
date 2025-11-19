@@ -100,31 +100,7 @@ export default function AppLayout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { features } = useApp();
 
-  // Manejar el caso cuando el contexto de autenticación no está disponible
-  if (!authContext) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-foreground-muted">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { user, tenant, logout, authLoaded } = authContext;
-
-  // Esperar a que la autenticación se cargue
-  if (!authLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-foreground-muted">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Obtener tipo de negocio
+  // Obtener tipo de negocio - debe ejecutarse antes de cualquier return condicional
   const { data: businessTypeData } = useQuery(
     async () => {
       try {
@@ -137,6 +113,12 @@ export default function AppLayout() {
     },
     []
   );
+
+  // Extraer valores del contexto de forma segura
+  const user = authContext?.user || null;
+  const tenant = authContext?.tenant || null;
+  const logout = authContext?.logout || (() => {});
+  const authLoaded = authContext?.authLoaded || false;
 
   const businessTypeCode = businessTypeData?.code || "salon";
   const navLabels = getNavigationLabels(businessTypeCode);
@@ -154,13 +136,10 @@ export default function AppLayout() {
     return typeof rawFeatures === "object" && rawFeatures != null ? rawFeatures : {};
   }, [rawFeatures]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
-
-  // Cargar contador de notificaciones
+  // Cargar contador de notificaciones - debe ejecutarse antes de cualquier return condicional
   useEffect(() => {
+    if (!authLoaded || !authContext) return;
+    
     const loadUnreadCount = async () => {
       try {
         const result = await apiClient.getUnreadCount();
@@ -173,7 +152,7 @@ export default function AppLayout() {
     loadUnreadCount();
     const interval = setInterval(loadUnreadCount, 30000); // Actualizar cada 30 segundos
     return () => clearInterval(interval);
-  }, []);
+  }, [authLoaded, authContext]);
 
   const featureFlags = useMemo(
     () => ({
@@ -183,6 +162,35 @@ export default function AppLayout() {
     }),
     [tenantFeatures, businessTypeCode, features]
   );
+
+  const handleLogout = async () => {
+    if (logout) {
+      await logout();
+      navigate("/login");
+    }
+  };
+
+  // Manejar el caso cuando el contexto de autenticación no está disponible
+  if (!authContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-foreground-muted">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Esperar a que la autenticación se cargue
+  if (!authLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-foreground-muted">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = [
     { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
