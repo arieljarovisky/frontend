@@ -62,6 +62,7 @@ import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
 import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
 import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -310,6 +311,18 @@ const router = createBrowserRouter([
   // Fallback: fuera de un tenant → a la landing page
   { path: "*", element: <Navigate to="/" replace /> },
 ]);
+
+// Exponer función de diagnóstico en la consola para debugging
+if (typeof window !== 'undefined') {
+  window.checkServerPerformance = logDiagnosis;
+  window.startPerformanceMonitoring = startMonitoring;
+  
+  // Iniciar monitoreo automático en desarrollo
+  if (import.meta.env.DEV) {
+    startMonitoring(60000); // Cada minuto
+    console.log('💡 Tip: Usa window.checkServerPerformance() en la consola para ver el diagnóstico');
+  }
+}
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

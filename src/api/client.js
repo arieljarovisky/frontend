@@ -1,5 +1,7 @@
 // src/api/client.js
 import axios from "axios";
+import { recordRequest } from "../utils/performanceMonitor.js";
+
 const apiBase = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const apiClient = axios.create({
   baseURL: apiBase,
@@ -8,6 +10,7 @@ const apiClient = axios.create({
     "ngrok-skip-browser-warning": "true",
   },
   withCredentials: true, // ✅ Para cookies HttpOnly
+  timeout: 30000, // 30 segundos de timeout para evitar esperas indefinidas
 });
 
 let isNgrok = false;
@@ -144,6 +147,10 @@ apiClient.interceptors.request.use(
     ) {
       config.params = { ...(config.params || {}), branchId: "all" };
     }
+    
+    // Agregar timestamp para medir tiempo de respuesta
+    config.metadata = { startTime: Date.now() };
+    
     return config;
   },
   (error) => {
@@ -155,11 +162,50 @@ apiClient.interceptors.request.use(
 // Interceptor de respuesta - Auth
 // ================================
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Medir tiempo de respuesta del servidor
+    const startTime = response.config?.metadata?.startTime;
+    if (startTime) {
+      const duration = Date.now() - startTime;
+      const url = response.config?.url || 'unknown';
+      const method = (response.config?.method || 'get').toUpperCase();
+      
+      // Registrar estadísticas
+      recordRequest(url, duration, false, false);
+      
+      // Solo loggear peticiones lentas (>1 segundo) o en desarrollo
+      if (duration > 1000 || import.meta.env.DEV) {
+        console.log(`[API] ${method} ${url} - ${duration}ms ${duration > 2000 ? '⚠️ LENTO' : ''}`);
+      }
+      
+      // Mostrar advertencia si es muy lento (probable problema del servidor)
+      if (duration > 5000) {
+        console.warn(`⚠️ Petición muy lenta (${duration}ms). Posible problema del servidor Railway.`);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
     const url = originalRequest?.url || "";
+
+    // Medir tiempo incluso en errores
+    const startTime = originalRequest?.metadata?.startTime;
+    if (startTime) {
+      const duration = Date.now() - startTime;
+      const method = (originalRequest?.method || 'get').toUpperCase();
+      console.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status}`);
+      
+      // Si el error es timeout, es probable problema del servidor
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+      if (isTimeout) {
+        recordRequest(url, duration, true, true);
+        console.error('⏱️ TIMEOUT: El servidor Railway no respondió a tiempo. Verifica el estado del servidor.');
+      } else {
+        recordRequest(url, duration, true, false);
+      }
+    }
 
     // No intentar refresh en endpoints de auth
     const isAuthEndpoint =

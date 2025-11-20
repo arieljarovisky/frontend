@@ -1,6 +1,37 @@
 // src/shared/useQuery.js
 import { useEffect, useState, useCallback, useRef } from "react";
 
+// Caché global simple para evitar peticiones duplicadas
+const queryCache = new Map();
+const CACHE_TTL = 5000; // 5 segundos de caché
+
+function getCacheKey(fn, deps) {
+    // Crear una clave única basada en la función y dependencias
+    const fnStr = fn.toString();
+    const depsStr = JSON.stringify(deps);
+    return `${fnStr}:${depsStr}`;
+}
+
+function getCachedData(key) {
+    const cached = queryCache.get(key);
+    if (!cached) return null;
+    
+    const now = Date.now();
+    if (now - cached.timestamp > CACHE_TTL) {
+        queryCache.delete(key);
+        return null;
+    }
+    
+    return cached.data;
+}
+
+function setCachedData(key, data) {
+    queryCache.set(key, {
+        data,
+        timestamp: Date.now()
+    });
+}
+
 /**
  * useQuery(fn, deps?)
  * - fn: (signal) => Promise<any>
@@ -14,16 +45,30 @@ export function useQuery(fn, deps = []) {
     const mountedRef = useRef(true);
     const abortControllerRef = useRef(null);
     const isExecutingRef = useRef(false);
+    const cacheKeyRef = useRef(getCacheKey(fn, deps));
 
     // Actualizar ref cuando cambia la función
     useEffect(() => {
         fnRef.current = fn;
-    }, [fn]);
+        cacheKeyRef.current = getCacheKey(fn, deps);
+    }, [fn, deps]);
 
-    const executeQuery = useCallback(async (signal, skipLoading = false) => {
+    const executeQuery = useCallback(async (signal, skipLoading = false, forceRefresh = false) => {
         // Evitar ejecuciones duplicadas
         if (isExecutingRef.current && !skipLoading) {
             return;
+        }
+        
+        const cacheKey = cacheKeyRef.current;
+        
+        // Intentar obtener datos del caché si no es un refresh forzado
+        if (!forceRefresh && !skipLoading) {
+            const cached = getCachedData(cacheKey);
+            if (cached !== null) {
+                setData(cached);
+                setLoading(false);
+                return;
+            }
         }
         
         isExecutingRef.current = true;
@@ -37,6 +82,8 @@ export function useQuery(fn, deps = []) {
             const result = await fnRef.current(signal);
             if (mountedRef.current && !signal.aborted) {
                 setData(result);
+                // Guardar en caché
+                setCachedData(cacheKey, result);
             }
         } catch (e) {
             if (signal.aborted || !mountedRef.current) {
@@ -83,7 +130,7 @@ export function useQuery(fn, deps = []) {
         
         const ac = new AbortController();
         abortControllerRef.current = ac;
-        executeQuery(ac.signal, false);
+        executeQuery(ac.signal, false, true); // forceRefresh = true
         return () => ac.abort();
     }, [executeQuery]);
 
