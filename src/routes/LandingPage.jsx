@@ -10,7 +10,6 @@ import {
   Zap, 
   CheckCircle2,
   ArrowRight,
-  Star,
   Menu,
   X,
   MessageSquare,
@@ -129,24 +128,69 @@ export default function LandingPage() {
     }
   ];
 
-  const testimonials = [
+  const stats = [
     {
-      name: "María González",
-      role: "Directora de Studio Balance",
-      content: "Desde que uso el sistema, mis turnos están organizados y no tengo más problemas con las faltas. ¡Totalmente recomendado!",
-      rating: 5
+      value: "100%",
+      label: "Automatización",
+      description: "De tus procesos de gestión"
     },
     {
-      name: "Carlos Rodríguez",
-      role: "Gerente General",
-      content: "La integración con Mercado Pago es perfecta. Mis clientes pueden pagar la seña online y todo se actualiza automáticamente.",
-      rating: 5
+      value: "24/7",
+      label: "Disponibilidad",
+      description: "Para tus clientes y tu negocio"
     },
     {
-      name: "Ana Martínez",
-      role: "Emprendedora",
-      content: "El bot de WhatsApp es increíble. Mis clientes pueden agendar turnos a cualquier hora sin que yo esté presente.",
-      rating: 5
+      value: "99.9%",
+      label: "Uptime",
+      description: "De disponibilidad del servicio"
+    },
+    {
+      value: "+50",
+      label: "Funcionalidades",
+      description: "Integradas en un solo sistema"
+    }
+  ];
+
+  const useCases = [
+    {
+      icon: Calendar,
+      title: "Servicios por Turnos",
+      description: "Ideal para negocios que trabajan con citas: salones, barberías, spas, centros de estética, consultorios y más."
+    },
+    {
+      icon: Users,
+      title: "Servicios con Equipos",
+      description: "Gestiona múltiples profesionales, horarios, disponibilidad y asignación de recursos en tiempo real."
+    },
+    {
+      icon: DollarSign,
+      title: "Negocios con Pagos Online",
+      description: "Acepta señas, pagos anticipados y membresías recurrentes integrado con Mercado Pago."
+    },
+    {
+      icon: Bell,
+      title: "Comunicación Automatizada",
+      description: "Recordatorios automáticos, confirmaciones y seguimiento por WhatsApp sin intervención manual."
+    },
+    {
+      icon: FileSpreadsheet,
+      title: "Facturación Electrónica",
+      description: "Facturación AFIP/ARCA integrada, control de stock, reportes financieros y gestión contable."
+    },
+    {
+      icon: Building2,
+      title: "Múltiples Sucursales",
+      description: "Administra varias ubicaciones desde un solo sistema con control centralizado y reportes consolidados."
+    },
+    {
+      icon: Zap,
+      title: "Servicios Rápidos",
+      description: "Para negocios que necesitan agilidad: reservas instantáneas, check-in rápido y gestión eficiente."
+    },
+    {
+      icon: Shield,
+      title: "Negocios Regulados",
+      description: "Cumplimiento normativo, trazabilidad, respaldos automáticos y seguridad de datos empresarial."
     }
   ];
 
@@ -187,14 +231,14 @@ export default function LandingPage() {
               Precios
             </a>
             <a
-              href="#testimonials"
+              href="#use-cases"
               onClick={(e) => {
                 e.preventDefault();
-                document.getElementById("testimonials")?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("use-cases")?.scrollIntoView({ behavior: "smooth" });
               }}
               className="landing-nav__link"
             >
-              Recursos
+              Casos de Uso
             </a>
             <a
               href="/docs"
@@ -252,13 +296,13 @@ export default function LandingPage() {
               Precios
             </a>
             <a
-              href="#testimonials"
+              href="#use-cases"
               onClick={() => {
-                document.getElementById("testimonials")?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("use-cases")?.scrollIntoView({ behavior: "smooth" });
                 setMobileMenuOpen(false);
               }}
             >
-              Recursos
+              Casos de Uso
             </a>
             <a
               href="/docs"
@@ -488,8 +532,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Stats Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background-secondary">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -499,35 +543,80 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Lo que dicen nuestros clientes
+              Sistema confiable y robusto
             </h2>
             <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
-              Cientos de negocios confían en nosotros para gestionar sus operaciones diarias
+              Tecnología de nivel empresarial al alcance de tu negocio
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="card card--space-lg"
+                className="text-center"
               >
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                  ))}
+                <div className="text-5xl md:text-6xl font-bold text-primary mb-2">
+                  {stat.value}
                 </div>
-                <p className="text-foreground-secondary mb-4 italic">"{testimonial.content}"</p>
-                <div>
-                  <p className="font-semibold text-foreground">{testimonial.name}</p>
-                  <p className="text-sm text-foreground-muted">{testimonial.role}</p>
+                <div className="text-xl font-semibold text-foreground mb-1">
+                  {stat.label}
+                </div>
+                <div className="text-sm text-foreground-secondary">
+                  {stat.description}
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases Section */}
+      <section id="use-cases" className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Ideal para cualquier negocio de servicios
+            </h2>
+            <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+              Desde pequeños emprendimientos hasta empresas con múltiples sucursales
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {useCases.map((useCase, index) => {
+              const Icon = useCase.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="card card--space-lg"
+                >
+                  <div className="w-12 h-12 bg-primary-light dark:bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                    <Icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    {useCase.title}
+                  </h3>
+                  <p className="text-foreground-secondary">
+                    {useCase.description}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -578,7 +667,7 @@ export default function LandingPage() {
                 <Logo size="default" showText={true} />
               </div>
               <p className="text-foreground-secondary text-sm">
-                Sistema de gestión ERP para negocios modernos. Turnos, stock, facturación y más.
+                Sistema de gestión ERP para cualquier negocio de servicios. Turnos, stock, facturación, membresías y más.
               </p>
             </div>
             <div>
@@ -586,7 +675,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm text-foreground-secondary">
                 <li><a href="#features" className="hover:text-foreground transition-colors">Características</a></li>
                 <li><a href="#pricing" className="hover:text-foreground transition-colors">Precios</a></li>
-                <li><a href="#testimonials" className="hover:text-foreground transition-colors">Testimonios</a></li>
+                <li><a href="#use-cases" className="hover:text-foreground transition-colors">Casos de Uso</a></li>
               </ul>
             </div>
             <div>
