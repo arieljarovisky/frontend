@@ -20,6 +20,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import ChatWidget from "../components/ChatWidget";
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -699,6 +700,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }
