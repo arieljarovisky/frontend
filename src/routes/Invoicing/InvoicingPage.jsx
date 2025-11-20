@@ -16,10 +16,14 @@ import {
   CheckSquare,
   ShoppingCart,
   Pencil,
-  Undo2
+  Undo2,
+  Users,
+  User,
+  CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
 import "./invoicingModal.css";
+import { InvoiceMembershipsModal } from "./InvoiceMembershipsModal.jsx";
 
 const resolveInvoiceStatus = (invoice = {}) => {
   const explicit = String(invoice.status || "").toLowerCase();
@@ -124,10 +128,13 @@ const parseInvoiceItems = (invoice = {}) => {
 export default function InvoicingPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState(""); // 'appointment', 'class', 'membership', ''
   const [showModal, setShowModal] = useState(false);
   const [draftToEdit, setDraftToEdit] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
+  const [showClassesModal, setShowClassesModal] = useState(false);
+  const [showMembershipsModal, setShowMembershipsModal] = useState(false);
   const [creditNoteLoadingId, setCreditNoteLoadingId] = useState(null);
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
   const [creditNoteTarget, setCreditNoteTarget] = useState(null);
@@ -175,9 +182,21 @@ export default function InvoicingPage() {
   const invoicesAnnotated = invoicesWithStatus.map((invoice) => {
     const invoiceId = Number(invoice.id || 0);
     const hasCreditNote = invoiceId ? creditNoteOriginalIds.has(invoiceId) : false;
+    
+    // Determinar el tipo de factura
+    let invoiceType = 'other';
+    if (invoice.appointment_id) {
+      invoiceType = 'appointment';
+    } else if (invoice.class_session_id || invoice.enrollment_id) {
+      invoiceType = 'class';
+    } else if (invoice.subscription_id) {
+      invoiceType = 'membership';
+    }
+    
     return {
       ...invoice,
       has_credit_note: hasCreditNote,
+      invoice_type: invoiceType,
     };
   });
 
@@ -186,7 +205,12 @@ export default function InvoicingPage() {
     return invoice.__status === statusFilter.toLowerCase();
   });
 
-  const invoices = filteredByStatus.filter((invoice) => {
+  const filteredByType = filteredByStatus.filter((invoice) => {
+    if (!typeFilter) return true;
+    return invoice.invoice_type === typeFilter;
+  });
+
+  const invoices = filteredByType.filter((invoice) => {
     if (!search) return true;
     const term = search.trim().toLowerCase();
     return (
@@ -407,6 +431,20 @@ export default function InvoicingPage() {
             <span className="text-sm sm:text-base">Facturar Turnos</span>
           </button>
           <button
+            onClick={() => setShowClassesModal(true)}
+            className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Facturar Clases</span>
+          </button>
+          <button
+            onClick={() => setShowMembershipsModal(true)}
+            className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Facturar Membresías</span>
+          </button>
+          <button
             onClick={() => {
               setDraftToEdit(null);
               setShowModal(true);
@@ -473,6 +511,39 @@ export default function InvoicingPage() {
               </div>
             </div>
           </div>
+
+          <div className="w-full sm:w-60">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+              Tipo
+            </span>
+            <div className="relative">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">Todos los tipos</option>
+                <option value="appointment">Turnos</option>
+                <option value="class">Clases</option>
+                <option value="membership">Membresías</option>
+                <option value="other">Otros</option>
+              </select>
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -515,10 +586,25 @@ export default function InvoicingPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground truncate">{invoice.customer_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <p className="text-xs text-foreground-muted">
                       {formatInvoiceNumber(invoice.invoice_number)}
                     </p>
+                    {invoice.invoice_type === 'appointment' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 text-[10px] font-semibold uppercase tracking-wide">
+                        <Calendar className="w-3 h-3" /> Turno
+                      </span>
+                    )}
+                    {invoice.invoice_type === 'class' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 text-[10px] font-semibold uppercase tracking-wide">
+                        <Users className="w-3 h-3" /> Clase
+                      </span>
+                    )}
+                    {invoice.invoice_type === 'membership' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-300 text-[10px] font-semibold uppercase tracking-wide">
+                        <CreditCard className="w-3 h-3" /> Membresía
+                      </span>
+                    )}
                     {invoice.__isCreditNote && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wide">
                         <Undo2 className="w-3 h-3" /> NC
@@ -639,6 +725,7 @@ export default function InvoicingPage() {
                 <thead>
                   <tr className="border-b border-border bg-background-secondary">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Número</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Tipo</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Cliente</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Fecha</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Total</th>
@@ -680,6 +767,30 @@ export default function InvoicingPage() {
                               </span>
                             )}
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {invoice.invoice_type === 'appointment' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 text-[10px] font-semibold uppercase tracking-wide">
+                              <Calendar className="w-3 h-3" /> Turno
+                            </span>
+                          )}
+                          {invoice.invoice_type === 'class' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 text-[10px] font-semibold uppercase tracking-wide">
+                              <Users className="w-3 h-3" /> Clase
+                            </span>
+                          )}
+                          {invoice.invoice_type === 'membership' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-300 text-[10px] font-semibold uppercase tracking-wide">
+                              <CreditCard className="w-3 h-3" /> Membresía
+                            </span>
+                          )}
+                          {invoice.invoice_type === 'other' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-500/10 text-gray-600 dark:text-gray-300 text-[10px] font-semibold uppercase tracking-wide">
+                              Otro
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -835,6 +946,32 @@ export default function InvoicingPage() {
             refetch();
             refetchAppointments();
             setShowAppointmentsModal(false);
+          }}
+        />
+      )}
+
+      {/* Modal de facturar clases */}
+      {showClassesModal && (
+        <InvoiceClassesModal
+          customers={customers}
+          constants={constants}
+          onClose={() => setShowClassesModal(false)}
+          onSave={() => {
+            refetch();
+            setShowClassesModal(false);
+          }}
+        />
+      )}
+
+      {/* Modal de facturar membresías */}
+      {showMembershipsModal && (
+        <InvoiceMembershipsModal
+          customers={customers}
+          constants={constants}
+          onClose={() => setShowMembershipsModal(false)}
+          onSave={() => {
+            refetch();
+            setShowMembershipsModal(false);
           }}
         />
       )}
@@ -2308,6 +2445,333 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
               )}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para facturar clases
+function InvoiceClassesModal({ customers, constants, onClose, onSave }) {
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [invoiceMode, setInvoiceMode] = useState(null); // 'complete' o 'per-student'
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+
+  // Cargar clases disponibles
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        setLoadingClasses(true);
+        const from = new Date();
+        from.setMonth(from.getMonth() - 3);
+        const to = new Date();
+        to.setDate(to.getDate() + 1);
+        
+        const response = await apiClient.get("/api/classes/sessions", {
+          params: {
+            from: from.toISOString(),
+            to: to.toISOString(),
+            status: "scheduled"
+          }
+        });
+        
+        const classesData = Array.isArray(response.data) ? response.data : [];
+        
+        // Cargar enrollments para cada clase
+        const classesWithEnrollments = await Promise.all(
+          classesData.map(async (classItem) => {
+            try {
+              const enrollResponse = await apiClient.get(`/api/classes/sessions/${classItem.id}`);
+              return {
+                ...classItem,
+                enrollments: enrollResponse.data?.enrollments || []
+              };
+            } catch (err) {
+              console.warn(`Error cargando enrollments para clase ${classItem.id}:`, err);
+              return { ...classItem, enrollments: [] };
+            }
+          })
+        );
+        
+        setClasses(classesWithEnrollments);
+      } catch (error) {
+        console.error("Error cargando clases:", error);
+        toast.error("Error al cargar las clases");
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+    
+    loadClasses();
+  }, []);
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("es-AR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const handleSelectClass = (classItem) => {
+    setSelectedClass(classItem);
+    setInvoiceMode(null);
+    setSelectedCustomerId("");
+  };
+
+  const handleInvoiceComplete = async () => {
+    if (!selectedClass || !selectedCustomerId) {
+      toast.error("Selecciona un cliente para facturar la clase completa");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiClient.post(`/api/invoicing/class/${selectedClass.id}`, {
+        customer_id: Number(selectedCustomerId)
+      });
+      toast.success("Clase facturada correctamente");
+      onSave();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Error al facturar la clase");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInvoiceEnrollment = async (enrollmentId) => {
+    if (!enrollmentId) return;
+
+    try {
+      setLoading(true);
+      await apiClient.post(`/api/invoicing/enrollment/${enrollmentId}`);
+      toast.success("Alumno facturado correctamente");
+      onSave();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Error al facturar el alumno");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-background rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'rgb(var(--border))' }}>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Facturar Clases</h2>
+            <p className="text-sm text-foreground-secondary mt-1">
+              Selecciona una clase y factúrala completa o por alumno
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary transition-colors"
+          >
+            <XCircle className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {loadingClasses ? (
+            <div className="text-center py-12">
+              <Clock className="w-12 h-12 mx-auto mb-4 text-foreground-muted animate-spin" />
+              <p className="text-foreground-secondary">Cargando clases...</p>
+            </div>
+          ) : classes.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
+              <p className="text-foreground-secondary">No hay clases disponibles para facturar</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Lista de clases */}
+              {!selectedClass && classes.map((classItem) => (
+                <div
+                  key={classItem.id}
+                  className="border rounded-lg p-4 cursor-pointer hover:bg-background-secondary transition-colors"
+                  style={{ borderColor: 'rgb(var(--border))' }}
+                  onClick={() => handleSelectClass(classItem)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground text-lg">
+                        {classItem.service_name || classItem.template_name || "Clase"}
+                      </h3>
+                      <div className="mt-2 space-y-1 text-sm text-foreground-secondary">
+                        <p><strong>Profesor:</strong> {classItem.instructor_name}</p>
+                        <p><strong>Fecha:</strong> {formatDate(classItem.starts_at)}</p>
+                        <p><strong>Alumnos inscritos:</strong> {classItem.enrollments?.length || 0}</p>
+                        <p><strong>Precio:</strong> ${Number(classItem.price_decimal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                    </div>
+                    <Users className="w-6 h-6 text-primary" />
+                  </div>
+                </div>
+              ))}
+
+              {/* Detalles de clase seleccionada */}
+              {selectedClass && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <button
+                      onClick={() => {
+                        setSelectedClass(null);
+                        setInvoiceMode(null);
+                        setSelectedCustomerId("");
+                      }}
+                      className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background-secondary transition-colors"
+                    >
+                      <Undo2 className="w-5 h-5" />
+                    </button>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {selectedClass.service_name || selectedClass.template_name || "Clase"}
+                    </h3>
+                  </div>
+
+                  <div className="border rounded-lg p-4" style={{ borderColor: 'rgb(var(--border))' }}>
+                    <div className="space-y-2 text-sm text-foreground-secondary mb-4">
+                      <p><strong>Profesor:</strong> {selectedClass.instructor_name}</p>
+                      <p><strong>Fecha:</strong> {formatDate(selectedClass.starts_at)}</p>
+                      <p><strong>Precio:</strong> ${Number(selectedClass.price_decimal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+
+                    {/* Opciones de facturación */}
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setInvoiceMode('complete');
+                            setSelectedCustomerId("");
+                          }}
+                          className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                            invoiceMode === 'complete'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-background-secondary text-foreground hover:bg-background-secondary/80'
+                          }`}
+                        >
+                          <Users className="w-5 h-5 mx-auto mb-1" />
+                          Facturar Clase Completa
+                        </button>
+                        <button
+                          onClick={() => {
+                            setInvoiceMode('per-student');
+                          }}
+                          className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                            invoiceMode === 'per-student'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-background-secondary text-foreground hover:bg-background-secondary/80'
+                          }`}
+                        >
+                          <User className="w-5 h-5 mx-auto mb-1" />
+                          Facturar por Alumno
+                        </button>
+                      </div>
+
+                      {/* Formulario para facturar clase completa */}
+                      {invoiceMode === 'complete' && (
+                        <div className="border rounded-lg p-4 space-y-4" style={{ borderColor: 'rgb(var(--border))' }}>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                              Cliente que paga la clase completa:
+                            </label>
+                            <select
+                              value={selectedCustomerId}
+                              onChange={(e) => setSelectedCustomerId(e.target.value)}
+                              className="input w-full"
+                            >
+                              <option value="">Selecciona un cliente</option>
+                              {customers.map((customer) => (
+                                <option key={customer.id} value={customer.id}>
+                                  {customer.name} {customer.documento ? `(${customer.documento})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            onClick={handleInvoiceComplete}
+                            disabled={loading || !selectedCustomerId}
+                            className="btn-primary w-full"
+                          >
+                            {loading ? "Facturando..." : `Facturar por $${Number(selectedClass.price_decimal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Lista de alumnos para facturar individualmente */}
+                      {invoiceMode === 'per-student' && (
+                        <div className="border rounded-lg" style={{ borderColor: 'rgb(var(--border))' }}>
+                          <div className="px-4 py-3 bg-background-secondary border-b" style={{ borderColor: 'rgb(var(--border))' }}>
+                            <h4 className="font-semibold text-foreground">Alumnos Inscritos</h4>
+                          </div>
+                          {selectedClass.enrollments?.length === 0 ? (
+                            <div className="p-4 text-center text-foreground-secondary">
+                              No hay alumnos inscritos en esta clase
+                            </div>
+                          ) : (
+                            <div className="divide-y" style={{ borderColor: 'rgb(var(--border))' }}>
+                              {selectedClass.enrollments?.map((enrollment) => {
+                                const customer = customers.find(c => c.id === enrollment.customer_id);
+                                return (
+                                  <div key={enrollment.id} className="p-4 flex items-center justify-between">
+                                    <div>
+                                      <p className="font-medium text-foreground">
+                                        {enrollment.customer_name || customer?.name || "Cliente desconocido"}
+                                      </p>
+                                      {enrollment.customer_phone && (
+                                        <p className="text-sm text-foreground-secondary">
+                                          {enrollment.customer_phone}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => handleInvoiceEnrollment(enrollment.id)}
+                                      disabled={loading}
+                                      className="btn-primary px-4 py-2"
+                                    >
+                                      {loading ? "Facturando..." : "Facturar"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end px-6 py-4 border-t bg-background-secondary" style={{ borderColor: 'rgb(var(--border))' }}>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg font-medium text-foreground bg-background hover:bg-background-secondary border border-border transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
