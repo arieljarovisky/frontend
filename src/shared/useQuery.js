@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
  * - deps: dependencias para re-ejecutar
  */
 export function useQuery(fn, deps = []) {
-    const [data, setData] = useState(null);
+    const [data, setData] = useState(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const fnRef = useRef(fn);

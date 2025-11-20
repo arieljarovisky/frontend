@@ -61,6 +61,7 @@ import PlansPage from "./routes/PlansPage.jsx";
 import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
 import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
 import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -312,11 +313,13 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationSystem />
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationSystem />
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

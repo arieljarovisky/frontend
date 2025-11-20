@@ -938,7 +938,7 @@ export default function InvoicingPage() {
       {/* Modal de facturar turnos */}
       {showAppointmentsModal && (
         <InvoiceAppointmentsModal
-          appointments={appointments}
+          appointments={appointments || []}
           customers={customers}
           constants={constants}
           onClose={() => setShowAppointmentsModal(false)}
@@ -1921,14 +1921,15 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
   };
 
   // Agrupar appointments por cliente si está activado
+  const safeAppointments = appointments || [];
   const groupedAppointments = groupByCustomer 
-    ? appointments.reduce((acc, apt) => {
+    ? safeAppointments.reduce((acc, apt) => {
         const customerId = apt.customer_id || apt.customer?.id || 'unknown';
         if (!acc[customerId]) acc[customerId] = [];
         acc[customerId].push(apt);
         return acc;
       }, {})
-    : { all: appointments };
+    : { all: safeAppointments };
 
   const formatDate = (date) => {
     if (!date) return "-";
@@ -1986,13 +1987,13 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
     // Sumar turnos seleccionados
     const relevantAppointments = customerId 
       ? selectedAppointments.filter(aptId => {
-          const apt = appointments.find(a => a.id === aptId);
+          const apt = (appointments || []).find(a => a.id === aptId);
           return (apt?.customer_id || apt?.customer?.id) == customerId;
         })
       : selectedAppointments;
     
     total += relevantAppointments.reduce((sum, aptId) => {
-      const apt = appointments.find(a => a.id === aptId);
+      const apt = (appointments || []).find(a => a.id === aptId);
       return sum + (getPrice(apt) || 0);
     }, 0);
     
@@ -2025,10 +2026,10 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
       // Agrupar por cliente si está activado
       if (groupByCustomer) {
         const byCustomer = selectedAppointments.reduce((acc, aptId) => {
-          const apt = appointments.find(a => a.id === aptId);
-          const customerId = apt.customer_id || apt.customer?.id || 'unknown';
+          const apt = (appointments || []).find(a => a.id === aptId);
+          const customerId = apt?.customer_id || apt?.customer?.id || 'unknown';
           if (!acc[customerId]) acc[customerId] = [];
-          acc[customerId].push(apt);
+          if (apt) acc[customerId].push(apt);
           return acc;
         }, {});
 
@@ -2075,15 +2076,16 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
         }
       } else {
         // Crear una sola factura con todos los turnos
-        const firstCustomer = appointments.find(a => selectedAppointments.includes(a.id))?.customer || 
-                             appointments.find(a => selectedAppointments.includes(a.id)) || 
+        const safeAppts = appointments || [];
+        const firstCustomer = safeAppts.find(a => selectedAppointments.includes(a.id))?.customer || 
+                             safeAppts.find(a => selectedAppointments.includes(a.id)) || 
                              customers[0];
 
         // Items de turnos
         const appointmentItems = selectedAppointments.map(aptId => {
-          const apt = appointments.find(a => a.id === aptId);
+          const apt = (appointments || []).find(a => a.id === aptId);
           return {
-            descripcion: `${getServiceName(apt)} - ${formatDate(apt.start_time || apt.date)}`,
+            descripcion: `${getServiceName(apt)} - ${formatDate(apt?.start_time || apt?.date)}`,
             cantidad: 1,
             precio_unitario: getPrice(apt),
             alicuota_iva: 21
@@ -2103,7 +2105,7 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
         const importe_total = importe_neto + importe_iva;
 
         const appointmentIds = selectedAppointments.map(aptId => {
-          const apt = appointments.find(a => a.id === aptId);
+          const apt = (appointments || []).find(a => a.id === aptId);
           return apt?.id;
         }).filter(Boolean);
 

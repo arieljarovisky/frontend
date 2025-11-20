@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles } from "lucide-react";
 import {
   authApi,
   setAccessToken,
@@ -224,147 +224,237 @@ export default function LoginPage() {
     );
   }
 
+  const features = [
+    { icon: Calendar, text: "Gestión de Turnos" },
+    { icon: Users, text: "Base de Clientes" },
+    { icon: DollarSign, text: "Pagos Online" },
+    { icon: Bell, text: "Notificaciones" }
+  ];
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full"
-      >
-        <div className="card p-8 space-y-8">
-          {/* Logo y título */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
+      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        {/* Columna izquierda - Información y características */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="hidden lg:block space-y-8"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
               <Logo size="default" showText />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Bienvenido
-              </h1>
-              <p className="text-foreground-muted">
-                Iniciá sesión para continuar
+            <h2 className="text-4xl font-bold text-foreground">
+              Gestioná tu negocio de forma inteligente
+            </h2>
+            <p className="text-lg text-foreground-secondary">
+              Sistema ERP completo para gestionar turnos, stock, facturación y más. 
+              Con pagos online, notificaciones automáticas y bot de WhatsApp integrado.
+            </p>
+          </div>
+
+          {/* Características destacadas */}
+          <div className="grid grid-cols-2 gap-4">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+                  className="flex items-center gap-3 p-4 rounded-lg bg-background-secondary border border-border"
+                >
+                  <div className="w-10 h-10 bg-primary-light dark:bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{feature.text}</span>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Beneficios */}
+          <div className="space-y-3 pt-4">
+            <div className="flex items-center gap-2 text-foreground-secondary">
+              <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+              <span className="text-sm">Prueba gratuita de 14 días</span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground-secondary">
+              <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+              <span className="text-sm">Sin tarjeta de crédito</span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground-secondary">
+              <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+              <span className="text-sm">Cancela cuando quieras</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Columna derecha - Formulario de login */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full"
+        >
+          <div className="card p-8 space-y-8 max-w-md mx-auto">
+            {/* Logo y título */}
+            <div className="text-center space-y-4">
+              <div className="flex justify-center lg:hidden mb-4">
+                <Logo size="default" showText />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">
+                  Bienvenido
+                </h1>
+                <p className="text-foreground-muted">
+                  Iniciá sesión para continuar
+                </p>
+              </div>
+            </div>
+
+            {/* Error message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+              >
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Email
+                </label>
+                <div className="input-group">
+                  <span className="input-group__icon">
+                    <Mail />
+                  </span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input input--with-icon"
+                    placeholder="tu@email.com"
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Contraseña
+                </label>
+                <div className="input-group">
+                  <span className="input-group__icon">
+                    <Lock />
+                  </span>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input input--with-icon input--with-icon-right"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="input-group__action"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m13.42 13.42l-3.29-3.29M3 3l18 18" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  <>
+                    Ingresar
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-background text-foreground-muted">o</span>
+              </div>
+            </div>
+
+            {/* Botón para nuevos usuarios */}
+            <div className="space-y-4">
+              <button
+                onClick={() => navigate("/onboarding")}
+                className="w-full py-3 px-4 bg-background-secondary hover:bg-border border-2 border-primary text-primary font-semibold rounded-lg transition-all flex items-center justify-center gap-2 group"
+              >
+                <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                ¿No tenés tu ERP todavía? Empezá ahora
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center space-y-2 text-sm text-foreground-muted">
+              <p>
+                <button
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-primary hover:text-primary-hover font-medium"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </p>
+              <p>
+                ¿Necesitás ayuda?{" "}
+                <button
+                  onClick={() => navigate("/contact")}
+                  className="text-primary hover:text-primary-hover font-medium"
+                >
+                  Contactanos
+                </button>
               </p>
             </div>
           </div>
-
-          {/* Error message */}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-            >
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-            </motion.div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">
-                Email
-              </label>
-              <div className="input-group">
-                <span className="input-group__icon">
-                  <Mail />
-                </span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input input--with-icon"
-                  placeholder="tu@email.com"
-                  required
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">
-                Contraseña
-              </label>
-              <div className="input-group">
-                <span className="input-group__icon">
-                  <Lock />
-                </span>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input input--with-icon input--with-icon-right"
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="input-group__action"
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m13.42 13.42l-3.29-3.29M3 3l18 18" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Iniciando sesión...
-                </>
-              ) : (
-                <>
-                  Ingresar
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <div className="text-center space-y-2 text-sm text-foreground-muted">
-            <p>
-              <button
-                onClick={() => navigate("/forgot-password")}
-                className="text-primary hover:text-primary-hover font-medium"
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            </p>
-            <p>
-              ¿Necesitás ayuda?{" "}
-              <button
-                onClick={() => navigate("/contact")}
-                className="text-primary hover:text-primary-hover font-medium"
-              >
-                Contactanos
-              </button>
-            </p>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

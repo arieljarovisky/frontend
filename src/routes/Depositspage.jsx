@@ -341,7 +341,7 @@ export default function DepositsPage() {
         <StatCard
           icon={DollarSign}
           title="Dinero retenido"
-          value={`$${deposits.reduce((sum, d) => sum + Number(d.deposit_decimal || 0), 0).toFixed(0)}`}
+          value={`$${(deposits || []).reduce((sum, d) => sum + Number(d.deposit_decimal || 0), 0).toFixed(0)}`}
           subtitle="En espera"
           color="warning"
         />

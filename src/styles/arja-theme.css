@@ -945,6 +945,7 @@ select.input:focus {
   font-size: 0.95rem;
   text-decoration: none;
   transition: color 0.2s ease;
+  white-space: nowrap;
 }
 
 .landing-nav__link:hover {
