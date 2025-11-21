@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api/client.js";
-import { ShoppingCart, Store, PlugZap, Unplug } from "lucide-react";
+import { ShoppingCart, Store, PlugZap, Unplug, Clock4 } from "lucide-react";
 
 const PROVIDERS = [
   {
@@ -39,6 +39,22 @@ export default function IntegrationsPage() {
     []
   );
 
+  const { data: integrationLogs = [], refetch: refetchLogs } = useQuery(
+    async () => {
+      const res = await apiClient.get("/api/ecommerce/integrations/logs?limit=80");
+      return res.data?.data || [];
+    },
+    []
+  );
+
+  const logsByProvider = useMemo(() => {
+    return integrationLogs.reduce((acc, log) => {
+      if (!acc[log.provider]) acc[log.provider] = [];
+      acc[log.provider].push(log);
+      return acc;
+    }, {});
+  }, [integrationLogs]);
+
   const statusMap = useMemo(() => {
     return integrations.reduce((acc, current) => {
       acc[current.provider] = current;
@@ -68,6 +84,7 @@ export default function IntegrationsPage() {
       await apiClient.post(`/api/ecommerce/integrations/${provider}/disconnect`);
       toast.success("Integración desconectada.");
       refetch();
+      refetchLogs();
     } catch (err) {
       const message =
         err.response?.data?.error || err.message || "No pudimos desconectar la integración.";
@@ -105,6 +122,7 @@ export default function IntegrationsPage() {
           const expiresLabel = status?.expires_at
             ? new Date(status.expires_at).toLocaleString("es-AR")
             : null;
+          const logs = logsByProvider[provider.key] || [];
 
           return (
             <article key={provider.key} className="card p-5 space-y-4 border border-border/60">
@@ -185,6 +203,37 @@ export default function IntegrationsPage() {
                 >
                   Ver documentación
                 </a>
+                <button
+                  type="button"
+                  className="btn-ghost text-sm"
+                  onClick={refetchLogs}
+                >
+                  Refrescar log
+                </button>
+              </div>
+
+              <div className="border border-border rounded-lg p-3 bg-background-secondary/40">
+                <p className="text-xs font-semibold text-foreground-secondary flex items-center gap-2 mb-2">
+                  <Clock4 className="w-3 h-3" />
+                  Actividad reciente
+                </p>
+                {logs.length === 0 ? (
+                  <p className="text-xs text-foreground-muted">Sin eventos registrados todavía.</p>
+                ) : (
+                  <ul className="space-y-2 text-xs text-foreground">
+                    {logs.slice(0, 4).map((log, index) => (
+                      <li key={`${log.provider}-${index}`} className="flex flex-col">
+                        <span className="font-medium">
+                          {new Date(log.created_at).toLocaleString("es-AR")}
+                        </span>
+                        <span className="text-foreground-secondary">{log.message}</span>
+                        {log.level === "error" && (
+                          <span className="text-red-400">Detalle: {log.payload ? JSON.stringify(log.payload).slice(0, 120) : "—"}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </article>
           );
