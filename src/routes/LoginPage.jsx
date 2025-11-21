@@ -63,6 +63,19 @@ export default function LoginPage() {
     }
   }, [authLoaded, user, navigate, location.pathname]);
 
+  useEffect(() => {
+    if (user) return;
+
+    const handlePop = () => {
+      if (!user && window.location.pathname === "/login") {
+        navigate("/", { replace: true });
+      }
+    };
+
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [user, navigate]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");

@@ -174,7 +174,7 @@ export default function AppLayout() {
   const handleLogout = async () => {
     if (logout) {
       await logout();
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   };
 
