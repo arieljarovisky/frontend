@@ -37,6 +37,7 @@ import StockTransfersPage from "./routes/Stock/StockTransfersPage.jsx";
 import StockAlertsPage from "./routes/Stock/StockAlertsPage.jsx";
 import StockValuationPage from "./routes/Stock/StockValuationPage.jsx";
 import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
+import EcommerceSalesPage from "./routes/Invoicing/EcommerceSalesPage.jsx";
 import UsersPage from "./routes/Users/UsersPage.jsx";
 import SuperAdminLayout from "./routes/SuperAdmin/SuperAdminLayout.jsx";
 import SuperAdminTenantsPage from "./routes/SuperAdmin/SuperAdminTenantsPage.jsx";
@@ -64,6 +65,7 @@ import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
 import AccountingPage from "./routes/Accounting/AccountingPage.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
+import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -226,6 +228,16 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "ecommerce-sales",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <FeatureGate featureKey="invoicing">
+              <EcommerceSalesPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "cash-register",
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
@@ -254,6 +266,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <Commissions />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/integraciones",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <IntegrationsPage />
           </PrivateRoute>
         ),
       },

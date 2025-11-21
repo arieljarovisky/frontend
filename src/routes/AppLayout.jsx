@@ -28,7 +28,9 @@ import {
   GraduationCap,
   Shield,
   Receipt,
-  BookOpen
+  BookOpen,
+  ShoppingCart,
+  PlugZap,
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -216,6 +218,14 @@ export default function AppLayout() {
       featureKey: "invoicing",
     },
     {
+      to: `${base}/ecommerce-sales`,
+      label: "Ventas Online",
+      icon: ShoppingCart,
+      active: pathname.startsWith(`${base}/ecommerce-sales`),
+      module: "invoicing",
+      featureKey: "invoicing",
+    },
+    {
       to: `${base}/cash-register`,
       label: "Cierre de Caja",
       icon: Receipt,
@@ -227,6 +237,13 @@ export default function AppLayout() {
       label: "Registro Contable",
       icon: BookOpen,
       active: pathname.startsWith(`${base}/accounting`),
+      adminOnly: true,
+    },
+    {
+      to: `${base}/admin/integraciones`,
+      label: "Integraciones",
+      icon: PlugZap,
+      active: pathname.startsWith(`${base}/admin/integraciones`),
       adminOnly: true,
     },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
