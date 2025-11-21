@@ -195,21 +195,6 @@ export default function IntegrationsPage() {
                     Desconectar
                   </button>
                 )}
-                <a
-                  href={provider.docsUrl}
-                  className="btn-ghost text-sm"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Ver documentación
-                </a>
-                <button
-                  type="button"
-                  className="btn-ghost text-sm"
-                  onClick={refetchLogs}
-                >
-                  Refrescar log
-                </button>
               </div>
 
               <div className="border border-border rounded-lg p-3 bg-background-secondary/40">
