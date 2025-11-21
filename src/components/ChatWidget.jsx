@@ -127,6 +127,15 @@ export default function ChatWidget() {
       {/* Ventana del chat */}
       <AnimatePresence>
         {isOpen && (
+          <>
+            {/* Overlay para mobile, permite cerrar tocando fuera */}
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/40 sm:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+            />
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -204,8 +213,18 @@ export default function ChatWidget() {
             </div>
 
 
+            {/* Botón para cerrar en mobile */}
+            <div className="sm:hidden p-4 border-t border-border bg-background">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-full py-2 border border-border rounded-lg text-foreground hover:bg-background-secondary transition-colors"
+              >
+                Cerrar chat
+              </button>
+            </div>
+
             {/* Input del mensaje */}
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border sm:border-t">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -236,6 +255,7 @@ export default function ChatWidget() {
               </p>
             </div>
           </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
