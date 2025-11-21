@@ -109,7 +109,7 @@ export default function ChatWidget() {
       {/* Botón flotante del chat */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center sm:bottom-6 sm:right-6"
+        className="fixed top-4 right-4 z-50 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center sm:top-6 sm:right-6"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         aria-label="Abrir chat de soporte"
@@ -141,7 +141,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-0 right-0 left-0 top-0 sm:bottom-24 sm:right-6 sm:left-auto sm:top-auto z-50 w-full h-full sm:w-96 sm:h-[500px] sm:max-h-[calc(100vh-8rem)] sm:max-w-[calc(100vw-1.5rem)] bg-background border-0 sm:border border-border rounded-none sm:rounded-lg shadow-2xl flex flex-col"
+            className="fixed bottom-0 right-0 left-0 top-0 sm:top-20 sm:right-6 sm:left-auto sm:bottom-auto z-50 w-full h-full sm:w-96 sm:h-[500px] sm:max-h-[calc(100vh-4rem)] sm:max-w-[calc(100vw-1.5rem)] bg-background border-0 sm:border border-border rounded-none sm:rounded-lg shadow-2xl flex flex-col"
           >
             {/* Header del chat */}
             <div className="bg-primary text-white p-4 rounded-t-lg flex items-center justify-between">
