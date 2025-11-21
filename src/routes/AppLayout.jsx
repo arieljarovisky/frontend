@@ -27,7 +27,8 @@ import {
   FileText,
   GraduationCap,
   Shield,
-  Receipt
+  Receipt,
+  BookOpen
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -219,6 +220,13 @@ export default function AppLayout() {
       label: "Cierre de Caja",
       icon: Receipt,
       active: pathname.startsWith(`${base}/cash-register`),
+      adminOnly: true,
+    },
+    {
+      to: `${base}/accounting`,
+      label: "Registro Contable",
+      icon: BookOpen,
+      active: pathname.startsWith(`${base}/accounting`),
       adminOnly: true,
     },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },

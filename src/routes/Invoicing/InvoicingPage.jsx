@@ -19,11 +19,13 @@ import {
   Undo2,
   Users,
   User,
-  CreditCard
+  CreditCard,
+  Package
 } from "lucide-react";
 import { toast } from "sonner";
 import "./invoicingModal.css";
 import { InvoiceMembershipsModal } from "./InvoiceMembershipsModal.jsx";
+import { InvoiceProductsModal } from "./InvoiceProductsModal.jsx";
 
 const resolveInvoiceStatus = (invoice = {}) => {
   const explicit = String(invoice.status || "").toLowerCase();
@@ -135,6 +137,7 @@ export default function InvoicingPage() {
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClassesModal, setShowClassesModal] = useState(false);
   const [showMembershipsModal, setShowMembershipsModal] = useState(false);
+  const [showProductsModal, setShowProductsModal] = useState(false);
   const [creditNoteLoadingId, setCreditNoteLoadingId] = useState(null);
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
   const [creditNoteTarget, setCreditNoteTarget] = useState(null);
@@ -443,6 +446,13 @@ export default function InvoicingPage() {
           >
             <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Facturar Membresías</span>
+          </button>
+          <button
+            onClick={() => setShowProductsModal(true)}
+            className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Facturar Productos</span>
           </button>
           <button
             onClick={() => {
@@ -972,6 +982,19 @@ export default function InvoicingPage() {
           onSave={() => {
             refetch();
             setShowMembershipsModal(false);
+          }}
+        />
+      )}
+
+      {/* Modal de facturar productos */}
+      {showProductsModal && (
+        <InvoiceProductsModal
+          customers={customers}
+          constants={constants}
+          onClose={() => setShowProductsModal(false)}
+          onInvoice={() => {
+            refetch();
+            setShowProductsModal(false);
           }}
         />
       )}
@@ -1903,6 +1926,11 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
   const [groupByCustomer, setGroupByCustomer] = useState(true);
   const [additionalItems, setAdditionalItems] = useState({}); // { customerId: [{ descripcion, cantidad, precio_unitario }] }
   const [showAddItem, setShowAddItem] = useState({}); // { customerId: true/false }
+  const [products, setProducts] = useState([]); // Productos del stock para autocomplete
+  const [customerPurchaseHistory, setCustomerPurchaseHistory] = useState({}); // { customerId: [productos comprados] }
+  const [productSearch, setProductSearch] = useState({}); // { customerId: searchTerm }
+  const [showProductSuggestions, setShowProductSuggestions] = useState({}); // { customerId: true/false }
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState({}); // { customerId: index }
 
   const toggleAppointment = (appointmentId) => {
     setSelectedAppointments(prev => 
@@ -1957,13 +1985,163 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
     return appointment.price || appointment.service?.price || appointment.total || 0;
   };
 
-  const addAdditionalItem = (customerId) => {
-    const newItem = { descripcion: '', cantidad: 1, precio_unitario: 0, alicuota_iva: 21 };
+  // Cargar productos del stock
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await apiClient.get("/api/stock/products");
+        const productsData = response.data?.data || response.data || [];
+        setProducts(productsData.filter(p => p.active !== false));
+      } catch (error) {
+        console.error("Error cargando productos:", error);
+        // No mostrar error, simplemente no habrá autocomplete
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // Cargar historial de compras del cliente cuando se selecciona
+  useEffect(() => {
+    const loadCustomerHistory = async () => {
+      const customerIds = Object.keys(groupedAppointments);
+      for (const customerId of customerIds) {
+        if (customerId === 'all' || customerId === 'unknown') continue;
+        try {
+          const response = await apiClient.get(`/api/invoicing/invoices?customerId=${customerId}&limit=50`);
+          const invoices = response.data?.data || [];
+          
+          // Extraer productos únicos de las facturas
+          const purchasedProducts = new Map();
+          invoices.forEach(invoice => {
+            try {
+              const items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items || [];
+              items.forEach(item => {
+                if (item.descripcion && item.precio_unitario) {
+                  const key = item.descripcion.toLowerCase();
+                  if (!purchasedProducts.has(key)) {
+                    purchasedProducts.set(key, {
+                      descripcion: item.descripcion,
+                      precio_unitario: item.precio_unitario,
+                      codigo: item.codigo,
+                      times_purchased: 1
+                    });
+                  } else {
+                    purchasedProducts.get(key).times_purchased++;
+                  }
+                }
+              });
+            } catch (e) {
+              // Ignorar errores de parsing
+            }
+          });
+          
+          setCustomerPurchaseHistory(prev => ({
+            ...prev,
+            [customerId]: Array.from(purchasedProducts.values()).sort((a, b) => b.times_purchased - a.times_purchased)
+          }));
+        } catch (error) {
+          console.warn(`Error cargando historial del cliente ${customerId}:`, error);
+        }
+      }
+    };
+    
+    if (groupByCustomer && Object.keys(groupedAppointments).length > 0) {
+      loadCustomerHistory();
+    }
+  }, [groupByCustomer, appointments]);
+
+  // Filtrar productos para autocomplete (estilo Tango - búsqueda incremental)
+  const getFilteredProducts = (customerId) => {
+    const searchTerm = (productSearch[customerId] || '').toLowerCase().trim();
+    
+    // Si no hay término de búsqueda, mostrar historial del cliente primero
+    if (!searchTerm) {
+      const history = customerPurchaseHistory[customerId] || [];
+      const historyProducts = history.slice(0, 5).map(item => ({
+        ...item,
+        isFromHistory: true,
+        name: item.descripcion,
+        price: item.precio_unitario
+      }));
+      return historyProducts;
+    }
+
+    const results = [];
+    
+    // 1. Primero productos del historial del cliente que coincidan
+    const history = customerPurchaseHistory[customerId] || [];
+    history.forEach(item => {
+      if (item.descripcion?.toLowerCase().includes(searchTerm) || 
+          item.codigo?.toLowerCase().includes(searchTerm)) {
+        results.push({
+          ...item,
+          isFromHistory: true,
+          name: item.descripcion,
+          price: item.precio_unitario
+        });
+      }
+    });
+
+    // 2. Luego productos del stock que coincidan
+    products.forEach(p => {
+      const nameMatch = p.name?.toLowerCase().includes(searchTerm);
+      const codeMatch = p.code?.toLowerCase().includes(searchTerm);
+      
+      if (nameMatch || codeMatch) {
+        // Evitar duplicados si ya está en el historial
+        const alreadyInResults = results.some(r => 
+          r.name?.toLowerCase() === p.name?.toLowerCase()
+        );
+        
+        if (!alreadyInResults) {
+          results.push({
+            ...p,
+            isFromHistory: false,
+            name: p.name,
+            price: parseFloat(p.sale_price || p.price || 0)
+          });
+        }
+      }
+    });
+
+    // Ordenar: primero historial, luego por relevancia (coincidencia al inicio del nombre)
+    return results
+      .sort((a, b) => {
+        // Historial primero
+        if (a.isFromHistory && !b.isFromHistory) return -1;
+        if (!a.isFromHistory && b.isFromHistory) return 1;
+        
+        // Luego por coincidencia al inicio
+        const aStarts = a.name?.toLowerCase().startsWith(searchTerm);
+        const bStarts = b.name?.toLowerCase().startsWith(searchTerm);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        
+        return 0;
+      })
+      .slice(0, 8); // Máximo 8 sugerencias
+  };
+
+  const addAdditionalItem = (customerId, product = null) => {
+    const newItem = product 
+      ? { 
+          descripcion: product.name || product.descripcion || '', 
+          cantidad: 1, 
+          precio_unitario: parseFloat(product.price || product.precio_unitario || product.sale_price || 0),
+          alicuota_iva: 21,
+          product_id: product.id,
+          codigo: product.codigo || product.code || null
+        }
+      : { descripcion: '', cantidad: 1, precio_unitario: 0, alicuota_iva: 21 };
+    
     setAdditionalItems(prev => ({
       ...prev,
       [customerId]: [...(prev[customerId] || []), newItem]
     }));
     setShowAddItem(prev => ({ ...prev, [customerId]: false }));
+    setProductSearch(prev => ({ ...prev, [customerId]: '' }));
+    setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
   };
 
   const removeAdditionalItem = (customerId, index) => {
@@ -2311,57 +2489,136 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
                         {/* Formulario para agregar item */}
                         {showAddItem[customerId] && (
                           <div className="mb-3 p-3 bg-background rounded border" style={{ borderColor: 'rgb(var(--border))' }}>
-                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                              <input
-                                type="text"
-                                placeholder="Descripción (ej: Producto, Servicio extra)"
-                                className="input sm:col-span-5 text-sm"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    addAdditionalItem(customerId);
-                                  }
-                                }}
-                                onChange={(e) => {
-                                  const items = additionalItems[customerId] || [];
-                                  if (items.length === 0) {
-                                    addAdditionalItem(customerId);
-                                  }
-                                  updateAdditionalItem(customerId, items.length - 1, 'descripcion', e.target.value);
-                                }}
-                              />
-                              <input
-                                type="number"
-                                placeholder="Cantidad"
-                                min="1"
-                                step="1"
-                                className="input sm:col-span-2 text-sm"
-                                onChange={(e) => {
-                                  const items = additionalItems[customerId] || [];
-                                  if (items.length > 0) {
-                                    updateAdditionalItem(customerId, items.length - 1, 'cantidad', e.target.value);
-                                  }
-                                }}
-                              />
-                              <input
-                                type="number"
-                                placeholder="Precio"
-                                min="0"
-                                step="0.01"
-                                className="input sm:col-span-3 text-sm"
-                                onChange={(e) => {
-                                  const items = additionalItems[customerId] || [];
-                                  if (items.length > 0) {
-                                    updateAdditionalItem(customerId, items.length - 1, 'precio_unitario', e.target.value);
-                                  }
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => addAdditionalItem(customerId)}
-                                className="btn-primary sm:col-span-2 text-sm py-2"
-                              >
-                                Agregar
-                              </button>
+                            <div className="relative">
+                              {/* Campo de búsqueda con autocomplete */}
+                              <div className="relative mb-2">
+                                <input
+                                  type="text"
+                                  placeholder="Buscar producto o escribir descripción..."
+                                  className="input w-full text-sm"
+                                  value={productSearch[customerId] || ''}
+                                  onFocus={() => setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }))}
+                                  onBlur={() => {
+                                    // Delay para permitir click en sugerencias
+                                    setTimeout(() => {
+                                      setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+                                    }, 200);
+                                  }}
+                                  onChange={(e) => {
+                                    const searchTerm = e.target.value;
+                                    setProductSearch(prev => ({ ...prev, [customerId]: searchTerm }));
+                                    setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }));
+                                    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
+                                  }}
+                                  onKeyDown={(e) => {
+                                    const filtered = getFilteredProducts(customerId);
+                                    const currentIndex = selectedSuggestionIndex[customerId] ?? -1;
+                                    
+                                    if (e.key === 'ArrowDown') {
+                                      e.preventDefault();
+                                      const nextIndex = currentIndex < filtered.length - 1 ? currentIndex + 1 : currentIndex;
+                                      setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: nextIndex }));
+                                    } else if (e.key === 'ArrowUp') {
+                                      e.preventDefault();
+                                      const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1;
+                                      setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: prevIndex }));
+                                    } else if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      if (currentIndex >= 0 && filtered[currentIndex]) {
+                                        addAdditionalItem(customerId, filtered[currentIndex]);
+                                      } else if (filtered.length > 0) {
+                                        addAdditionalItem(customerId, filtered[0]);
+                                      } else if (productSearch[customerId]) {
+                                        // Agregar como descripción manual
+                                        const items = additionalItems[customerId] || [];
+                                        const newItem = { 
+                                          descripcion: productSearch[customerId], 
+                                          cantidad: 1, 
+                                          precio_unitario: 0, 
+                                          alicuota_iva: 21 
+                                        };
+                                        setAdditionalItems(prev => ({
+                                          ...prev,
+                                          [customerId]: [...items, newItem]
+                                        }));
+                                        setProductSearch(prev => ({ ...prev, [customerId]: '' }));
+                                        setShowAddItem(prev => ({ ...prev, [customerId]: false }));
+                                      }
+                                    } else if (e.key === 'Escape') {
+                                      setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+                                    }
+                                  }}
+                                />
+                                {/* Sugerencias de productos (estilo Tango) */}
+                                {showProductSuggestions[customerId] && getFilteredProducts(customerId).length > 0 && (
+                                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ borderColor: 'rgb(var(--border))' }}>
+                                    {getFilteredProducts(customerId).map((product, index) => {
+                                      const isSelected = selectedSuggestionIndex[customerId] === index;
+                                      const isFromHistory = product.isFromHistory;
+                                      return (
+                                        <button
+                                          key={product.id || product.descripcion || index}
+                                          type="button"
+                                          className={`w-full text-left px-3 py-2 transition-colors ${
+                                            isSelected 
+                                              ? 'bg-primary/20 border-l-2 border-primary' 
+                                              : 'hover:bg-background-secondary'
+                                          } ${isFromHistory ? 'bg-background-secondary/50' : ''}`}
+                                          onMouseEnter={() => setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: index }))}
+                                          onClick={() => {
+                                            addAdditionalItem(customerId, product);
+                                          }}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-foreground flex items-center gap-2">
+                                                {product.name || product.descripcion}
+                                                {isFromHistory && (
+                                                  <span className="text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded">
+                                                    Comprado antes
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="text-xs text-foreground-secondary mt-0.5">
+                                                {product.code && `Código: ${product.code} • `}
+                                                {!isFromHistory && product.stock !== undefined && `Stock: ${product.stock || 0} • `}
+                                                Precio: ${(product.price || product.precio_unitario || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                {isFromHistory && product.times_purchased > 1 && (
+                                                  <span> • Comprado {product.times_purchased} veces</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Botón para agregar manualmente si no hay producto seleccionado */}
+                              {productSearch[customerId] && getFilteredProducts(customerId).length === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const items = additionalItems[customerId] || [];
+                                    const newItem = { 
+                                      descripcion: productSearch[customerId], 
+                                      cantidad: 1, 
+                                      precio_unitario: 0, 
+                                      alicuota_iva: 21 
+                                    };
+                                    setAdditionalItems(prev => ({
+                                      ...prev,
+                                      [customerId]: [...items, newItem]
+                                    }));
+                                    setProductSearch(prev => ({ ...prev, [customerId]: '' }));
+                                    setShowAddItem(prev => ({ ...prev, [customerId]: false }));
+                                  }}
+                                  className="btn-primary w-full text-sm py-2 mb-2"
+                                >
+                                  Agregar como "{productSearch[customerId]}"
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

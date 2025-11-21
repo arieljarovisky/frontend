@@ -145,6 +145,13 @@ export default function ChatWidget() {
                   <p className="text-xs text-white/80">Generalmente respondemos en minutos</p>
                 </div>
               </div>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full"
+                aria-label="Cerrar chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Mensajes */}

@@ -61,6 +61,7 @@ import PlansPage from "./routes/PlansPage.jsx";
 import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
 import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
 import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
+import AccountingPage from "./routes/Accounting/AccountingPage.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
 
@@ -229,6 +230,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <CashRegisterPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "accounting",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <AccountingPage />
           </PrivateRoute>
         ),
       },
