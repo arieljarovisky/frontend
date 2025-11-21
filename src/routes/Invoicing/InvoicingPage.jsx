@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { 
@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import "./invoicingModal.css";
 import { InvoiceMembershipsModal } from "./InvoiceMembershipsModal.jsx";
 import { InvoiceProductsModal } from "./InvoiceProductsModal.jsx";
+import { createPortal } from "react-dom";
 
 const resolveInvoiceStatus = (invoice = {}) => {
   const explicit = String(invoice.status || "").toLowerCase();
@@ -1931,6 +1932,154 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
   const [productSearch, setProductSearch] = useState({}); // { customerId: searchTerm }
   const [showProductSuggestions, setShowProductSuggestions] = useState({}); // { customerId: true/false }
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState({}); // { customerId: index }
+  const [draftItems, setDraftItems] = useState({}); // { customerId: { descripcion, cantidad, precio_unitario, product_id, codigo } }
+
+  const defaultDraftItem = {
+    descripcion: "",
+    cantidad: 1,
+    precio_unitario: 0,
+    product_id: null,
+    codigo: null,
+  };
+
+  const ensureDraftItem = (customerId) => {
+    setDraftItems(prev => {
+      if (prev[customerId]) return prev;
+      return {
+        ...prev,
+        [customerId]: { ...defaultDraftItem },
+      };
+    });
+    setProductSearch(prev => prev[customerId] ? prev : ({ ...prev, [customerId]: "" }));
+    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
+  };
+
+  const updateDraftItem = (customerId, updates = {}) => {
+    setDraftItems(prev => ({
+      ...prev,
+      [customerId]: {
+        ...defaultDraftItem,
+        ...prev[customerId],
+        ...updates,
+      },
+    }));
+  };
+
+  const productInputRefs = useRef({});
+
+  const registerProductInput = (customerId) => (element) => {
+    if (element) {
+      productInputRefs.current[customerId] = element;
+    } else {
+      delete productInputRefs.current[customerId];
+    }
+  };
+
+  const handleSearchChange = (customerId, value) => {
+    ensureDraftItem(customerId);
+    setProductSearch(prev => ({ ...prev, [customerId]: value }));
+    setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }));
+    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
+    updateDraftItem(customerId, {
+      descripcion: value,
+      product_id: null,
+      codigo: null,
+    });
+  };
+
+  const getFilteredProductsBase = (customerId) => {
+    const searchTerm = (productSearch[customerId] || "").toLowerCase().trim();
+    if (!searchTerm) {
+      return products.slice(0, 8);
+    }
+    return products
+      .filter((product) => {
+        const name = product.name?.toLowerCase() || "";
+        const code = product.code?.toLowerCase() || "";
+        return name.includes(searchTerm) || code.includes(searchTerm);
+      })
+      .slice(0, 8);
+  };
+
+  const handleProductSelect = (customerId, product) => {
+    updateDraftItem(customerId, {
+      descripcion: product.name || "",
+      precio_unitario: parseFloat(product.sale_price || product.price || 0) || 0,
+      product_id: product.id || null,
+      codigo: product.code || null,
+    });
+    setProductSearch(prev => ({
+      ...prev,
+      [customerId]: product.code ? `${product.code} - ${product.name}` : (product.name || ""),
+    }));
+    setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
+  };
+
+  const renderProductSuggestions = (customerId) => {
+    if (!showProductSuggestions[customerId]) return null;
+    const options = getFilteredProductsBase(customerId);
+    if (!options.length) return null;
+    const inputEl = productInputRefs.current[customerId];
+    if (!inputEl) return null;
+    const rect = inputEl.getBoundingClientRect();
+    const style = {
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 2000,
+    };
+
+    return createPortal(
+      <div
+        style={style}
+        className="bg-background border border-border rounded-lg shadow-2xl max-h-64 overflow-y-auto"
+      >
+        {options.map((product, index) => {
+          const isSelected = selectedSuggestionIndex[customerId] === index;
+          return (
+            <button
+              key={product.id}
+              type="button"
+              className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                isSelected ? "bg-primary/20 border-l-2 border-primary" : "hover:bg-background-secondary"
+              }`}
+              onMouseEnter={() => setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: index }))}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleProductSelect(customerId, product);
+              }}
+            >
+              <div className="font-medium text-foreground truncate">{product.name}</div>
+              <div className="text-xs text-foreground-muted">
+                {product.code ? `Código: ${product.code} • ` : ""}
+                Precio: $
+                {parseFloat(product.sale_price || product.price || 0).toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+              </div>
+            </button>
+          );
+        })}
+      </div>,
+      document.body
+    );
+  };
+
+  const toggleAdditionalForm = (customerId) => {
+    setShowAddItem(prev => {
+      const next = !prev[customerId];
+      if (next) {
+        ensureDraftItem(customerId);
+        setProductSearch(search => ({ ...search, [customerId]: "" }));
+        setSelectedSuggestionIndex(indexes => ({ ...indexes, [customerId]: -1 }));
+      } else {
+        setShowProductSuggestions(show => ({ ...show, [customerId]: false }));
+      }
+      return { ...prev, [customerId]: next };
+    });
+  };
 
   const toggleAppointment = (appointmentId) => {
     setSelectedAppointments(prev => 
@@ -2051,19 +2200,17 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
   }, [groupByCustomer, appointments]);
 
   // Filtrar productos para autocomplete (estilo Tango - búsqueda incremental)
-  const getFilteredProducts = (customerId) => {
+  const getFilteredProductsHistory = (customerId) => {
     const searchTerm = (productSearch[customerId] || '').toLowerCase().trim();
     
     // Si no hay término de búsqueda, mostrar historial del cliente primero
     if (!searchTerm) {
-      const history = customerPurchaseHistory[customerId] || [];
-      const historyProducts = history.slice(0, 5).map(item => ({
+      return (customerPurchaseHistory[customerId] || []).slice(0, 5).map(item => ({
         ...item,
         isFromHistory: true,
         name: item.descripcion,
         price: item.precio_unitario
       }));
-      return historyProducts;
     }
 
     const results = [];
@@ -2123,23 +2270,39 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
   };
 
   const addAdditionalItem = (customerId, product = null) => {
-    const newItem = product 
-      ? { 
-          descripcion: product.name || product.descripcion || '', 
-          cantidad: 1, 
-          precio_unitario: parseFloat(product.price || product.precio_unitario || product.sale_price || 0),
-          alicuota_iva: 21,
-          product_id: product.id,
-          codigo: product.codigo || product.code || null
-        }
-      : { descripcion: '', cantidad: 1, precio_unitario: 0, alicuota_iva: 21 };
-    
+    let newItem;
+    if (product) {
+      newItem = {
+        descripcion: product.name || product.descripcion || "Producto",
+        cantidad: 1,
+        precio_unitario: parseFloat(product.price || product.precio_unitario || product.sale_price || 0),
+        alicuota_iva: 21,
+        product_id: product.id || null,
+        codigo: product.codigo || product.code || null,
+      };
+    } else {
+      const draft = draftItems[customerId];
+      if (!draft || !draft.descripcion?.trim()) {
+        toast.error("Ingresá una descripción o elegí un producto.");
+        return;
+      }
+      newItem = {
+        descripcion: draft.descripcion.trim(),
+        cantidad: Number(draft.cantidad) > 0 ? Number(draft.cantidad) : 1,
+        precio_unitario: Number(draft.precio_unitario) || 0,
+        alicuota_iva: 21,
+        product_id: draft.product_id || null,
+        codigo: draft.codigo || null,
+      };
+    }
+
     setAdditionalItems(prev => ({
       ...prev,
       [customerId]: [...(prev[customerId] || []), newItem]
     }));
+    setDraftItems(prev => ({ ...prev, [customerId]: { ...defaultDraftItem } }));
     setShowAddItem(prev => ({ ...prev, [customerId]: false }));
-    setProductSearch(prev => ({ ...prev, [customerId]: '' }));
+    setProductSearch(prev => ({ ...prev, [customerId]: "" }));
     setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
     setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
   };
@@ -2479,7 +2642,7 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
                           <h4 className="text-sm font-medium text-foreground">Consumos adicionales</h4>
                           <button
                             type="button"
-                            onClick={() => setShowAddItem(prev => ({ ...prev, [customerId]: !prev[customerId] }))}
+                            onClick={() => toggleAdditionalForm(customerId)}
                             className="text-xs px-2 py-1 rounded text-primary hover:bg-primary/10 transition-colors"
                           >
                             {showAddItem[customerId] ? 'Cancelar' : '+ Agregar'}
@@ -2488,137 +2651,92 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
 
                         {/* Formulario para agregar item */}
                         {showAddItem[customerId] && (
-                          <div className="mb-3 p-3 bg-background rounded border" style={{ borderColor: 'rgb(var(--border))' }}>
+                          <div className="mb-3 p-3 bg-background rounded border space-y-3" style={{ borderColor: 'rgb(var(--border))' }}>
                             <div className="relative">
-                              {/* Campo de búsqueda con autocomplete */}
-                              <div className="relative mb-2">
+                              <label className="block text-xs text-foreground-muted mb-1">Descripción / Producto</label>
+                              <input
+                                ref={registerProductInput(customerId)}
+                                type="text"
+                                placeholder="Buscar producto o escribir descripción..."
+                                className="input w-full text-sm"
+                                value={productSearch[customerId] ?? getDraftItem(customerId).descripcion}
+                                onChange={(e) => handleSearchChange(customerId, e.target.value)}
+                                onFocus={() => setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }))}
+                                onKeyDown={(e) => {
+                                  const options = getFilteredProducts(customerId);
+                                  const currentIndex = selectedSuggestionIndex[customerId] ?? -1;
+
+                                  if (e.key === "ArrowDown" && options.length > 0) {
+                                    e.preventDefault();
+                                    const nextIndex = (currentIndex + 1) % options.length;
+                                    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: nextIndex }));
+                                  } else if (e.key === "ArrowUp" && options.length > 0) {
+                                    e.preventDefault();
+                                    const prevIndex = currentIndex <= 0 ? options.length - 1 : currentIndex - 1;
+                                    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: prevIndex }));
+                                  } else if (e.key === "Enter" && options.length > 0) {
+                                    e.preventDefault();
+                                    const option = currentIndex >= 0 ? options[currentIndex] : options[0];
+                                    handleProductSelect(customerId, option);
+                                  } else if (e.key === "Escape") {
+                                    setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
+                                  }, 150);
+                                }}
+                              />
+                              {renderProductSuggestions(customerId)}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                              <div className="sm:col-span-2">
+                                <label className="block text-xs text-foreground-muted mb-1">Cantidad</label>
                                 <input
-                                  type="text"
-                                  placeholder="Buscar producto o escribir descripción..."
-                                  className="input w-full text-sm"
-                                  value={productSearch[customerId] || ''}
-                                  onFocus={() => setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }))}
-                                  onBlur={() => {
-                                    // Delay para permitir click en sugerencias
-                                    setTimeout(() => {
-                                      setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
-                                    }, 200);
-                                  }}
-                                  onChange={(e) => {
-                                    const searchTerm = e.target.value;
-                                    setProductSearch(prev => ({ ...prev, [customerId]: searchTerm }));
-                                    setShowProductSuggestions(prev => ({ ...prev, [customerId]: true }));
-                                    setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: -1 }));
-                                  }}
-                                  onKeyDown={(e) => {
-                                    const filtered = getFilteredProducts(customerId);
-                                    const currentIndex = selectedSuggestionIndex[customerId] ?? -1;
-                                    
-                                    if (e.key === 'ArrowDown') {
-                                      e.preventDefault();
-                                      const nextIndex = currentIndex < filtered.length - 1 ? currentIndex + 1 : currentIndex;
-                                      setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: nextIndex }));
-                                    } else if (e.key === 'ArrowUp') {
-                                      e.preventDefault();
-                                      const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1;
-                                      setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: prevIndex }));
-                                    } else if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      if (currentIndex >= 0 && filtered[currentIndex]) {
-                                        addAdditionalItem(customerId, filtered[currentIndex]);
-                                      } else if (filtered.length > 0) {
-                                        addAdditionalItem(customerId, filtered[0]);
-                                      } else if (productSearch[customerId]) {
-                                        // Agregar como descripción manual
-                                        const items = additionalItems[customerId] || [];
-                                        const newItem = { 
-                                          descripcion: productSearch[customerId], 
-                                          cantidad: 1, 
-                                          precio_unitario: 0, 
-                                          alicuota_iva: 21 
-                                        };
-                                        setAdditionalItems(prev => ({
-                                          ...prev,
-                                          [customerId]: [...items, newItem]
-                                        }));
-                                        setProductSearch(prev => ({ ...prev, [customerId]: '' }));
-                                        setShowAddItem(prev => ({ ...prev, [customerId]: false }));
-                                      }
-                                    } else if (e.key === 'Escape') {
-                                      setShowProductSuggestions(prev => ({ ...prev, [customerId]: false }));
-                                    }
-                                  }}
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={draftItems[customerId]?.cantidad ?? 1}
+                                  onChange={(e) =>
+                                    updateDraftItem(customerId, {
+                                      cantidad: Math.max(1, Number(e.target.value) || 1),
+                                    })
+                                  }
+                                  className="input text-sm"
                                 />
-                                {/* Sugerencias de productos (estilo Tango) */}
-                                {showProductSuggestions[customerId] && getFilteredProducts(customerId).length > 0 && (
-                                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ borderColor: 'rgb(var(--border))' }}>
-                                    {getFilteredProducts(customerId).map((product, index) => {
-                                      const isSelected = selectedSuggestionIndex[customerId] === index;
-                                      const isFromHistory = product.isFromHistory;
-                                      return (
-                                        <button
-                                          key={product.id || product.descripcion || index}
-                                          type="button"
-                                          className={`w-full text-left px-3 py-2 transition-colors ${
-                                            isSelected 
-                                              ? 'bg-primary/20 border-l-2 border-primary' 
-                                              : 'hover:bg-background-secondary'
-                                          } ${isFromHistory ? 'bg-background-secondary/50' : ''}`}
-                                          onMouseEnter={() => setSelectedSuggestionIndex(prev => ({ ...prev, [customerId]: index }))}
-                                          onClick={() => {
-                                            addAdditionalItem(customerId, product);
-                                          }}
-                                        >
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0">
-                                              <div className="font-medium text-foreground flex items-center gap-2">
-                                                {product.name || product.descripcion}
-                                                {isFromHistory && (
-                                                  <span className="text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded">
-                                                    Comprado antes
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <div className="text-xs text-foreground-secondary mt-0.5">
-                                                {product.code && `Código: ${product.code} • `}
-                                                {!isFromHistory && product.stock !== undefined && `Stock: ${product.stock || 0} • `}
-                                                Precio: ${(product.price || product.precio_unitario || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                                {isFromHistory && product.times_purchased > 1 && (
-                                                  <span> • Comprado {product.times_purchased} veces</span>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
                               </div>
-                              {/* Botón para agregar manualmente si no hay producto seleccionado */}
-                              {productSearch[customerId] && getFilteredProducts(customerId).length === 0 && (
+                              <div className="sm:col-span-2">
+                                <label className="block text-xs text-foreground-muted mb-1">Precio unitario</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={draftItems[customerId]?.precio_unitario ?? 0}
+                                  onChange={(e) =>
+                                    updateDraftItem(customerId, {
+                                      precio_unitario: Number(e.target.value) || 0,
+                                    })
+                                  }
+                                  className="input text-sm"
+                                />
+                              </div>
+                              <div className="sm:col-span-2 flex items-end">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const items = additionalItems[customerId] || [];
-                                    const newItem = { 
-                                      descripcion: productSearch[customerId], 
-                                      cantidad: 1, 
-                                      precio_unitario: 0, 
-                                      alicuota_iva: 21 
-                                    };
-                                    setAdditionalItems(prev => ({
-                                      ...prev,
-                                      [customerId]: [...items, newItem]
-                                    }));
-                                    setProductSearch(prev => ({ ...prev, [customerId]: '' }));
-                                    setShowAddItem(prev => ({ ...prev, [customerId]: false }));
-                                  }}
-                                  className="btn-primary w-full text-sm py-2 mb-2"
+                                  onClick={() => addAdditionalItem(customerId)}
+                                  className="btn-primary w-full text-sm py-2"
                                 >
-                                  Agregar como "{productSearch[customerId]}"
+                                  Agregar
                                 </button>
-                              )}
+                              </div>
+                            </div>
+                            <div className="text-xs text-foreground-muted mt-2 text-right">
+                              Subtotal: $
+                              {(
+                                (draftItems[customerId]?.cantidad || 1) * (draftItems[customerId]?.precio_unitario || 0)
+                              ).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                             </div>
                           </div>
                         )}
