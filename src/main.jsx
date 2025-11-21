@@ -231,7 +231,7 @@ const router = createBrowserRouter([
         path: "ecommerce-sales",
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
-            <FeatureGate featureKey="invoicing">
+            <FeatureGate featureKey="online_sales">
               <EcommerceSalesPage />
             </FeatureGate>
           </PrivateRoute>
@@ -273,7 +273,9 @@ const router = createBrowserRouter([
         path: "admin/integraciones",
         element: (
           <PrivateRoute roles={["admin"]}>
-            <IntegrationsPage />
+            <FeatureGate featureKey="ecommerce_integrations">
+              <IntegrationsPage />
+            </FeatureGate>
           </PrivateRoute>
         ),
       },

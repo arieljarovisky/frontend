@@ -157,14 +157,19 @@ export default function AppLayout() {
     return () => clearInterval(interval);
   }, [authLoaded, authContext]);
 
-  const featureFlags = useMemo(
-    () => ({
+  const featureFlags = useMemo(() => {
+    const merged = {
       ...(DEFAULT_FEATURES_BY_BUSINESS[businessTypeCode] || {}),
       ...tenantFeatures,
       ...features,
-    }),
-    [tenantFeatures, businessTypeCode, features]
-  );
+    };
+
+    return {
+      ...merged,
+      online_sales: merged.online_sales ?? false,
+      ecommerce_integrations: merged.ecommerce_integrations ?? false,
+    };
+  }, [tenantFeatures, businessTypeCode, features]);
 
   const handleLogout = async () => {
     if (logout) {
@@ -223,7 +228,7 @@ export default function AppLayout() {
       icon: ShoppingCart,
       active: pathname.startsWith(`${base}/ecommerce-sales`),
       module: "invoicing",
-      featureKey: "invoicing",
+      featureKey: "online_sales",
     },
     {
       to: `${base}/cash-register`,
@@ -245,6 +250,7 @@ export default function AppLayout() {
       icon: PlugZap,
       active: pathname.startsWith(`${base}/admin/integraciones`),
       adminOnly: true,
+      featureKey: "ecommerce_integrations",
     },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
     { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
