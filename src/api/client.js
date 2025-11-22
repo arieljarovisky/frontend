@@ -1,6 +1,7 @@
 // src/api/client.js
 import axios from "axios";
 import { recordRequest } from "../utils/performanceMonitor.js";
+import { logger } from "../utils/logger.js";
 
 const apiBase = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const apiClient = axios.create({
@@ -178,12 +179,12 @@ apiClient.interceptors.response.use(
       
       // Solo loggear peticiones lentas (>1 segundo) o en desarrollo
       if (duration > 1000 || import.meta.env.DEV) {
-        console.log(`[API] ${method} ${url} - ${duration}ms ${duration > 2000 ? '⚠️ LENTO' : ''}`);
+        logger.log(`[API] ${method} ${url} - ${duration}ms ${duration > 2000 ? '⚠️ LENTO' : ''}`);
       }
       
       // Mostrar advertencia si es muy lento (probable problema del servidor)
       if (duration > 5000) {
-        console.warn(`⚠️ Petición muy lenta (${duration}ms). Posible problema del servidor Railway.`);
+        logger.warn(`⚠️ Petición muy lenta (${duration}ms). Posible problema del servidor Railway.`);
       }
     }
     return response;
@@ -203,20 +204,20 @@ apiClient.interceptors.response.use(
     if (startTime) {
       const duration = Date.now() - startTime;
       const method = (originalRequest?.method || 'get').toUpperCase();
-      console.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status || 'NO RESPONSE'}`);
+      logger.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status || 'NO RESPONSE'}`);
       
       // Si no hay status, es probable que sea un error de red o CORS
       if (status === undefined) {
-        console.error(`[API ERROR] Detalles del error sin respuesta:`, {
+        logger.error(`[API ERROR] Detalles del error sin respuesta:`, {
           code: error.code,
           message: error.message,
           response: error.response ? 'existe' : 'no existe',
           request: originalRequest ? 'existe' : 'no existe',
         });
         if (error.code === 'ERR_NETWORK') {
-          console.error('🌐 ERROR DE RED: No se pudo conectar al servidor. Verificá tu conexión a internet.');
+          logger.error('🌐 ERROR DE RED: No se pudo conectar al servidor. Verificá tu conexión a internet.');
         } else {
-          console.error('❓ ERROR DESCONOCIDO: La petición no obtuvo respuesta del servidor.');
+          logger.error('❓ ERROR DESCONOCIDO: La petición no obtuvo respuesta del servidor.');
         }
       }
       
@@ -224,7 +225,7 @@ apiClient.interceptors.response.use(
       const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
       if (isTimeout) {
         recordRequest(url, duration, true, true);
-        console.error('⏱️ TIMEOUT: El servidor Railway no respondió a tiempo. Verifica el estado del servidor.');
+        logger.error('⏱️ TIMEOUT: El servidor Railway no respondió a tiempo. Verifica el estado del servidor.');
       } else {
         recordRequest(url, duration, true, false);
       }
@@ -381,7 +382,7 @@ const authApi = {
     try {
       await apiClient.post("/auth/logout");
     } catch (e) {
-      console.error("Error en logout:", e);
+      logger.error("Error en logout:", e);
     }
 
     // Limpiar todo
@@ -414,7 +415,7 @@ const authApi = {
 
       return false;
     } catch (error) {
-      console.error("Error en refresh:", error);
+      logger.error("Error en refresh:", error);
       return false;
     }
   },
@@ -437,7 +438,7 @@ const authApi = {
 
       return data;
     } catch (error) {
-      console.error("Error en me:", error);
+      logger.error("Error en me:", error);
       throw error;
     }
   },
@@ -480,7 +481,7 @@ apiClient.getConfig = async function () {
     const { data } = await apiClient.get("/api/config");
     return data;
   } catch (error) {
-    console.error("Error obteniendo config:", error);
+    logger.error("Error obteniendo config:", error);
     return {};
   }
 };
@@ -499,14 +500,14 @@ apiClient.listBranches = async function () {
     const { data } = await apiClient.get("/api/branches", {
       headers: { "X-Branch-Mode": "skip" },
     });
-    console.log("[apiClient.listBranches] Respuesta completa:", data);
+    logger.log("[apiClient.listBranches] Respuesta completa:", data);
     // El endpoint retorna { ok: true, data: [...] }
     const branches = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    console.log("[apiClient.listBranches] Sucursales extraídas:", branches);
+    logger.log("[apiClient.listBranches] Sucursales extraídas:", branches);
     return branches;
   } catch (error) {
-    console.error("[apiClient.listBranches] Error:", error);
-    console.error("[apiClient.listBranches] Error response:", error.response?.data);
+    logger.error("[apiClient.listBranches] Error:", error);
+    logger.error("[apiClient.listBranches] Error response:", error.response?.data);
     throw error;
   }
 };
@@ -759,7 +760,7 @@ apiClient.getUnreadCount = async function () {
     if (typeof data?.count === "number") return { count: data.count };
     return { count: 0 };
   } catch (error) {
-    console.error("Error obteniendo unread count:", error);
+    logger.error("Error obteniendo unread count:", error);
     return { count: 0 };
   }
 };
@@ -771,7 +772,7 @@ apiClient.getCommissions = async function (params = {}) {
     if (Array.isArray(data?.data)) return data.data;
     return data;
   } catch (error) {
-    console.error("❌ [getCommissions] Error:", error);
+    logger.error("❌ [getCommissions] Error:", error);
     return [];
   }
 };
@@ -782,7 +783,7 @@ apiClient.updateCommission = async function (instructorId, percentage) {
     });
     return data;
   } catch (error) {
-    console.error("❌ [updateCommission] Error:", error);
+    logger.error("❌ [updateCommission] Error:", error);
     throw error;
   }
 };
