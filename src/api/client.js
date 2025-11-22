@@ -189,6 +189,11 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Ignorar errores de cancelación (son esperados cuando se cancelan peticiones)
+    if (error.code === 'ERR_CANCELED' || error.message === 'canceled') {
+      return Promise.reject(error);
+    }
+
     const originalRequest = error.config;
     const status = error.response?.status;
     const url = originalRequest?.url || "";
@@ -198,7 +203,22 @@ apiClient.interceptors.response.use(
     if (startTime) {
       const duration = Date.now() - startTime;
       const method = (originalRequest?.method || 'get').toUpperCase();
-      console.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status}`);
+      console.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status || 'NO RESPONSE'}`);
+      
+      // Si no hay status, es probable que sea un error de red o CORS
+      if (status === undefined) {
+        console.error(`[API ERROR] Detalles del error sin respuesta:`, {
+          code: error.code,
+          message: error.message,
+          response: error.response ? 'existe' : 'no existe',
+          request: originalRequest ? 'existe' : 'no existe',
+        });
+        if (error.code === 'ERR_NETWORK') {
+          console.error('🌐 ERROR DE RED: No se pudo conectar al servidor. Verificá tu conexión a internet.');
+        } else {
+          console.error('❓ ERROR DESCONOCIDO: La petición no obtuvo respuesta del servidor.');
+        }
+      }
       
       // Si el error es timeout, es probable problema del servidor
       const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
@@ -475,11 +495,20 @@ apiClient.updateConfig = async function (config) {
 ========================= */
 
 apiClient.listBranches = async function () {
-  const { data } = await apiClient.get("/api/branches", {
-    headers: { "X-Branch-Mode": "skip" },
-  });
-  // El endpoint retorna { ok: true, data: [...] }
-  return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  try {
+    const { data } = await apiClient.get("/api/branches", {
+      headers: { "X-Branch-Mode": "skip" },
+    });
+    console.log("[apiClient.listBranches] Respuesta completa:", data);
+    // El endpoint retorna { ok: true, data: [...] }
+    const branches = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    console.log("[apiClient.listBranches] Sucursales extraídas:", branches);
+    return branches;
+  } catch (error) {
+    console.error("[apiClient.listBranches] Error:", error);
+    console.error("[apiClient.listBranches] Error response:", error.response?.data);
+    throw error;
+  }
 };
 
 apiClient.createBranch = async function (payload) {

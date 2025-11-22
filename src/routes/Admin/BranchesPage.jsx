@@ -383,11 +383,26 @@ export default function BranchesPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await apiClient.listBranches();
-      setBranches(Array.isArray(response?.data) ? response.data : []);
-      setLimitInfo(response?.limit || { multiBranch: false, maxBranches: 1 });
+      console.log("[BranchesPage] Cargando sucursales...");
+      // listBranches ya devuelve el array directamente, pero necesitamos también el limitInfo
+      // Por eso hacemos la llamada directa al endpoint
+      const { data } = await apiClient.get("/api/branches", {
+        headers: { "X-Branch-Mode": "skip" },
+      });
+      console.log("[BranchesPage] Respuesta completa:", data);
+      
+      // El endpoint retorna { ok: true, data: [...], limit: {...} }
+      const branchesList = Array.isArray(data?.data) ? data.data : [];
+      const limitInfo = data?.limit || { multiBranch: false, maxBranches: 1 };
+      
+      console.log("[BranchesPage] Sucursales extraídas:", branchesList);
+      console.log("[BranchesPage] Limit info:", limitInfo);
+      
+      setBranches(branchesList);
+      setLimitInfo(limitInfo);
     } catch (err) {
       console.error("[BranchesPage] list error:", err);
+      console.error("[BranchesPage] error response:", err?.response?.data);
       setError(err?.response?.data?.error || err?.message || "No se pudieron cargar las sucursales");
       setBranches([]);
     } finally {

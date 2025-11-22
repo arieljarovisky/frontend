@@ -430,15 +430,20 @@ export default function ConfigPage() {
         let branchesList = [];
         try {
           setBranchesLoading(true);
-          branchesList = await apiClient.listBranches();
-          branchesList = Array.isArray(branchesList) ? branchesList : [];
+          console.log("[ConfigPage] Cargando sucursales...");
+          const response = await apiClient.listBranches();
+          console.log("[ConfigPage] Respuesta de listBranches:", response);
+          branchesList = Array.isArray(response) ? response : [];
+          console.log("[ConfigPage] Sucursales procesadas:", branchesList);
           setBranches(branchesList);
           // Seleccionar la primera sucursal por defecto si hay sucursales y no hay una seleccionada
           if (branchesList.length > 0 && !selectedBranchId) {
+            console.log("[ConfigPage] Seleccionando primera sucursal:", branchesList[0].id);
             setSelectedBranchId(branchesList[0].id);
           }
         } catch (e) {
-          console.error("Error cargando sucursales:", e);
+          console.error("[ConfigPage] Error cargando sucursales:", e);
+          console.error("[ConfigPage] Error details:", e.response?.data || e.message);
           setBranches([]);
         } finally {
           setBranchesLoading(false);
