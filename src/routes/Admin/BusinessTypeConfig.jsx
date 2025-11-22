@@ -1,24 +1,28 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../../api";
 import { toast } from "sonner";
-import { Building2, CheckCircle, RotateCcw } from "lucide-react";
+import { Building2, CheckCircle, RotateCcw, ArrowUp, Sparkles } from "lucide-react";
 import { useQuery } from "../../shared/useQuery.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useApp } from "../../context/UseApp.js";
 
-const FEATURE_KEYS = ["appointments", "stock", "invoicing"];
+const FEATURE_KEYS = ["appointments", "classes", "stock", "invoicing"];
 const FEATURE_LABELS = {
-  appointments: "Turnos",
+  appointments: "Turnos individuales",
+  classes: "Turnos de clases",
   stock: "Gestión de stock",
   invoicing: "Facturación",
 };
 const FEATURE_DESCRIPTIONS = {
-  appointments: "Gestión de turnos y citas",
+  appointments: "Gestión de turnos y citas individuales",
+  classes: "Gestión de clases grupales y turnos de clases",
   stock: "Control de inventario y productos",
   invoicing: "Facturación electrónica con ARCA",
 };
 const BASE_FEATURE_DEFAULTS = {
   appointments: true,
+  classes: true,
   stock: false,
   invoicing: false,
 };
@@ -170,6 +174,8 @@ const ConfirmDialog = ({ open, onCancel, onConfirm, typeChanged, fromType, toTyp
 export default function BusinessTypeConfig() {
   const { user } = useAuth();
   const { refreshFeatures, tenantInfo } = useApp();
+  const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const canEditType = Boolean(user?.isSuperAdmin || user?.is_super_admin);
   const planLocks = useMemo(() => {
     const planFeatures = tenantInfo?.plan?.features || {};
@@ -186,6 +192,65 @@ export default function BusinessTypeConfig() {
     },
     []
   );
+
+  // Planes de suscripción de la plataforma (definidos en el backend)
+  const PLATFORM_PLANS = [
+    {
+      code: "starter",
+      label: "Plan Starter",
+      description: "Ideal para comenzar con hasta 2 profesionales",
+      features: {
+        appointments: true,
+        classes: true,
+        stock: false,
+        invoicing: false,
+        multiBranch: false,
+        maxBranches: 1,
+      },
+    },
+    {
+      code: "growth",
+      label: "Plan Growth",
+      description: "Negocios en expansión, hasta 8 profesionales",
+      features: {
+        appointments: true,
+        classes: true,
+        stock: true,
+        invoicing: false,
+        multiBranch: false,
+        maxBranches: 1,
+      },
+    },
+    {
+      code: "scale",
+      label: "Plan Escala",
+      description: "Operaciones con varias sucursales (hasta 2 sedes)",
+      features: {
+        appointments: true,
+        classes: true,
+        stock: true,
+        invoicing: true,
+        multiBranch: true,
+        maxBranches: 2,
+      },
+    },
+    {
+      code: "pro",
+      label: "Plan Pro a Medida",
+      description: "Empresas grandes con múltiples sucursales ilimitadas",
+      features: {
+        appointments: true,
+        classes: true,
+        stock: true,
+        invoicing: true,
+        multiBranch: true,
+        maxBranches: null,
+      },
+    },
+  ];
+
+  const availablePlans = PLATFORM_PLANS;
+  const loadingPlans = false;
 
   const { data: currentBusinessType, loading: loadingCurrent, refetch } = useQuery(
     async () => {
@@ -353,11 +418,44 @@ export default function BusinessTypeConfig() {
     [planFeatureList]
   );
 
-  const handleRequestUpgrade = () => {
+  const handleRequestUpgrade = (planCode) => {
     toast.info("Contactá al dueño del sistema o escribinos a ventas@arjaerp.com para cambiar tu plan.");
   };
 
-  if (loadingTypes || loadingCurrent) {
+  // Determinar plan actual y planes de upgrade
+  const currentPlanCode = tenantInfo?.plan?.code || "starter";
+  const currentPlan = useMemo(() => {
+    return availablePlans.find((p) => p.code === currentPlanCode) || {
+      code: currentPlanCode,
+      label: tenantInfo?.plan?.label || "Plan Starter",
+      features: tenantInfo?.plan?.features || {},
+    };
+  }, [availablePlans, currentPlanCode, tenantInfo?.plan]);
+
+  // Orden de planes para determinar upgrades
+  const PLAN_ORDER = ["starter", "growth", "scale", "pro"];
+  const currentPlanIndex = PLAN_ORDER.indexOf(currentPlanCode);
+  
+  const upgradePlans = useMemo(() => {
+    if (currentPlanIndex === -1 || currentPlanIndex === PLAN_ORDER.length - 1) {
+      return []; // No hay upgrades disponibles
+    }
+    return availablePlans.filter((plan) => {
+      const planIndex = PLAN_ORDER.indexOf(plan.code);
+      return planIndex > currentPlanIndex && planIndex !== -1;
+    });
+  }, [availablePlans, currentPlanIndex]);
+
+  // Calcular funcionalidades adicionales que se agregarían con cada upgrade
+  const getAdditionalFeatures = useCallback((upgradePlan) => {
+    const currentFeatures = currentPlan.features || {};
+    const upgradeFeatures = upgradePlan.features || {};
+    return FEATURE_KEYS.filter((key) => {
+      return !currentFeatures[key] && upgradeFeatures[key];
+    });
+  }, [currentPlan]);
+
+  if (loadingTypes || loadingCurrent || loadingPlans) {
     return (
       <div className="card card--space-xl card--no-hover text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
@@ -369,261 +467,157 @@ export default function BusinessTypeConfig() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Tipo de Negocio</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">Funcionalidades de tu Plan</h3>
         <p className="text-sm text-foreground-secondary">
-          Seleccioná el tipo de negocio que mejor describe tu actividad. Antes de guardar, revisá
-          el resumen para entender qué módulos y servicios se van a ajustar.
+          Acá podés ver las funcionalidades disponibles en tu plan actual y las opciones de upgrade si necesitás más características.
         </p>
-        <p className="text-xs text-foreground-secondary mt-2">
-          Plan actual:{" "}
-          <span className="font-medium text-foreground">
-            {tenantInfo?.plan?.label || "Plan Starter"}
-          </span>
-        </p>
-        {!canEditType ? (
-          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-xs sm:text-sm text-primary">
-            Para cambiar el tipo de negocio o sumar funcionalidades necesitás contactar al dueño del sistema.
-            Los módulos disponibles dependen del plan contratado.
-          </div>
-        ) : null}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {(businessTypes || []).map((type) => {
-          const isSelected = selectedType === type.id;
-          const features = normalizeFeatures(type.features, BASE_FEATURE_DEFAULTS);
-
-          return (
-            <button
-              key={type.id}
-              onClick={() => handleSelectType(type)}
-              className={`card p-4 sm:p-6 text-left transition-all ${
-                isSelected
-                  ? "ring-2 ring-primary bg-primary-light dark:bg-primary/20"
-                  : "hover:bg-background-secondary"
-              } ${!canEditType && type.id !== (currentBusinessType?.business_type_id ?? null) ? "opacity-60 cursor-not-allowed" : ""}`}
-            >
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-semibold text-foreground text-sm sm:text-base truncate">
-                      {type.name}
-                    </h4>
-                    <p className="text-xs text-foreground-muted">{type.code}</p>
-                  </div>
-                </div>
-                {isSelected ? (
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 ml-2" />
-                ) : null}
-              </div>
-
-              {type.description ? (
-                <p className="text-xs sm:text-sm text-foreground-secondary mb-2 sm:mb-3 line-clamp-2">
-                  {type.description}
-                </p>
-              ) : null}
-
-              <div className="text-xs text-foreground-muted space-y-0.5 sm:space-y-1">
-                {features.stock ? <div>✓ Gestión de stock</div> : null}
-                {features.appointments ? <div>✓ Turnos</div> : null}
-                {features.invoicing ? <div>✓ Facturación</div> : null}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-       {selectedTypeData ? (
-        <div className="card card--space-md space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+      {/* Plan Actual */}
+      <div className="card p-4 sm:p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            </div>
             <div>
-              <p className="text-sm text-foreground-secondary">
-                Tipo actual:{" "}
-                <span className="font-medium text-foreground">
-                  {currentTypeData?.name || "Sin configuración"}
-                </span>
-              </p>
-              <p className="text-sm text-foreground-secondary">
-                Selección pendiente:{" "}
-                <span className="font-medium text-foreground">{selectedTypeData.name}</span>
-              </p>
+              <h4 className="font-semibold text-foreground text-base sm:text-lg">
+                {currentPlan.label || "Plan Actual"}
+              </h4>
+              <p className="text-xs text-foreground-muted mt-0.5">Tu plan actual</p>
             </div>
-            {typeChanged ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-primary/10 text-primary border border-primary/30">
-                Cambio pendiente
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-foreground/5 text-foreground-secondary border border-border">
-                Mismo tipo guardado
-              </span>
-            )}
           </div>
+        </div>
 
-          <div className="rounded-lg border border-border bg-background-secondary/50 divide-y divide-border/60">
-            <div className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-              Resultado esperado al guardar
-            </div>
-            <ul className="px-4 py-2 text-sm space-y-2">
-              {featureChanges.map(({ key, next, changed, locked }) => (
-                <li key={key} className="flex items-center justify-between">
-                  <span className="text-foreground">{FEATURE_LABELS[key]}</span>
-                  {locked ? (
-                    <span className="text-xs font-semibold uppercase tracking-wide text-red-300">
-                      No disponible en tu plan
-                    </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          {FEATURE_KEYS.map((key) => {
+            const isEnabled = Boolean(currentPlan.features?.[key]);
+            return (
+              <div
+                key={key}
+                className={`rounded-lg border px-4 py-3 text-left ${
+                  isEnabled
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : "border-border bg-background-secondary opacity-60"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {isEnabled ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                   ) : (
-                    <span
-                      className={`text-xs font-semibold uppercase tracking-wide ${
-                        changed
-                          ? next
-                            ? "text-emerald-400"
-                            : "text-rose-400"
-                          : "text-foreground-muted"
-                      }`}
-                    >
-                      {changed
-                        ? next
-                          ? "Se habilitará"
-                          : "Se desactivará"
-                        : "Se mantiene"}
-                    </span>
+                    <div className="w-4 h-4 rounded-full border-2 border-foreground-muted flex-shrink-0" />
                   )}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {typeChanged ? (
-            <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-xs sm:text-sm text-amber-200">
-              Al guardar se reemplazarán los servicios actuales por los predeterminados de{" "}
-              <span className="font-semibold">{selectedTypeData.name}</span>. Si necesitás conservar
-              servicios personalizados, exportalos o duplicalos antes de confirmar.
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {selectedTypeData ? (
-        <div className="card card--space-md space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h4 className="font-semibold text-foreground text-sm sm:text-base">
-              {canEditType ? "Funcionalidades habilitadas" : "Funcionalidades incluidas en tu plan"}
-            </h4>
-            {canEditType ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-foreground-muted">
-                  Valores por defecto de {selectedTypeData.name}:{" "}
-                  {FEATURE_KEYS.filter((key) => selectedTypeDefaults[key])
-                    .map((key) => FEATURE_LABELS[key])
-                    .join(", ") || "ninguno"}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleRestoreDefaults}
-                  disabled={customizedKeys.length === 0}
-                  className="inline-flex items-center gap-2 text-xs font-medium text-foreground-secondary hover:text-foreground px-3 py-1 rounded-lg border border-border hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Restaurar valores del tipo
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          {canEditType ? (
-            <div className="space-y-2 sm:space-y-3">
-              {FEATURE_KEYS.map((key) => (
-                <FeatureToggle
-                  key={key}
-                  featureKey={key}
-                  checked={featuresConfig[key]}
-                  onChange={handleToggleFeature}
-                  description={FEATURE_DESCRIPTIONS[key]}
-                  customized={customizedKeys.includes(key)}
-                  locked={planLocks[key]}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {planFeatureList.map((feature) => (
-                <div
-                  key={feature.key}
-                  className={`rounded-lg border px-4 py-3 text-left ${
-                    feature.enabled
-                      ? "border-emerald-500/40 bg-emerald-500/10"
-                      : feature.locked
-                      ? "border-red-500/40 bg-red-500/10"
-                      : "border-border bg-background-secondary"
-                  }`}
-                >
-                  <div className="font-semibold text-sm text-foreground">{feature.label}</div>
-                  <div className="text-xs text-foreground-secondary mt-1">
-                    {feature.enabled
-                      ? "Disponible en tu plan"
-                      : feature.locked
-                      ? "Requiere un plan superior"
-                      : "Deshabilitado actualmente"}
-                  </div>
+                  <div className="font-semibold text-sm text-foreground">{FEATURE_LABELS[key]}</div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="text-xs text-foreground-secondary mt-1">
+                  {isEnabled ? "Disponible" : "No incluido"}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ) : null}
+      </div>
 
-      {canEditType ? (
-        <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3">
-            {hasUnsavedChanges ? (
-              <span className="text-xs text-foreground-secondary">
-                Revisá el resumen antes de guardar. Cambios pendientes:{" "}
-                <strong>{pendingChangeLabels.join(" y ")}</strong>.
-              </span>
-            ) : (
-              <span className="text-xs text-foreground-muted">No hay cambios pendientes.</span>
-            )}
-            <button
-              onClick={handleOpenConfirm}
-              disabled={!hasUnsavedChanges || saving}
-              className="btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? "Guardando..." : "Guardar Cambios"}
-            </button>
+      {/* Planes de Upgrade */}
+      {upgradePlans.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h4 className="text-base font-semibold text-foreground">Planes Disponibles para Upgrade</h4>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {upgradePlans.map((plan) => {
+              const additionalFeatures = getAdditionalFeatures(plan);
+              return (
+                <div
+                  key={plan.code}
+                  className="card p-4 sm:p-6 text-left border-2 border-primary/30 hover:border-primary/50 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-foreground text-sm sm:text-base truncate">
+                          {plan.label || plan.name || plan.code}
+                        </h4>
+                        {plan.description && (
+                          <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">
+                            {plan.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-          <ConfirmDialog
-            open={showConfirm}
-            onCancel={() => setShowConfirm(false)}
-            onConfirm={performSave}
-            typeChanged={typeChanged}
-            fromType={currentTypeData?.name}
-            toType={selectedTypeData?.name}
-            featureSummary={featureChanges}
-          />
-        </>
-      ) : (
-        <div className="card card--space-md space-y-3 text-center">
-          <h4 className="text-sm font-semibold text-foreground">¿Necesitás más funcionalidades?</h4>
-          <p className="text-sm text-foreground-secondary">
-            Para habilitar módulos adicionales como stock o facturación tenés que cambiar de plan. Nuestro equipo comercial puede ayudarte a encontrar la mejor opción.
-          </p>
-          <div className="flex justify-center">
-            <button type="button" onClick={handleRequestUpgrade} className="btn-primary">
-              Solicitar cambio de plan
-            </button>
+                  {additionalFeatures.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs font-medium text-foreground-secondary mb-2">
+                        Funcionalidades adicionales:
+                      </p>
+                      <div className="text-xs text-foreground-muted space-y-1">
+                        {additionalFeatures.map((key) => (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <ArrowUp className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                            <span>{FEATURE_LABELS[key]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <div className="text-xs text-foreground-muted space-y-0.5">
+                      {FEATURE_KEYS.map((key) => {
+                        const isEnabled = Boolean(plan.features?.[key]);
+                        return isEnabled ? (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                            <span>{FEATURE_LABELS[key]}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  {plan.code === "pro" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate(`/${tenantSlug}/feature-request?plan=${plan.code}`);
+                      }}
+                      className="mt-4 w-full btn-primary text-sm"
+                    >
+                      Contactar a Ventas
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate(`/${tenantSlug}/feature-request?plan=${plan.code}`);
+                      }}
+                      className="mt-4 w-full btn-primary text-sm"
+                    >
+                      Solicitar Upgrade
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          {hasLockedFeatures ? (
-            <p className="text-[11px] text-foreground-muted">
-              Las funcionalidades marcadas como{" "}
-              <span className="text-red-300">“Requiere un plan superior”</span> no están incluidas en tu suscripción actual.
-            </p>
-          ) : null}
         </div>
       )}
+
+      {upgradePlans.length === 0 && (
+        <div className="card p-4 sm:p-6 text-center">
+          <p className="text-sm text-foreground-secondary">
+            Ya tenés el plan más completo disponible. Si necesitás funcionalidades personalizadas, contactá a nuestro equipo.
+          </p>
+        </div>
+      )}
+
+
     </div>
   );
 }

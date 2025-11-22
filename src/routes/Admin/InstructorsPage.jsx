@@ -20,7 +20,7 @@ const DEFAULT_INSTRUCTOR_FORM = {
   colorHex: "#2563EB",
   isActive: true,
   serviceIds: [],
-  branchId: null,
+  branchIds: [],
 };
 
 const DEFAULT_SERVICE_FORM = {
@@ -35,27 +35,73 @@ function sortByName(list) {
   return [...list].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function MultiSelect({ label, value = [], options = [], onChange, helper }) {
+function MultiSelect({ label, value = [], options = [], onChange, helper, disabled = false, loading = false, emptyMessage = null }) {
+  const toggleItem = (itemId) => {
+    if (disabled) return;
+    const isSelected = value.includes(itemId);
+    if (isSelected) {
+      onChange(value.filter((id) => id !== itemId));
+    } else {
+      onChange([...value, itemId]);
+    }
+  };
+
+  const itemLabel = label.toLowerCase().includes("sucursal") ? "sucursal" : "servicio";
+  const itemLabelPlural = label.toLowerCase().includes("sucursal") ? "sucursales" : "servicios";
+
   return (
-    <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
-      <span className="font-medium text-foreground">{label}</span>
-      <select
-        multiple
-        className="input min-h-[140px]"
-        value={value.map(String)}
-        onChange={(event) => {
-          const selected = Array.from(event.target.selectedOptions).map((opt) => Number(opt.value));
-          onChange(selected);
-        }}
-      >
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-      {helper ? <span className="text-xs text-foreground-muted">{helper}</span> : null}
-    </label>
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium text-foreground">{label}</label>
+      {helper && <span className="text-xs text-foreground-muted">{helper}</span>}
+      {loading ? (
+        <div className="col-span-full text-sm text-foreground-muted py-4 text-center">
+          Cargando...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+          {options.length === 0 ? (
+            <div className="col-span-full text-sm text-foreground-muted py-4 text-center">
+              {emptyMessage || `No hay ${itemLabelPlural} disponibles`}
+            </div>
+          ) : (
+            options.map((option) => {
+              const isSelected = value.includes(option.id);
+              return (
+                <label
+                  key={option.id}
+                  className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                    disabled
+                      ? "opacity-50 cursor-not-allowed"
+                      : isSelected
+                      ? "border-primary bg-primary/10 shadow-md"
+                      : "border-border bg-background-secondary hover:border-primary/50 hover:bg-background-secondary/80"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleItem(option.id)}
+                    disabled={disabled}
+                    className="w-5 h-5 rounded border-border text-primary focus:ring-primary focus:ring-2 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className={`text-sm font-medium flex-1 ${isSelected ? "text-foreground" : "text-foreground-secondary"}`}>
+                    {option.name}
+                  </span>
+                  {isSelected && (
+                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                  )}
+                </label>
+              );
+            })
+          )}
+        </div>
+      )}
+      {value.length > 0 && (
+        <div className="mt-2 text-xs text-foreground-muted">
+          {value.length} {value.length === 1 ? `${itemLabel} seleccionado` : `${itemLabelPlural} seleccionadas`}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -153,10 +199,10 @@ export default function InstructorsPage() {
   }, [loadBranches, loadData]);
 
   useEffect(() => {
-    if (!editingInstructorId && defaultBranchId && instructorForm.branchId == null) {
-      setInstructorForm((prev) => ({ ...prev, branchId: defaultBranchId }));
+    if (!editingInstructorId && defaultBranchId && instructorForm.branchIds.length === 0) {
+      setInstructorForm((prev) => ({ ...prev, branchIds: [defaultBranchId] }));
     }
-  }, [defaultBranchId, editingInstructorId, instructorForm.branchId]);
+  }, [defaultBranchId, editingInstructorId, instructorForm.branchIds.length]);
 
   const availableServices = useMemo(() => sortByName(services), [services]);
   const availableInstructors = useMemo(() => sortByName(instructors), [instructors]);
@@ -165,7 +211,7 @@ export default function InstructorsPage() {
     setEditingInstructorId(null);
     setInstructorForm({
       ...DEFAULT_INSTRUCTOR_FORM,
-      branchId: defaultBranchId,
+      branchIds: defaultBranchId ? [defaultBranchId] : [],
     });
   };
 
@@ -188,7 +234,7 @@ export default function InstructorsPage() {
         colorHex: instructorForm.colorHex || null,
         isActive: instructorForm.isActive,
         serviceIds: instructorForm.serviceIds,
-        branchId: instructorForm.branchId || null,
+        branchIds: instructorForm.branchIds || [],
       };
 
       if (editingInstructorId) {
@@ -372,15 +418,6 @@ export default function InstructorsPage() {
                   <tbody>
                     {instructors.map((instructor) => (
                       <tr key={instructor.id} className="border-b border-border/50 last:border-b-0">
-                        <td className="py-3 px-4 text-sm text-foreground-secondary">
-                          {instructor.branchName ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/60 bg-background text-xs">
-                              {instructor.branchName}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-foreground-muted italic">Sin asignar</span>
-                          )}
-                        </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <span
@@ -412,6 +449,26 @@ export default function InstructorsPage() {
                             </span>
                           )}
                         </td>
+                        <td className="py-3 px-4 text-sm text-foreground-secondary">
+                          {instructor.branchNames && instructor.branchNames.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {instructor.branchNames.map((branchName, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/60 bg-background text-xs"
+                                >
+                                  {branchName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : instructor.branchName ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/60 bg-background text-xs">
+                              {instructor.branchName}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-foreground-muted italic">Sin asignar</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -439,7 +496,7 @@ export default function InstructorsPage() {
                                   colorHex: instructor.colorHex || "#2563EB",
                                   isActive: instructor.isActive,
                                   serviceIds: instructor.serviceIds || [],
-                              branchId: instructor.branchId || defaultBranchId || null,
+                                  branchIds: instructor.branchIds || (instructor.branchId ? [instructor.branchId] : (defaultBranchId ? [defaultBranchId] : [])),
                                 });
                               }}
                               aria-label="Editar instructor"
@@ -497,38 +554,18 @@ export default function InstructorsPage() {
                 />
               </label>
 
-              <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
-                <span className="font-medium text-foreground">Sucursal</span>
-                <select
-                  className="input"
-                  value={instructorForm.branchId ?? ""}
-                  onChange={(event) =>
-                    setInstructorForm((prev) => ({
-                      ...prev,
-                      branchId: event.target.value ? Number(event.target.value) : null,
-                    }))
-                  }
-                  disabled={branchesLoading || branches.length === 0}
-                >
-                  {branches.length === 0 ? (
-                    <option value="">
-                      {branchesLoading ? "Cargando..." : "No hay sucursales activas"}
-                    </option>
-                  ) : (
-                    <>
-                      <option value="">Seleccionar sucursal</option>
-                      {branches.map((branch) => (
-                        <option key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-                <span className="text-xs text-foreground-muted">
-                  Definí en qué sede trabaja este empleado.
-                </span>
-              </label>
+              <MultiSelect
+                label="Sucursales"
+                value={instructorForm.branchIds}
+                options={branches}
+                onChange={(branchIds) =>
+                  setInstructorForm((prev) => ({ ...prev, branchIds }))
+                }
+                helper="Definí en qué sedes trabaja este empleado."
+                disabled={branchesLoading || branches.length === 0}
+                loading={branchesLoading}
+                emptyMessage={branches.length === 0 ? "No hay sucursales activas" : null}
+              />
 
               <MultiSelect
                 label="Servicios habilitados"

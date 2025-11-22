@@ -20,23 +20,22 @@ const csv = (rows) =>
   ).map(v => /[",\n]/.test(v) ? `"${v}"` : v).join(","))].join("\n");
 
 const KPI = ({ icon: Icon, label, value, sublabel }) => (
-  <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] transition hover:-translate-y-0.5 hover:shadow-xl">
-    <div className="absolute inset-0 bg-[radial-gradient(25rem_15rem_at_120%_-20%,rgba(99,102,241,.15),transparent_60%)] pointer-events-none" />
-    <div className="flex items-center gap-3">
-      <div className="rounded-xl p-2.5 bg-white/10 backdrop-blur-sm">
-        <Icon className="size-5" />
+  <div className="card card--space-lg group hover:shadow-lg transition-all">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+        <Icon className="w-5 h-5 text-primary" />
       </div>
-      <div className="text-sm text-zinc-400">{label}</div>
+      <div className="text-sm font-medium text-foreground-secondary">{label}</div>
     </div>
-    <div className="mt-2 text-2xl font-semibold tracking-tight">{value}</div>
-    {sublabel ? <div className="mt-1 text-xs text-zinc-500">{sublabel}</div> : null}
+    <div className="text-2xl font-semibold text-foreground tracking-tight">{value}</div>
+    {sublabel ? <div className="mt-1 text-xs text-foreground-muted">{sublabel}</div> : null}
   </div>
 );
 
 const Btn = ({ children, className = "", ...props }) => (
   <button
     {...props}
-    className={`inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm hover:bg-white/10 active:scale-[.99] transition ${className}`}
+    className={`inline-flex items-center gap-2 rounded-xl border border-border bg-background-secondary px-3.5 py-2 text-sm font-medium text-foreground hover:bg-border active:scale-[.99] transition ${className}`}
   >
     {children}
   </button>
@@ -44,30 +43,78 @@ const Btn = ({ children, className = "", ...props }) => (
 
 /* ===== Editor horarios / francos ===== */
 function WorkingHoursEditor({ instructorId }) {
-  const [rows, setRows] = useState([]);
+  // Cambiar estructura: cada día tiene un array de horarios (uno por sucursal)
+  const [rows, setRows] = useState(() => 
+    Array.from({ length: 7 }, (_, d) => ({
+      weekday: d,
+      schedules: [] // Array de { branch_id, start_time, end_time }
+    }))
+  );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [blocks, setBlocks] = useState([]); // bloqueos de tiempo
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
   const week = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  const loadBranches = useCallback(async () => {
+    try {
+      setBranchesLoading(true);
+      const branchesList = await apiClient.listBranches();
+      // Asegurar que sea un array
+      const branchesArray = Array.isArray(branchesList) 
+        ? branchesList 
+        : (branchesList?.data && Array.isArray(branchesList.data))
+        ? branchesList.data
+        : [];
+      setBranches(branchesArray);
+    } catch (e) {
+      console.error("Error cargando sucursales:", e);
+      toast.error("Error al cargar sucursales");
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!instructorId) return;
     setErr("");
     try {
+      console.log(`[loadWorkingHours] Cargando horarios para instructor ${instructorId}`);
       const server = await apiClient.getWorkingHours({ instructorId });
-      const byWd = new Map((server || []).map(x => [Number(x.weekday), x]));
-      const full = Array.from({ length: 7 }, (_, d) => {
-        const r = byWd.get(d);
-        return {
-          weekday: d,
-          start_time: r?.start_time ?? null,
-          end_time: r?.end_time ?? null,
-        };
+      console.log(`[loadWorkingHours] Respuesta del servidor:`, server);
+      
+      // Agrupar por weekday, cada día puede tener múltiples horarios (uno por sucursal)
+      const byWeekday = new Map();
+      (server || []).forEach(x => {
+        const wd = Number(x.weekday);
+        if (!byWeekday.has(wd)) {
+          byWeekday.set(wd, []);
+        }
+        if (x.start_time && x.end_time) {
+          const schedule = {
+            branch_id: x.branch_id !== undefined && x.branch_id !== null ? Number(x.branch_id) : null,
+            start_time: x.start_time?.slice(0, 5) || null,
+            end_time: x.end_time?.slice(0, 5) || null,
+          };
+          console.log(`[loadWorkingHours] Agregando horario para día ${wd}:`, schedule);
+          byWeekday.get(wd).push(schedule);
+        }
       });
+      
+      const full = Array.from({ length: 7 }, (_, d) => ({
+        weekday: d,
+        schedules: byWeekday.get(d) || [],
+      }));
+      
+      console.log(`[loadWorkingHours] Horarios agrupados por día:`, full);
+      console.log(`[loadWorkingHours] Total de días con horarios:`, full.filter(d => d.schedules.length > 0).length);
+      
       setRows(full);
     } catch (e) {
       setErr("No pude cargar horarios.");
-      console.error(e);
+      console.error("[loadWorkingHours] Error:", e);
     }
   }, [instructorId]);
 
@@ -90,17 +137,50 @@ function WorkingHoursEditor({ instructorId }) {
   }, [instructorId]);
 
   useEffect(() => { 
+    loadBranches();
+  }, [loadBranches]);
+
+  useEffect(() => { 
     load();
     loadBlocks();
   }, [load, loadBlocks]);
 
-  const update = (idx, patch) => setRows(rs => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-  
-  const toggleFranco = (idx) => {
-    const r = rows[idx];
-    const off = !r.start_time && !r.end_time;
-    update(idx, off ? { start_time: "10:00:00", end_time: "19:00:00" }
-      : { start_time: null, end_time: null });
+  const addSchedule = (dayIdx) => {
+    setRows(rs => rs.map((r, i) => {
+      if (i === dayIdx) {
+        return {
+          ...r,
+          schedules: [...r.schedules, { branch_id: null, start_time: "10:00:00", end_time: "19:00:00" }]
+        };
+      }
+      return r;
+    }));
+  };
+
+  const removeSchedule = (dayIdx, scheduleIdx) => {
+    setRows(rs => rs.map((r, i) => {
+      if (i === dayIdx) {
+        return {
+          ...r,
+          schedules: r.schedules.filter((_, idx) => idx !== scheduleIdx)
+        };
+      }
+      return r;
+    }));
+  };
+
+  const updateSchedule = (dayIdx, scheduleIdx, patch) => {
+    setRows(rs => rs.map((r, i) => {
+      if (i === dayIdx) {
+        return {
+          ...r,
+          schedules: r.schedules.map((s, idx) => 
+            idx === scheduleIdx ? { ...s, ...patch } : s
+          )
+        };
+      }
+      return r;
+    }));
   };
 
   const save = async () => {
@@ -108,22 +188,186 @@ function WorkingHoursEditor({ instructorId }) {
     setSaving(true);
     setErr("");
     try {
-      const hours = Array.from({ length: 7 }, (_, d) => {
-        const r = rows.find(x => Number(x.weekday) === d) || {};
-        const st = r.start_time?.trim?.() || null;
-        const et = r.end_time?.trim?.() || null;
-        return {
-          weekday: d,
-          start_time: st ? (st.length === 5 ? `${st}:00` : st) : null,
-          end_time: et ? (et.length === 5 ? `${et}:00` : et) : null,
-        };
+      // Convertir la estructura de schedules a un array plano de hours
+      const hours = [];
+      rows.forEach(day => {
+        if (day.schedules.length === 0) {
+          // Si no hay horarios, no agregar nada (no guardar francos explícitamente)
+          // Los francos se manejan eliminando los registros existentes
+        } else {
+          // Agregar un registro por cada horario/sucursal
+          day.schedules.forEach(schedule => {
+            const st = schedule.start_time?.trim?.() || null;
+            const et = schedule.end_time?.trim?.() || null;
+            if (st && et) {
+              // Asegurar que branch_id sea un número o null explícitamente
+              // Usar !== null && !== undefined && !== '' para preservar el 0 si existe
+              const branchId = (schedule.branch_id !== null && schedule.branch_id !== undefined && schedule.branch_id !== '') 
+                ? Number(schedule.branch_id) 
+                : null;
+              
+              hours.push({
+                weekday: day.weekday,
+                start_time: st.length === 5 ? `${st}:00` : st,
+                end_time: et.length === 5 ? `${et}:00` : et,
+                branch_id: branchId,
+              });
+              
+              console.log(`[saveWorkingHours] Agregando horario: weekday=${day.weekday}, branch_id=${branchId}, start=${st}, end=${et}`);
+            }
+          });
+        }
       });
+      
+      // Validar que no haya horarios solapados
+      const validateOverlaps = (hours) => {
+        // Convertir tiempo a minutos para facilitar comparación
+        const timeToMinutes = (timeStr) => {
+          if (!timeStr) return null;
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+
+        // Agrupar por día
+        const byDay = {};
+        hours.forEach(h => {
+          if (!byDay[h.weekday]) {
+            byDay[h.weekday] = [];
+          }
+          byDay[h.weekday].push(h);
+        });
+
+        // Verificar solapamientos por día
+        const overlaps = [];
+        Object.entries(byDay).forEach(([weekday, dayHours]) => {
+          for (let i = 0; i < dayHours.length; i++) {
+            for (let j = i + 1; j < dayHours.length; j++) {
+              const h1 = dayHours[i];
+              const h2 = dayHours[j];
+              
+              const start1 = timeToMinutes(h1.start_time);
+              const end1 = timeToMinutes(h1.end_time);
+              const start2 = timeToMinutes(h2.start_time);
+              const end2 = timeToMinutes(h2.end_time);
+
+              // Verificar si se solapan: (start1 < end2 && end1 > start2)
+              if (start1 !== null && end1 !== null && start2 !== null && end2 !== null) {
+                if (start1 < end2 && end1 > start2) {
+                  const branch1 = h1.branch_id ? `Sucursal ${h1.branch_id}` : 'Sin sucursal';
+                  const branch2 = h2.branch_id ? `Sucursal ${h2.branch_id}` : 'Sin sucursal';
+                  overlaps.push({
+                    weekday: Number(weekday),
+                    schedule1: { branch: branch1, time: `${h1.start_time.slice(0, 5)} - ${h1.end_time.slice(0, 5)}` },
+                    schedule2: { branch: branch2, time: `${h2.start_time.slice(0, 5)} - ${h2.end_time.slice(0, 5)}` }
+                  });
+                }
+              }
+            }
+          }
+        });
+
+        return overlaps;
+      };
+
+      const overlaps = validateOverlaps(hours);
+      if (overlaps.length > 0) {
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const overlapMessages = overlaps.map(ov => {
+          const dayName = dayNames[ov.weekday];
+          return `${dayName}: ${ov.schedule1.branch} (${ov.schedule1.time}) se solapa con ${ov.schedule2.branch} (${ov.schedule2.time})`;
+        });
+        
+        const errorMsg = `No se pueden guardar horarios que se solapen:\n${overlapMessages.join('\n')}`;
+        console.error(`[saveWorkingHours] ❌ Horarios solapados detectados:`, overlaps);
+        toast.error("Horarios solapados", {
+          description: overlapMessages.join('; '),
+          duration: 8000
+        });
+        setErr(errorMsg);
+        setSaving(false);
+        return;
+      }
+      
+      console.log(`[saveWorkingHours] ==========================================`);
+      console.log(`[saveWorkingHours] RESUMEN ANTES DE ENVIAR:`);
+      console.log(`[saveWorkingHours] Instructor ID: ${instructorId}`);
+      console.log(`[saveWorkingHours] Total de horarios a guardar: ${hours.length}`);
+      console.log(`[saveWorkingHours] Detalle de horarios:`, JSON.stringify(hours, null, 2));
+      
+      // Agrupar por día para verificar duplicados
+      const byDay = {};
+      hours.forEach(h => {
+        const dayKey = `${h.weekday}-${h.branch_id || 'null'}`;
+        if (!byDay[dayKey]) {
+          byDay[dayKey] = [];
+        }
+        byDay[dayKey].push(h);
+      });
+      
+      const duplicates = Object.entries(byDay).filter(([_, items]) => items.length > 1);
+      if (duplicates.length > 0) {
+        console.warn(`[saveWorkingHours] ⚠️ ADVERTENCIA: Se detectaron claves duplicadas:`, duplicates);
+      }
+      
+      console.log(`[saveWorkingHours] Horarios agrupados por día/sucursal:`, byDay);
+      console.log(`[saveWorkingHours] ==========================================`);
 
       await apiClient.saveWorkingHours({ instructorId, hours });
       toast.success("Horarios guardados correctamente");
+      load(); // Recargar para ver los cambios
     } catch (e) {
-      setErr(e?.response?.data?.error || e.message || "No pude guardar horarios.");
-      toast.error("Error al guardar horarios");
+      const errorData = e?.response?.data || {};
+      let errorMessage = errorData.error || e.message || "No se pudieron guardar los horarios.";
+      
+      // Mejorar mensajes de error específicos
+      if (errorData.code === 'ERR_OVERLAPPING_SCHEDULES') {
+        // Error de horarios solapados desde el backend
+        const details = errorData.details || [];
+        errorMessage = "Horarios solapados detectados";
+        toast.error(errorMessage, {
+          description: details.join('; '),
+          duration: 8000
+        });
+        setErr(details.join('\n'));
+      } else if (errorData.code === 'ER_DUP_ENTRY') {
+        if (errorMessage.includes('uq_wh')) {
+          errorMessage = "Ya existe un horario para este día. Si querés agregar múltiples sucursales, ejecutá la migración 054 en la base de datos para actualizar las restricciones.";
+        } else {
+          errorMessage = "Ya existe un horario para esta combinación de día y sucursal. Verificá que no estés duplicando horarios.";
+        }
+        setErr(errorMessage);
+        toast.error(errorMessage, {
+          description: errorData.code ? `Código de error: ${errorData.code}` : undefined,
+          duration: 5000,
+        });
+      } else if (errorData.code === 'ER_BAD_FIELD_ERROR') {
+        errorMessage = "Error en la estructura de la base de datos. Verificá que las migraciones 053 y 054 estén ejecutadas.";
+        setErr(errorMessage);
+        toast.error(errorMessage, {
+          description: errorData.code ? `Código de error: ${errorData.code}` : undefined,
+          duration: 5000,
+        });
+      } else if (errorMessage.includes('migración')) {
+        // Ya tiene un mensaje útil sobre migraciones
+        setErr(errorMessage);
+        toast.error(errorMessage, {
+          description: errorData.code ? `Código de error: ${errorData.code}` : undefined,
+          duration: 5000,
+        });
+      } else if (!errorMessage || errorMessage === "No se pudieron guardar los horarios.") {
+        errorMessage = "No se pudieron guardar los horarios. Verificá que todos los campos estén completos y que no haya duplicados.";
+        setErr(errorMessage);
+        toast.error(errorMessage, {
+          description: errorData.code ? `Código de error: ${errorData.code}` : undefined,
+          duration: 5000,
+        });
+      } else {
+        setErr(errorMessage);
+        toast.error(errorMessage, {
+          description: errorData.code ? `Código de error: ${errorData.code}` : undefined,
+          duration: 5000,
+        });
+      }
       console.error("[saveWorkingHours]", e);
     } finally {
       setSaving(false);
@@ -147,56 +391,120 @@ function WorkingHoursEditor({ instructorId }) {
   return (
     <div className="mt-10 space-y-6">
       {/* Horarios semanales */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="card card--space-lg">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Horarios semanales</h3>
           <div className="flex items-center gap-2">
             <Btn onClick={load}><RotateCw className="size-4" /> Recargar</Btn>
-            <Btn onClick={save} className="bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20">
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            <button
+              onClick={save}
+              className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Guardar
-            </Btn>
+            </button>
           </div>
         </div>
         {err && (
-          <div className="mb-3 text-sm rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300 flex items-center gap-2">
-            <AlertTriangle className="size-4" /> {err}
+          <div className="mb-3 text-sm rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> {err}
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {rows.map((r, idx) => {
-            const off = !r.start_time && !r.end_time;
+          {rows.map((day, dayIdx) => {
+            const hasSchedules = day.schedules.length > 0;
             return (
-              <div key={idx} className={`rounded-xl border px-4 py-3 ${off ? "border-white/10 bg-white/[0.02]" : "border-white/10 bg-white/[0.04]"}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">{week[r.weekday]}</span>
-                  <button
-                    onClick={() => toggleFranco(idx)}
-                    className={`text-xs rounded-lg px-2 py-1 border ${off ? "border-white/10 bg-white/5" : "border-amber-500/30 bg-amber-500/10 text-amber-200"}`}
-                  >
-                    {off ? "Franco" : "Trabaja"}
-                  </button>
-                </div>
-                {!off && (
+              <div key={dayIdx} className={`rounded-xl border px-4 py-3 ${hasSchedules ? "border-border bg-background-secondary" : "border-border bg-background-secondary/50"}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-foreground">{week[day.weekday]}</span>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="text-xs text-zinc-400">Desde</label>
-                      <input
-                        type="time"
-                        value={(r.start_time || "").slice(0, 5)}
-                        onChange={(e) => update(idx, { start_time: `${e.target.value}:00` })}
-                        className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-zinc-400">Hasta</label>
-                      <input
-                        type="time"
-                        value={(r.end_time || "").slice(0, 5)}
-                        onChange={(e) => update(idx, { end_time: `${e.target.value}:00` })}
-                        className="w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-sm"
-                      />
-                    </div>
+                    {hasSchedules && (
+                      <button
+                        onClick={() => addSchedule(dayIdx)}
+                        className="text-xs rounded-lg px-2 py-1 border border-primary/30 bg-primary/10 text-primary font-medium hover:bg-primary/20"
+                        title="Agregar otra sucursal"
+                      >
+                        + Sucursal
+                      </button>
+                    )}
+                    {!hasSchedules && (
+                      <button
+                        onClick={() => addSchedule(dayIdx)}
+                        className="text-xs rounded-lg px-2 py-1 border border-primary/30 bg-primary/10 text-primary font-medium"
+                      >
+                        Trabaja
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {hasSchedules ? (
+                  <div className="space-y-3">
+                    {day.schedules.map((schedule, scheduleIdx) => (
+                      <div key={scheduleIdx} className="p-3 rounded-lg border border-border/60 bg-background/50 space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-foreground-secondary">
+                            Horario {scheduleIdx + 1}
+                          </span>
+                          {day.schedules.length > 1 && (
+                            <button
+                              onClick={() => removeSchedule(dayIdx, scheduleIdx)}
+                              className="text-xs text-red-400 hover:text-red-300"
+                              title="Eliminar este horario"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-xs text-foreground-muted mb-1 block">Sucursal</label>
+                          <select
+                            value={schedule.branch_id || ""}
+                            onChange={(e) => updateSchedule(dayIdx, scheduleIdx, { branch_id: e.target.value ? Number(e.target.value) : null })}
+                            className="input w-full text-sm"
+                            disabled={branchesLoading || !Array.isArray(branches) || branches.length === 0}
+                          >
+                            <option value="">Seleccionar sucursal</option>
+                            {Array.isArray(branches) && branches.map((branch) => (
+                              <option key={branch.id} value={branch.id}>
+                                {branch.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-foreground-muted mb-1 block">Desde</label>
+                            <input
+                              type="time"
+                              value={(schedule.start_time || "").slice(0, 5)}
+                              onChange={(e) => updateSchedule(dayIdx, scheduleIdx, { start_time: `${e.target.value}:00` })}
+                              className="input w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-foreground-muted mb-1 block">Hasta</label>
+                            <input
+                              type="time"
+                              value={(schedule.end_time || "").slice(0, 5)}
+                              onChange={(e) => updateSchedule(dayIdx, scheduleIdx, { end_time: `${e.target.value}:00` })}
+                              className="input w-full text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => addSchedule(dayIdx)}
+                      className="w-full text-xs text-center py-2 rounded-lg border border-dashed border-border text-foreground-secondary hover:text-foreground hover:border-primary/50 transition-colors"
+                    >
+                      + Agregar otra sucursal
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-2">
+                    <span className="text-xs text-foreground-muted italic">Franco</span>
                   </div>
                 )}
               </div>
@@ -270,28 +578,28 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+    <div className="card card--space-lg">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Bloqueos de tiempo</h3>
-          <p className="text-sm text-zinc-400 mt-1">
+          <h3 className="text-lg font-semibold text-foreground">Bloqueos de tiempo</h3>
+          <p className="text-sm text-foreground-secondary mt-1">
             Bloqueá horarios específicos (ej: trámites, descansos, almuerzo)
           </p>
         </div>
-        <Btn 
+        <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/20"
+          className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
         >
-          {showForm ? <X className="size-4" /> : <>+ Nuevo bloqueo</>}
-        </Btn>
+          {showForm ? <X className="w-4 h-4" /> : <>+ Nuevo bloqueo</>}
+        </button>
       </div>
 
       {/* Formulario */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/[0.02] border border-white/10">
+        <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-background-secondary border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Fecha *
               </label>
               <input
@@ -299,38 +607,38 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                className="input w-full text-sm"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-sm text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Desde *
                 </label>
                 <input
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                  className="input w-full text-sm"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Hasta *
                 </label>
                 <input
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm"
+                  className="input w-full text-sm"
                   required
                 />
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Motivo (opcional)
               </label>
               <input
@@ -338,7 +646,7 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 placeholder="Ej: Trámite en el banco, Almuerzo"
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm placeholder:text-zinc-600"
+                className="input w-full text-sm"
               />
             </div>
           </div>
@@ -346,15 +654,15 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm flex items-center gap-2"
+              className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
             >
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Crear bloqueo
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm"
+              className="px-4 py-2 rounded-lg bg-background-secondary hover:bg-border border border-border text-sm text-foreground"
             >
               Cancelar
             </button>
@@ -365,10 +673,10 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
       {/* Lista de bloqueos */}
       <div className="space-y-2">
         {futureBlocks.length === 0 ? (
-          <div className="text-center py-8 text-zinc-400 text-sm">
-            <Clock className="size-8 mx-auto mb-2 opacity-50" />
+          <div className="text-center py-8 text-foreground-secondary text-sm">
+            <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No hay bloqueos programados</p>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-foreground-muted mt-1">
               Creá un bloqueo para reservar tiempo específico
             </p>
           </div>
@@ -406,35 +714,35 @@ function BlockItem({ block, onDelete }) {
   const isPast = startDate < new Date();
 
   return (
-    <div className={`flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-colors ${isPast ? "opacity-60" : ""}`}>
+    <div className={`flex items-center justify-between p-3 rounded-lg bg-background-secondary border border-border hover:bg-border transition-colors ${isPast ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3">
         <div className={`p-2 rounded-lg ${
           isToday 
             ? "bg-amber-500/20 border border-amber-500/30" 
             : "bg-primary/20 border border-primary/30"
         }`}>
-          <Clock className={`size-4 ${isToday ? "text-amber-400" : "text-primary"}`} />
+          <Clock className={`w-4 h-4 ${isToday ? "text-amber-400" : "text-primary"}`} />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{formatDate(startDate)}</span>
+            <span className="text-sm font-medium text-foreground">{formatDate(startDate)}</span>
             {isToday && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 Hoy
               </span>
             )}
             {isPast && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-500/20 text-zinc-400 border border-zinc-500/30">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-background-secondary text-foreground-muted border border-border">
                 Pasado
               </span>
             )}
           </div>
-          <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1">
+          <div className="text-xs text-foreground-secondary flex items-center gap-2 mt-1">
             <span>{formatTime(startDate)} - {formatTime(endDate)}</span>
             {block.reason && (
               <>
                 <span>•</span>
-                <span className="text-zinc-300">{block.reason}</span>
+                <span className="text-foreground-muted">{block.reason}</span>
               </>
             )}
           </div>
@@ -442,10 +750,10 @@ function BlockItem({ block, onDelete }) {
       </div>
       <button
         onClick={() => onDelete(block.id)}
-        className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+        className="p-2 rounded-lg hover:bg-red-500/10 text-foreground-secondary hover:text-red-400 transition-colors"
         title="Eliminar bloqueo"
       >
-        <Trash2 className="size-4" />
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -587,20 +895,19 @@ export default function InstructorStatsPage() {
   };
 
   const Empty = () => (
-    <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
-      <p className="text-zinc-400">No hay datos para el rango seleccionado.</p>
+    <div className="mt-8 card card--space-lg text-center">
+      <p className="text-foreground-secondary">No hay datos para el rango seleccionado.</p>
     </div>
   );
 
   return (
-    <div className="relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 py-8">
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Estadísticas por Instructor</h1>
-            <p className="text-zinc-400 mt-1">Clases, facturación, comisión y configuración de horarios.</p>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Estadísticas por Instructor</h1>
+            <p className="text-foreground-secondary mt-1">Clases, facturación, comisión y configuración de horarios.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -609,7 +916,7 @@ export default function InstructorStatsPage() {
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
-                className="appearance-none rounded-xl bg-slate-800 border border-white/10 px-3 py-2 pr-8 text-sm"
+                className="input appearance-none pr-8 text-sm"
               >
                 {instructors.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -617,15 +924,15 @@ export default function InstructorStatsPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400">▾</div>
+              <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted">▾</div>
             </div>
 
             {/* Rango fechas */}
-            <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 p-1">
-              <Calendar className="size-4 mx-1 text-zinc-400" />
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-transparent text-sm outline-none px-1" />
-              <span className="text-zinc-500">–</span>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-transparent text-sm outline-none px-1" />
+            <div className="flex items-center gap-2 rounded-xl bg-background-secondary border border-border p-1">
+              <Calendar className="w-4 h-4 mx-1 text-foreground-muted" />
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-transparent text-sm outline-none px-1 text-foreground" />
+              <span className="text-foreground-muted">–</span>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-transparent text-sm outline-none px-1 text-foreground" />
             </div>
 
             {/* Presets */}
@@ -652,8 +959,8 @@ export default function InstructorStatsPage() {
 
         {/* Error visible */}
         {err ? (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-            <AlertTriangle className="size-4" />
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <AlertTriangle className="w-4 h-4" />
             <span>{err}</span>
           </div>
         ) : null}
@@ -662,7 +969,7 @@ export default function InstructorStatsPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-[108px] animate-pulse rounded-2xl bg-white/5 border border-white/10" />
+              <div key={i} className="h-[108px] animate-pulse rounded-2xl bg-background-secondary border border-border" />
             ))}
           </div>
         ) : stats ? (
@@ -675,8 +982,8 @@ export default function InstructorStatsPage() {
             </div>
 
             {/* Gráfico diario */}
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="mb-3 text-sm text-zinc-400">Evolución diaria</div>
+            <div className="mt-8 card card--space-lg">
+              <div className="mb-3 text-sm font-medium text-foreground-secondary">Evolución diaria</div>
               {dailySeries.length ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -695,24 +1002,24 @@ export default function InstructorStatsPage() {
             </div>
 
             {/* Tabla por servicio */}
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="mb-3 text-sm text-zinc-400">Servicios</div>
+            <div className="mt-8 card card--space-lg">
+              <div className="mb-3 text-sm font-medium text-foreground-secondary">Servicios</div>
               {serviceRows.length ? (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="text-zinc-400">
+                    <thead className="text-foreground-secondary">
                       <tr>
-                        <th className="text-left py-2 pr-4">Servicio</th>
-                        <th className="text-right py-2 pr-4">Reservas</th>
-                        <th className="text-right py-2">Monto</th>
+                        <th className="text-left py-2 pr-4 font-medium">Servicio</th>
+                        <th className="text-right py-2 pr-4 font-medium">Reservas</th>
+                        <th className="text-right py-2 font-medium">Monto</th>
                       </tr>
                     </thead>
                     <tbody>
                       {serviceRows.map((r, i) => (
-                        <tr key={i} className="border-t border-white/10">
-                          <td className="py-2 pr-4">{r.service ?? r.name}</td>
-                          <td className="py-2 pr-4 text-right">{r.count ?? r.cortes ?? 0}</td>
-                          <td className="py-2 text-right">{money(r.amount ?? 0)}</td>
+                        <tr key={i} className="border-t border-border">
+                          <td className="py-2 pr-4 text-foreground">{r.service ?? r.name}</td>
+                          <td className="py-2 pr-4 text-right text-foreground">{r.count ?? r.cortes ?? 0}</td>
+                          <td className="py-2 text-right text-foreground">{money(r.amount ?? 0)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -731,8 +1038,8 @@ export default function InstructorStatsPage() {
         )}
 
         {/* Pie */}
-        <div className="mt-10 flex items-center gap-2 text-xs text-zinc-500">
-          {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+        <div className="mt-10 flex items-center gap-2 text-xs text-foreground-muted">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           <span>{loading ? "Actualizando…" : "Listo"}</span>
         </div>
       </div>

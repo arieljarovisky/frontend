@@ -478,7 +478,8 @@ apiClient.listBranches = async function () {
   const { data } = await apiClient.get("/api/branches", {
     headers: { "X-Branch-Mode": "skip" },
   });
-  return data;
+  // El endpoint retorna { ok: true, data: [...] }
+  return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
 };
 
 apiClient.createBranch = async function (payload) {

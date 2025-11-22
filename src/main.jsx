@@ -66,6 +66,7 @@ import AccountingPage from "./routes/Accounting/AccountingPage.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
 import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
+import FeatureRequestPage from "./routes/FeatureRequestPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -308,6 +309,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <MembershipPlansPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "feature-request",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <FeatureRequestPage />
           </PrivateRoute>
         ),
       },

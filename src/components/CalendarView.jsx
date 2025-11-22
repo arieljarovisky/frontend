@@ -24,6 +24,7 @@ import AppointmentModal from "./AppointmentModal";
 import { AppContext } from "../context/AppProvider";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import resourcePlugin from "@fullcalendar/resource";
+import apiClient from "../api/client";
 
 /* =========================
    Helpers Responsive
@@ -248,6 +249,77 @@ export default function CalendarView() {
   const [showStats, setShowStats] = useState(true);
 
   const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
+
+  // Calcular rango de horarios dinámicamente basado en los horarios de las sucursales
+  const [calendarTimeRange, setCalendarTimeRange] = useState({ min: "08:00:00", max: "19:00:00" });
+
+  useEffect(() => {
+    const calculateTimeRange = async () => {
+      try {
+        // Obtener horarios de los instructores relevantes
+        const relevantInstructors = instructorFilter 
+          ? instructors.filter(i => String(i.id) === String(instructorFilter))
+          : instructors;
+
+        if (relevantInstructors.length === 0) {
+          // Si no hay instructores, usar valores por defecto
+          setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
+          return;
+        }
+
+        // Obtener horarios de todos los instructores relevantes
+        const allWorkingHours = [];
+        for (const instructor of relevantInstructors) {
+          try {
+            const hours = await apiClient.getWorkingHours({ instructorId: instructor.id });
+            if (Array.isArray(hours) && hours.length > 0) {
+              allWorkingHours.push(...hours);
+            }
+          } catch (e) {
+            console.warn(`[CalendarView] No se pudieron cargar horarios para instructor ${instructor.id}:`, e);
+          }
+        }
+
+        if (allWorkingHours.length === 0) {
+          // Si no hay horarios, usar valores por defecto
+          setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
+          return;
+        }
+
+        // Calcular min y max de todos los horarios
+        let minHour = 24;
+        let maxHour = 0;
+
+        allWorkingHours.forEach(h => {
+          if (h.start_time && h.end_time) {
+            const startParts = h.start_time.split(':').map(Number);
+            const endParts = h.end_time.split(':').map(Number);
+            const startHour = startParts[0] + (startParts[1] || 0) / 60;
+            const endHour = endParts[0] + (endParts[1] || 0) / 60;
+
+            if (startHour < minHour) minHour = startHour;
+            if (endHour > maxHour) maxHour = endHour;
+          }
+        });
+
+        // Asegurar valores razonables (mínimo 6:00, máximo 23:00)
+        minHour = Math.max(6, Math.floor(minHour));
+        maxHour = Math.min(23, Math.ceil(maxHour));
+
+        // Agregar un margen de 1 hora antes y después
+        const minTime = `${String(Math.max(0, minHour - 1)).padStart(2, '0')}:00:00`;
+        const maxTime = `${String(Math.min(23, maxHour + 1)).padStart(2, '0')}:00:00`;
+
+        console.log(`[CalendarView] Rango de horarios calculado: ${minTime} - ${maxTime} (basado en ${allWorkingHours.length} horarios)`);
+        setCalendarTimeRange({ min: minTime, max: maxTime });
+      } catch (e) {
+        console.error("[CalendarView] Error calculando rango de horarios:", e);
+        setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
+      }
+    };
+
+    calculateTimeRange();
+  }, [instructors, instructorFilter]);
 
   const resources = useMemo(() => {
     const map = new Map();
@@ -738,21 +810,21 @@ export default function CalendarView() {
                 }}
                 dayHeaderContent={dayHeaderContent}
                 allDaySlot={false}
-                slotMinTime="08:00:00"
-                slotMaxTime="21:00:00"
-                slotDuration="00:15:00"
+                slotMinTime={calendarTimeRange.min}
+                slotMaxTime={calendarTimeRange.max}
+                slotDuration="00:30:00"
                 slotLabelFormat={{
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: false
                 }}
-                expandRows
+                expandRows={false}
                 stickyHeaderDates
                 nowIndicator={!isMobile}
                 navLinks={!isMobile}
                 height="auto"
-                contentHeight={isMobile ? 600 : "auto"}
-                aspectRatio={isMobile ? 0.95 : 1.35}
+                contentHeight={isMobile ? 400 : 550}
+                aspectRatio={isMobile ? 0.95 : 2.0}
                 datesSet={handleDatesSet}
                 viewDidMount={(arg) => {
                   // Ajustar recursos cuando cambia la vista

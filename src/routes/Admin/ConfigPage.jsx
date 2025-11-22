@@ -26,6 +26,7 @@ import {
   Info,
   Plus,
   Edit3,
+  Clock,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -139,6 +140,7 @@ export default function ConfigPage() {
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
     { id: "business-type", label: "Tipo de Negocio", Icon: Building2, adminOnly: true },
+    { id: "working-hours", label: "Horarios Laborales", Icon: Clock },
     { id: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { id: "contact", label: "ARCA", Icon: Receipt },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
@@ -229,6 +231,11 @@ export default function ConfigPage() {
     enabled: false,
     advance_hours: 24,
   });
+
+  const [workingHours, setWorkingHours] = useState({});
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
   const [bookingConfig, setBookingConfig] = useState({
     require_membership: false,
   });
@@ -319,6 +326,8 @@ export default function ConfigPage() {
   const [arcaConnectionStatus, setArcaConnectionStatus] = useState(null);
   const [arcaStatusLoading, setArcaStatusLoading] = useState(false);
   const [showArcaTutorial, setShowArcaTutorial] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialConfig, setInitialConfig] = useState(null);
 
   // ============================================
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
@@ -326,7 +335,7 @@ export default function ConfigPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [g, c, n, contactData, w, booking, reminders, bot] = await Promise.all([
+        const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
@@ -335,6 +344,7 @@ export default function ConfigPage() {
           apiClient.getAppointmentsConfig().catch(() => ({})),
           apiClient.get("/api/reminders/config").then(r => r.data?.data || {}).catch(() => ({})),
           apiClient.getConfigSection("bot").catch(() => ({})), // Configuración del bot
+          apiClient.getConfigSection("working-hours").catch(() => ({})), // Horarios laborales
         ]);
 
         // Prefiere siempre el nombre real del tenant si está disponible
@@ -415,11 +425,86 @@ export default function ConfigPage() {
           serviceSelectionHeader: bot.serviceSelectionHeader || "Elegí un servicio",
           instructorSelectionBody: bot.instructorSelectionBody || "¿Con quién preferís?",
         });
+
+        // Cargar sucursales primero
+        let branchesList = [];
+        try {
+          setBranchesLoading(true);
+          branchesList = await apiClient.listBranches();
+          branchesList = Array.isArray(branchesList) ? branchesList : [];
+          setBranches(branchesList);
+          // Seleccionar la primera sucursal por defecto si hay sucursales y no hay una seleccionada
+          if (branchesList.length > 0 && !selectedBranchId) {
+            setSelectedBranchId(branchesList[0].id);
+          }
+        } catch (e) {
+          console.error("Error cargando sucursales:", e);
+          setBranches([]);
+        } finally {
+          setBranchesLoading(false);
+        }
+
+        // Cargar horarios laborales por sucursal
+        // wh puede ser un objeto con claves como "branch_1", "branch_2", etc., o un objeto plano (legacy)
+        const defaultDayHours = { enabled: true, start: "09:00", end: "18:00" };
+        const defaultWeekendHours = { enabled: false, start: "09:00", end: "13:00" };
+        
+        let loadedWorkingHours = {};
+        
+        if (wh && typeof wh === 'object' && Object.keys(wh).length > 0) {
+          // Si wh tiene claves que empiezan con "branch_", es el nuevo formato
+          const hasBranchKeys = Object.keys(wh).some(key => key.startsWith('branch_'));
+          
+          if (hasBranchKeys) {
+            // Nuevo formato: por sucursal
+            loadedWorkingHours = wh;
+          } else {
+            // Formato legacy: convertir a formato por sucursal
+            if (branchesList.length > 0) {
+              const branchKey = `branch_${branchesList[0].id}`;
+              loadedWorkingHours[branchKey] = {
+                monday: wh.monday || defaultDayHours,
+                tuesday: wh.tuesday || defaultDayHours,
+                wednesday: wh.wednesday || defaultDayHours,
+                thursday: wh.thursday || defaultDayHours,
+                friday: wh.friday || defaultDayHours,
+                saturday: wh.saturday || defaultWeekendHours,
+                sunday: wh.sunday || defaultWeekendHours,
+              };
+              // Si no hay sucursal seleccionada, seleccionar la primera
+              if (!selectedBranchId) {
+                setSelectedBranchId(branchesList[0].id);
+              }
+            }
+          }
+        }
+        
+        setWorkingHours(loadedWorkingHours);
       } catch (e) {
         console.error("Load config failed", e);
       }
     })();
   }, []);
+
+  // Establecer configuración inicial después de que todos los estados estén cargados
+  useEffect(() => {
+    if (general.businessName && !initialConfig && contact.arca !== undefined && remindersConfig.advance_hours !== undefined) {
+      // Solo establecer initialConfig una vez cuando todos los datos estén cargados
+      // Usar una copia profunda para evitar referencias
+      const configSnapshot = {
+        general: JSON.parse(JSON.stringify(general)),
+        contact: JSON.parse(JSON.stringify(contact)),
+        commissions: JSON.parse(JSON.stringify(commissions)),
+        notifications: JSON.parse(JSON.stringify(notifications)),
+        bookingConfig: JSON.parse(JSON.stringify(bookingConfig)),
+        remindersConfig: JSON.parse(JSON.stringify(remindersConfig)),
+        botConfig: JSON.parse(JSON.stringify(botConfig)),
+        workingHours: JSON.parse(JSON.stringify(workingHours)),
+      };
+      setInitialConfig(configSnapshot);
+      setHasUnsavedChanges(false); // Asegurar que no haya cambios al inicio
+    }
+  }, [general.businessName, contact.arca, remindersConfig.advance_hours, initialConfig]);
 
   // === Cargar configuración de pagos/señas (payments.*) ===
   const loadPayments = async () => {
@@ -806,12 +891,26 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("contact", contact),
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
+        apiClient.saveConfigSection("working-hours", workingHours),
         apiClient.saveAppointmentsConfig(bookingConfig),
         apiClient.put("/api/reminders/config", remindersConfig),
         // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
         savePayments(),
       ]);
       toast.success("Configuración guardada correctamente");
+      setHasUnsavedChanges(false);
+
+      // Actualizar configuración inicial después de guardar
+      setInitialConfig({
+        general,
+        contact,
+        commissions,
+        notifications,
+        bookingConfig,
+        remindersConfig,
+        botConfig,
+        workingHours,
+      });
 
       // Recargar configuración de contacto para asegurar que el estado esté actualizado
       try {
@@ -1077,8 +1176,51 @@ export default function ConfigPage() {
 
   const navZIndex = 70;
 
+  // Detectar cambios sin guardar (solo si initialConfig ya está establecido)
+  useEffect(() => {
+    if (!initialConfig) {
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    const hasChanges = 
+      JSON.stringify(general) !== JSON.stringify(initialConfig.general) ||
+      JSON.stringify(contact) !== JSON.stringify(initialConfig.contact) ||
+      JSON.stringify(commissions) !== JSON.stringify(initialConfig.commissions) ||
+      JSON.stringify(notifications) !== JSON.stringify(initialConfig.notifications) ||
+      JSON.stringify(bookingConfig) !== JSON.stringify(initialConfig.bookingConfig) ||
+      JSON.stringify(remindersConfig) !== JSON.stringify(initialConfig.remindersConfig) ||
+      JSON.stringify(botConfig) !== JSON.stringify(initialConfig.botConfig) ||
+      JSON.stringify(workingHours) !== JSON.stringify(initialConfig.workingHours);
+
+    setHasUnsavedChanges(hasChanges);
+  }, [general, contact, commissions, notifications, bookingConfig, remindersConfig, botConfig, workingHours, initialConfig]);
+
   return (
     <div className="space-y-6">
+      {/* Botón flotante para guardar cambios */}
+      {hasUnsavedChanges && (
+        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-top-2">
+          <button
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Guardar Cambios
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       <div ref={navAnchorRef} />
       {floating && <div style={{ height: navHeight }} />}
       {/*  barra de navegación */}
@@ -1184,21 +1326,21 @@ export default function ConfigPage() {
       <div id="booking">
         <ConfigSection
           title="Reservas y membresías"
-          description="Configurá si el sistema requiere cuota al día antes de permitir un turno"
+          description="Configurá si el sistema requiere cuota al día antes de permitir inscribirse a una clase"
           icon={Shield}
         >
           <div className="space-y-4">
             <SwitchField
-              label="Requerir cuota al día para reservar"
-              description="Bloqueá las reservas si el cliente no tiene una suscripción activa. Ideal para gimnasios o clubes."
+              label="Requerir cuota al día para inscribirse a clases"
+              description="Bloqueá la inscripción a clases si el cliente no tiene una suscripción activa. Ideal para gimnasios o clubes. Los turnos individuales no requieren membresía."
               checked={bookingConfig.require_membership}
               onChange={(e) =>
                 setBookingConfig((prev) => ({ ...prev, require_membership: e.target.checked }))
               }
             />
             <p className="text-xs text-foreground-muted">
-              Cuando está desactivado, cualquier cliente puede reservar aunque no tenga una
-              membresía vigente (recomendado para peluquerías y estudios sin mensualidad).
+              Cuando está desactivado, cualquier cliente puede inscribirse a clases aunque no tenga una
+              membresía vigente. Los turnos individuales siempre están disponibles sin membresía (recomendado para peluquerías y estudios sin mensualidad).
             </p>
             {bookingConfig.require_membership && (
               <div className="rounded-2xl border border-border/60 bg-background-secondary/50 p-4 space-y-4">
@@ -1349,6 +1491,169 @@ export default function ConfigPage() {
           <BusinessTypeConfig />
         </ConfigSection>
       </div>
+
+      {/* WORKING HOURS */}
+      <div id="working-hours">
+        <ConfigSection
+          title="Horarios Laborales"
+          description="Configurá los horarios de trabajo del negocio por sucursal para calcular horas extras de empleados"
+          icon={Clock}
+        >
+          <div className="space-y-6">
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Para qué sirve esta configuración?</h4>
+                  <p className="text-xs text-foreground-secondary leading-relaxed">
+                    Los horarios laborales definen el horario normal de trabajo por sucursal. Cualquier hora trabajada fuera de estos horarios se considerará como horas extras y se calculará automáticamente para los empleados.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Selector de sucursal */}
+            {branchesLoading ? (
+              <div className="p-4 rounded-lg border border-border bg-background-secondary text-center">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-foreground-muted" />
+                <p className="text-sm text-foreground-muted mt-2">Cargando sucursales...</p>
+              </div>
+            ) : branches.length === 0 ? (
+              <div className="p-4 rounded-lg border border-amber-500/20 bg-amber-500/10">
+                <p className="text-sm text-amber-300">
+                  No hay sucursales configuradas. Configurá al menos una sucursal para poder establecer horarios laborales.
+                </p>
+              </div>
+            ) : (
+              <>
+                <FieldGroup label="Sucursal">
+                  <select
+                    value={selectedBranchId || ""}
+                    onChange={(e) => {
+                      const branchId = e.target.value ? Number(e.target.value) : null;
+                      setSelectedBranchId(branchId);
+                    }}
+                    className="input w-full"
+                  >
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </FieldGroup>
+
+                {selectedBranchId && (
+                  <div className="space-y-4">
+                    {[
+                      { key: "monday", label: "Lunes" },
+                      { key: "tuesday", label: "Martes" },
+                      { key: "wednesday", label: "Miércoles" },
+                      { key: "thursday", label: "Jueves" },
+                      { key: "friday", label: "Viernes" },
+                      { key: "saturday", label: "Sábado" },
+                      { key: "sunday", label: "Domingo" },
+                    ].map((day) => {
+                      const branchKey = `branch_${selectedBranchId}`;
+                      const branchHours = workingHours[branchKey] || {};
+                      const dayConfig = branchHours[day.key] || { enabled: true, start: "09:00", end: "18:00" };
+                      
+                      return (
+                        <div
+                          key={day.key}
+                          className="p-4 rounded-lg border border-border bg-background-secondary"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={dayConfig.enabled}
+                                onChange={(e) =>
+                                  setWorkingHours((prev) => {
+                                    const branchKey = `branch_${selectedBranchId}`;
+                                    const branchHours = prev[branchKey] || {};
+                                    return {
+                                      ...prev,
+                                      [branchKey]: {
+                                        ...branchHours,
+                                        [day.key]: { ...branchHours[day.key], enabled: e.target.checked },
+                                      },
+                                    };
+                                  })
+                                }
+                                className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
+                              />
+                              <span className="text-sm font-semibold text-foreground">{day.label}</span>
+                            </label>
+                          </div>
+
+                          {dayConfig.enabled && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <FieldGroup label="Hora de inicio">
+                                <input
+                                  type="time"
+                                  value={dayConfig.start || "09:00"}
+                                  onChange={(e) =>
+                                    setWorkingHours((prev) => {
+                                      const branchKey = `branch_${selectedBranchId}`;
+                                      const branchHours = prev[branchKey] || {};
+                                      return {
+                                        ...prev,
+                                        [branchKey]: {
+                                          ...branchHours,
+                                          [day.key]: { ...branchHours[day.key], start: e.target.value },
+                                        },
+                                      };
+                                    })
+                                  }
+                                  className="input w-full"
+                                />
+                              </FieldGroup>
+                              <FieldGroup label="Hora de fin">
+                                <input
+                                  type="time"
+                                  value={dayConfig.end || "18:00"}
+                                  onChange={(e) =>
+                                    setWorkingHours((prev) => {
+                                      const branchKey = `branch_${selectedBranchId}`;
+                                      const branchHours = prev[branchKey] || {};
+                                      return {
+                                        ...prev,
+                                        [branchKey]: {
+                                          ...branchHours,
+                                          [day.key]: { ...branchHours[day.key], end: e.target.value },
+                                        },
+                                      };
+                                    })
+                                  }
+                                  className="input w-full"
+                                />
+                              </FieldGroup>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-300 mb-1">Cálculo de horas extras</p>
+                  <p className="text-xs text-amber-200/90 leading-relaxed">
+                    Las horas trabajadas fuera del horario laboral configurado se calcularán automáticamente como horas extras. 
+                    Este cálculo se aplicará a los registros de asistencia y turnos de los empleados.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ConfigSection>
+      </div>
       {/* WHATSAPP */}
       <div id="whatsapp">
         <ConfigSection
@@ -1357,19 +1662,19 @@ export default function ConfigPage() {
           icon={MessageCircle}
         >
           <div className="space-y-6">
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/25">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-primary" />
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Integración centralizada ARJA</h4>
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-foreground mb-1">Integración centralizada ARJA</h4>
                   <p className="text-xs text-foreground-secondary">
                     Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business.
                   </p>
+                  {whatsappConfig.supportMessage ? (
+                    <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
+                  ) : null}
                 </div>
               </div>
-              {whatsappConfig.supportMessage ? (
-                <p className="mt-3 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
-              ) : null}
             </div>
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
@@ -1390,11 +1695,11 @@ export default function ConfigPage() {
                 />
               </FieldGroup>
 
-              <div className="rounded-2xl border border-border/60 bg-background-secondary/70 shadow-sm p-4 space-y-3">
+              <div className="rounded-lg border border-border bg-background-secondary p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Estado del asistente</p>
-                    <p className="text-xs text-foreground-muted leading-relaxed">
+                    <p className="text-xs text-foreground-muted mt-1">
                       {whatsappStatusMeta.description}
                     </p>
                   </div>
@@ -1453,14 +1758,14 @@ export default function ConfigPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border/60 bg-background-secondary/60 p-4 space-y-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-background-secondary p-4 space-y-4">
               <div className="flex items-center gap-3">
                 <TestTube className="w-5 h-5 text-primary-400" />
                 <div>
                   <h4 className="text-sm font-semibold text-foreground">
                     Enviar mensaje de prueba
                   </h4>
-                  <p className="text-xs text-foreground-secondary">
+                  <p className="text-xs text-foreground-secondary mt-1">
                     {whatsappConfig.hubConfigured
                       ? "Probá la integración enviándote un mensaje desde tu número configurado."
                       : "Guardá tu número y esperá a que soporte termine la conexión para poder hacer pruebas."}
@@ -2420,104 +2725,131 @@ export default function ConfigPage() {
           icon={Bell}
         >
           <div className="space-y-6">
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/25">
-              <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-primary" />
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Bell className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground">Recordatorios automáticos</h4>
-                  <p className="text-xs text-foreground-secondary">
-                    Los recordatorios se envían automáticamente a tus clientes antes de sus turnos. Podés configurar cuántas horas antes se envían.
+                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Qué son los recordatorios automáticos?</h4>
+                  <p className="text-xs text-foreground-secondary leading-relaxed">
+                    Los recordatorios se envían automáticamente por WhatsApp a tus clientes antes de sus turnos. Esto ayuda a reducir las faltas y mejorar la asistencia.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <SwitchField
                 label="Activar recordatorios automáticos"
-                description="Si está activado, se enviarán recordatorios automáticamente a los clientes antes de sus turnos"
+                description="Activa o desactiva el envío automático de recordatorios. Cuando está activado, el sistema enviará mensajes automáticamente según la configuración de horas."
                 checked={remindersConfig.enabled}
                 onChange={(checked) => setRemindersConfig(prev => ({ ...prev, enabled: checked }))}
               />
 
               {remindersConfig.enabled && (
-                <FieldGroup
-                  label="Horas de anticipación"
-                  hint="¿Cuántas horas antes del turno se debe enviar el recordatorio? (0-168 horas = 7 días)"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min="0"
-                      max="168"
-                      value={remindersConfig.advance_hours}
-                      onChange={(e) => {
-                        const value = Math.max(0, Math.min(168, Number(e.target.value) || 24));
-                        setRemindersConfig(prev => ({ ...prev, advance_hours: value }));
-                      }}
-                      className="input w-32 text-base font-medium"
-                    />
-                    <span className="text-sm text-foreground-secondary">
-                      {remindersConfig.advance_hours === 1 
-                        ? "hora antes" 
-                        : remindersConfig.advance_hours === 24
-                        ? "día antes"
-                        : remindersConfig.advance_hours > 24
-                        ? `${Math.round(remindersConfig.advance_hours / 24)} días antes`
-                        : "horas antes"}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs text-foreground-muted">
-                    Ejemplos: 24 horas = 1 día antes, 48 horas = 2 días antes, 2 horas = 2 horas antes
-                  </div>
-                </FieldGroup>
+                <div className="space-y-3">
+                  <FieldGroup
+                    label="¿Cuánto tiempo antes del turno enviar el recordatorio?"
+                    hint="Configurá cuántas horas antes del turno querés que se envíe el recordatorio. Máximo 7 días (168 horas)."
+                  >
+                    <div className="flex items-baseline gap-3">
+                      <input
+                        type="number"
+                        min="0"
+                        max="168"
+                        value={remindersConfig.advance_hours}
+                        onChange={(e) => {
+                          const value = Math.max(0, Math.min(168, Number(e.target.value) || 24));
+                          setRemindersConfig(prev => ({ ...prev, advance_hours: value }));
+                        }}
+                        className="input w-24 text-base font-semibold text-center"
+                      />
+                      <span className="text-sm font-medium text-foreground">
+                        {remindersConfig.advance_hours === 0
+                          ? "horas antes (inmediato)"
+                          : remindersConfig.advance_hours === 1 
+                          ? "hora antes" 
+                          : remindersConfig.advance_hours === 24
+                          ? "día antes (24 horas)"
+                          : remindersConfig.advance_hours > 24 && remindersConfig.advance_hours % 24 === 0
+                          ? `días antes (${remindersConfig.advance_hours} horas)`
+                          : "horas antes"}
+                      </span>
+                    </div>
+                    <div className="mt-3 p-3 rounded-lg bg-background-secondary border border-border/50">
+                      <p className="text-xs font-medium text-foreground-secondary mb-2">Ejemplos prácticos:</p>
+                      <ul className="text-xs text-foreground-muted space-y-1">
+                        <li>• <strong>24 horas</strong> = Se envía 1 día antes del turno</li>
+                        <li>• <strong>48 horas</strong> = Se envía 2 días antes del turno</li>
+                        <li>• <strong>2 horas</strong> = Se envía 2 horas antes del turno</li>
+                        <li>• <strong>12 horas</strong> = Se envía 12 horas antes (medio día antes)</li>
+                      </ul>
+                    </div>
+                  </FieldGroup>
+                </div>
               )}
 
               {remindersConfig.enabled && (
                 <>
-                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-300 mb-1">Cómo funcionan los recordatorios</p>
-                        <ul className="text-xs text-amber-200/90 space-y-1 list-disc list-inside">
-                          <li>Se envían automáticamente por WhatsApp a los clientes</li>
-                          <li>Solo se envían para turnos confirmados o programados</li>
-                          <li>Cada turno recibe un solo recordatorio</li>
-                          <li>Se envían dentro de una ventana de 1 hora antes del tiempo configurado</li>
-                          <li>Requiere que WhatsApp esté configurado y activo</li>
-                        </ul>
+                      <div className="flex-1 space-y-2">
+                        <p className="text-sm font-semibold text-amber-300">Información importante</p>
+                        <div className="space-y-2 text-xs text-amber-200/90">
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span>Los recordatorios se envían <strong>automáticamente</strong> por WhatsApp a tus clientes</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span>Solo se envían para turnos con estado <strong>confirmado</strong> o <strong>programado</strong></span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span>Cada turno recibe <strong>un solo recordatorio</strong> (no se repiten)</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span>El sistema verifica cada 15 minutos y envía recordatorios para turnos que están dentro de la ventana configurada</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span><strong>Requisito:</strong> WhatsApp debe estar configurado y activo en la sección de configuración</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const response = await apiClient.post("/api/reminders/send");
-                          const data = response.data || response;
-                          if (data.ok) {
-                            toast.success(
-                              data.sent > 0
-                                ? `Se enviaron ${data.sent} recordatorios`
-                                : "No hay turnos que requieran recordatorio en este momento"
-                            );
-                          } else {
-                            toast.error(data.error || "Error al enviar recordatorios");
+                  <div className="p-4 rounded-lg border border-border bg-background-secondary">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const response = await apiClient.post("/api/reminders/send");
+                            const data = response.data || response;
+                            if (data.ok) {
+                              toast.success(
+                                data.sent > 0
+                                  ? `Se enviaron ${data.sent} recordatorios`
+                                  : "No hay turnos que requieran recordatorio en este momento"
+                              );
+                            } else {
+                              toast.error(data.error || "Error al enviar recordatorios");
+                            }
+                          } catch (error) {
+                            toast.error(error?.response?.data?.error || "Error al enviar recordatorios");
                           }
-                        } catch (error) {
-                          toast.error(error?.response?.data?.error || "Error al enviar recordatorios");
-                        }
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Bell className="w-4 h-4" />
-                      Enviar recordatorios ahora
-                    </Button>
-                    <span className="text-xs text-foreground-secondary">
-                      Envía recordatorios manualmente para turnos que están dentro de la ventana configurada
-                    </span>
+                        }}
+                        className="flex items-center gap-2 w-full sm:w-auto"
+                      >
+                        <Bell className="w-4 h-4" />
+                        Enviar recordatorios ahora
+                      </Button>
+                      <p className="text-xs text-foreground-secondary flex-1">
+                        Envía recordatorios manualmente para turnos que están dentro de la ventana de tiempo configurada. Útil para probar o enviar recordatorios inmediatamente.
+                      </p>
+                    </div>
                   </div>
                 </>
               )}
