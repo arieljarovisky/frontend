@@ -161,6 +161,9 @@ apiClient.interceptors.request.use(
 // ================================
 // Interceptor de respuesta - Auth
 // ================================
+let isRefreshing = false;
+let refreshPromise = null;
+
 apiClient.interceptors.response.use(
   (response) => {
     // Medir tiempo de respuesta del servidor
@@ -214,12 +217,35 @@ apiClient.interceptors.response.use(
       url.includes("/auth/refresh") ||
       url.includes("/auth/logout");
 
+    // No intentar refresh si estamos en la página de login o no hay token
+    const isOnLoginPage = window.location.pathname === "/login";
+    const hasToken = !!getAccessToken();
+
     // Si es 401 y aún no intentamos refresh
-    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint && !isOnLoginPage && hasToken) {
       originalRequest._retry = true;
 
+      // Si ya hay un refresh en progreso, esperar a que termine
+      if (isRefreshing && refreshPromise) {
+        try {
+          await refreshPromise;
+          // Reintentar la request original con el nuevo token
+          return apiClient(originalRequest);
+        } catch {
+          // Si el refresh falló, continuar con el flujo normal
+        }
+      }
+
+      // Iniciar nuevo refresh
+      isRefreshing = true;
+      refreshPromise = authApi.refresh()
+        .finally(() => {
+          isRefreshing = false;
+          refreshPromise = null;
+        });
+
       try {
-        const refreshed = await authApi.refresh();
+        const refreshed = await refreshPromise;
         if (refreshed) {
           // Reintentar la request original con el nuevo token
           return apiClient(originalRequest);
@@ -231,11 +257,13 @@ apiClient.interceptors.response.use(
         setTenantId(null);
         setUserData(null);
 
-        // Redirigir con ?next a la ruta actual
-        const next = encodeURIComponent(
-          window.location.pathname + window.location.search
-        );
-        window.location.href = `/login?next=${next}`;
+        // Solo redirigir si no estamos ya en login
+        if (!isOnLoginPage) {
+          const next = encodeURIComponent(
+            window.location.pathname + window.location.search
+          );
+          window.location.href = `/login?next=${next}`;
+        }
 
         return Promise.reject(refreshError);
       }

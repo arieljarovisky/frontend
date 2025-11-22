@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles } from "lucide-react";
@@ -66,15 +66,41 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) return;
 
+    // Interceptar navegación hacia atrás cuando estamos en login sin sesión
     const handlePop = () => {
-      if (!user && window.location.pathname === "/login") {
-        navigate("/", { replace: true });
+      const currentPath = window.location.pathname;
+      
+      // Si estamos en login sin sesión y presionan atrás, ir directamente a /
+      if (currentPath === "/login") {
+        // Prevenir la navegación y redirigir a /
+        window.history.replaceState(null, "", "/");
+        window.location.replace("/");
+        return;
+      }
+      
+      // Si salimos de login hacia cualquier otra ruta que no sea /, redirigir a /
+      if (currentPath !== "/login" && currentPath !== "/") {
+        window.location.replace("/");
       }
     };
 
     window.addEventListener("popstate", handlePop);
+    
+    // Cuando el componente se monta en login sin sesión, asegurar que la entrada anterior sea /
+    if (window.location.pathname === "/login") {
+      // Si la entrada anterior no es /, reemplazarla
+      // Esto se hace manipulando el historial antes de que el usuario presione atrás
+      const currentState = window.history.state;
+      // Guardar el estado actual
+      const savedState = currentState;
+      // Reemplazar la entrada actual con / (esto será la entrada anterior cuando agreguemos /login)
+      window.history.replaceState({ ...savedState, fromLogin: true }, "", "/");
+      // Agregar /login de nuevo
+      window.history.pushState({ ...savedState, fromLogin: false }, "", "/login");
+    }
+
     return () => window.removeEventListener("popstate", handlePop);
-  }, [user, navigate]);
+  }, [user]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

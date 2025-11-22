@@ -174,7 +174,10 @@ export default function AppLayout() {
   const handleLogout = async () => {
     if (logout) {
       await logout();
-      navigate("/login", { replace: true });
+      // Limpiar el historial: primero ir a /, luego a /login
+      // Esto asegura que al presionar atrás desde login, vaya a la landing
+      window.history.replaceState(null, "", "/");
+      window.location.replace("/login");
     }
   };
 
