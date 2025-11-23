@@ -1,5 +1,6 @@
 // Utilidad para monitorear el rendimiento del servidor
 // Ayuda a diagnosticar si el problema es de Railway o del frontend
+import { logger } from "./logger.js";
 
 let requestStats = {
   total: 0,
@@ -99,31 +100,29 @@ export function getDiagnosis() {
 export function logDiagnosis() {
   const diagnosis = getDiagnosis();
   
-  console.group('🔍 Diagnóstico de Rendimiento');
-  console.table(diagnosis.stats);
+  logger.log('🔍 Diagnóstico de Rendimiento');
+  logger.log('📊 Estadísticas:', diagnosis.stats);
   
   if (diagnosis.issues.length > 0) {
-    console.group('⚠️ Problemas detectados:');
+    logger.log('⚠️ Problemas detectados:');
     diagnosis.issues.forEach((issue, i) => {
       const icon = issue.severity === 'high' ? '🔴' : issue.severity === 'medium' ? '🟡' : '🔵';
-      console.log(`${icon} ${issue.message}`);
-      console.log(`   💡 Solución: ${issue.solution}`);
+      logger.log(`${icon} ${issue.message}`);
+      logger.log(`   💡 Solución: ${issue.solution}`);
     });
-    console.groupEnd();
   }
   
   if (diagnosis.isServerProblem) {
-    console.warn('🚨 El problema parece ser del SERVIDOR (Railway), no del frontend.');
-    console.log('📊 Revisa el dashboard de Railway: https://railway.app');
-    console.log('💡 Consejos:');
-    console.log('   - Verifica si el servicio está "dormido" (plan gratuito)');
-    console.log('   - Revisa los logs del servidor');
-    console.log('   - Considera actualizar el plan si estás en el tier gratuito');
+    logger.warn('🚨 El problema parece ser del SERVIDOR (Railway), no del frontend.');
+    logger.log('📊 Revisa el dashboard de Railway: https://railway.app');
+    logger.log('💡 Consejos:');
+    logger.log('   - Verifica si el servicio está "dormido" (plan gratuito)');
+    logger.log('   - Revisa los logs del servidor');
+    logger.log('   - Considera actualizar el plan si estás en el tier gratuito');
   } else {
-    console.log('✅ El rendimiento parece normal. Si aún es lento, puede ser la conexión a internet.');
+    logger.log('✅ El rendimiento parece normal. Si aún es lento, puede ser la conexión a internet.');
   }
   
-  console.groupEnd();
   
   return diagnosis;
 }

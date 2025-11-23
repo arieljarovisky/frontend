@@ -5,6 +5,7 @@ import Button from "./ui/Button";
 import { Field } from "./ui/Field";
 import { Users, CalendarClock, RefreshCw, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 
 function formatSessionLabel(session) {
   if (!session) return "Clase";
@@ -59,7 +60,7 @@ export default function ClassEnrollForm({ defaultName = "", defaultPhone = "" })
       const available = (Array.isArray(data) ? data : []).filter((session) => session.status === "scheduled");
       setSessions(available);
     } catch (e) {
-      console.error("❌ [ClassEnrollForm] Error cargando clases:", e);
+      logger.error("❌ [ClassEnrollForm] Error cargando clases:", e);
       setError(e?.message || "No se pudieron obtener las clases disponibles.");
       setSessions([]);
     } finally {

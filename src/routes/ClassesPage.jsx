@@ -17,6 +17,7 @@ import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
+import { logger } from "../utils/logger.js";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
   salon: { classes: false },
@@ -330,7 +331,7 @@ export default function ClassesPage() {
         return fallback ? { ...prev, branchId: fallback } : prev;
       });
     } catch (error) {
-      console.error("❌ [classes] Error cargando sucursales:", error);
+      logger.error("❌ [classes] Error cargando sucursales:", error);
       toast.error("No se pudieron cargar las sucursales");
     } finally {
       setBranchesLoading(false);
@@ -370,7 +371,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       const list = await apiClient.listInstructors({ active: true });
       setInstructors(Array.isArray(list) ? list : []);
     } catch (error) {
-      console.error("❌ [classes] Error cargando estilistas:", error);
+      logger.error("❌ [classes] Error cargando estilistas:", error);
     }
   }, []);
 
@@ -379,7 +380,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       const list = await apiClient.listServices({ active: true });
       setServices(Array.isArray(list) ? list : []);
     } catch (error) {
-      console.error("❌ [classes] Error cargando servicios:", error);
+      logger.error("❌ [classes] Error cargando servicios:", error);
     }
   }, []);
 
@@ -390,7 +391,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       const list = await apiClient.listClassTemplates();
       setTemplates(Array.isArray(list) ? list : []);
     } catch (error) {
-      console.error("❌ [classes] Error cargando plantillas:", error);
+      logger.error("❌ [classes] Error cargando plantillas:", error);
       setTemplatesError(error?.message || "No se pudieron obtener las plantillas");
     } finally {
       setTemplatesLoading(false);
@@ -411,7 +412,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       const list = await apiClient.listClassSessions(params);
       setSessions(Array.isArray(list) ? list : []);
     } catch (error) {
-      console.error("❌ [classes] Error cargando sesiones:", error);
+      logger.error("❌ [classes] Error cargando sesiones:", error);
       setSessions([]);
       setSessionsError(error?.message || "No se pudieron obtener las clases");
     } finally {
@@ -432,7 +433,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         const detail = await apiClient.getClassSession(sessionId);
         setSessionDetail(detail);
       } catch (error) {
-        console.error("❌ [classes] Error cargando detalle:", error);
+        logger.error("❌ [classes] Error cargando detalle:", error);
         setDetailError(error?.message || "No se pudo cargar la clase seleccionada");
         setSessionDetail(null);
       } finally {

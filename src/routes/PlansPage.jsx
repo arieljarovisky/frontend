@@ -7,6 +7,7 @@ import { apiClient } from "../api/client";
 import { toast } from "sonner";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
+import { logger } from "../utils/logger.js";
 
 const PLANS = [
   {
@@ -96,7 +97,7 @@ export default function PlansPage() {
       const response = await apiClient.get("/api/business-types/tenant/business-type");
       // Aquí podrías obtener información de la suscripción actual si existe
     } catch (error) {
-      console.error("Error cargando suscripción:", error);
+      logger.error("Error cargando suscripción:", error);
     }
   };
 
@@ -108,7 +109,7 @@ export default function PlansPage() {
       // La verificación real se hará al intentar crear la suscripción
       setMpConnected(true); // Permitir intentar suscribirse
     } catch (error) {
-      console.error("Error verificando Mercado Pago:", error);
+      logger.error("Error verificando Mercado Pago:", error);
       setMpConnected(false);
     }
   };
@@ -161,7 +162,7 @@ export default function PlansPage() {
         setLoading(false);
       }
     } catch (error) {
-      console.error("Error suscribiéndose:", error);
+      logger.error("Error suscribiéndose:", error);
       toast.error(
         error?.response?.data?.error ||
         "No se pudo crear la suscripción. Verificá tu conexión a Mercado Pago."

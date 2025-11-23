@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { DollarSign, Package, TrendingUp } from "lucide-react";
+import { logger } from "../../utils/logger.js";
 
 export default function StockValuationPage() {
   const [branchFilter, setBranchFilter] = useState("");
@@ -16,7 +17,7 @@ export default function StockValuationPage() {
         // getInventoryValuation devuelve un objeto directamente
         return result && typeof result === 'object' ? result : {};
       } catch (error) {
-        console.error("Error al cargar valuación:", error);
+        logger.error("Error al cargar valuación:", error);
         return {};
       }
     },
@@ -34,7 +35,7 @@ export default function StockValuationPage() {
         // getInventoryValuationDetail ya devuelve el array directamente
         return Array.isArray(result) ? result : [];
       } catch (error) {
-        console.error("Error al cargar detalle de valuación:", error);
+        logger.error("Error al cargar detalle de valuación:", error);
         return [];
       }
     },
@@ -49,7 +50,7 @@ export default function StockValuationPage() {
         const response = await apiClient.listActiveBranches();
         return Array.isArray(response?.data) ? response.data : [];
       } catch (error) {
-        console.error("Error al cargar sucursales:", error);
+        logger.error("Error al cargar sucursales:", error);
         return [];
       }
     },

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Building2, Check } from "lucide-react";
 import { apiClient, setTenantId } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { logger } from "../utils/logger.js";
 
 export function TenantSelector() {
   const { user, tenant, refreshSession } = useAuth();
@@ -44,7 +45,7 @@ export function TenantSelector() {
         });
       setTenants(normalized);
     } catch (error) {
-      console.error("Error loading tenants:", error);
+      logger.error("Error loading tenants:", error);
     }
   };
 
@@ -56,7 +57,7 @@ export function TenantSelector() {
       setShowDropdown(false);
       window.location.reload(); // Forzar recarga para que todo se actualice
     } catch (error) {
-      console.error("Error switching tenant:", error);
+      logger.error("Error switching tenant:", error);
       alert("Error al cambiar de sucursal");
     } finally {
       setLoading(false);

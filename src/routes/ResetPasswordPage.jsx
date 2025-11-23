@@ -6,6 +6,7 @@ import apiClient from "../api/client";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import { validatePassword, getPasswordRequirements } from "../utils/passwordValidation.js";
+import { logger } from "../utils/logger.js";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ export default function ResetPasswordPage() {
         setError(data?.error || "Error al restablecer la contraseña");
       }
     } catch (err) {
-      console.error("Error en reset-password:", err);
+      logger.error("Error en reset-password:", err);
       const errorMsg = err.response?.data?.error || "No se pudo conectar con el servidor";
       setError(errorMsg);
     } finally {

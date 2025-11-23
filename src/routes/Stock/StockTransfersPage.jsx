@@ -3,6 +3,7 @@ import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { ArrowRightLeft, CheckCircle, XCircle, Clock, Package, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 
 export default function StockTransfersPage() {
   const [showModal, setShowModal] = useState(false);
@@ -24,7 +25,7 @@ export default function StockTransfersPage() {
         // listStockTransfers ya devuelve el array directamente
         return Array.isArray(result) ? result : [];
       } catch (error) {
-        console.error("Error al cargar transferencias:", error);
+        logger.error("Error al cargar transferencias:", error);
         return [];
       }
     },
@@ -39,7 +40,7 @@ export default function StockTransfersPage() {
         const response = await apiClient.get("/api/stock/products");
         return Array.isArray(response?.data?.data) ? response.data.data : [];
       } catch (error) {
-        console.error("Error al cargar productos:", error);
+        logger.error("Error al cargar productos:", error);
         return [];
       }
     },
@@ -53,7 +54,7 @@ export default function StockTransfersPage() {
         const response = await apiClient.listActiveBranches();
         return Array.isArray(response?.data) ? response.data : [];
       } catch (error) {
-        console.error("Error al cargar sucursales:", error);
+        logger.error("Error al cargar sucursales:", error);
         return [];
       }
     },

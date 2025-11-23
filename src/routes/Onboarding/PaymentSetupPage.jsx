@@ -5,6 +5,7 @@ import { apiClient } from "../../api/client";
 import ThemeToggle from "../../components/ThemeToggle";
 import Logo from "../../components/Logo";
 import { useAuth } from "../../context/AuthContext";
+import { logger } from "../../utils/logger.js";
 
 const PLAN_DETAILS = {
   starter: { code: "starter", label: "Plan Starter", currency: "ARS", amount: 9999 },
@@ -101,7 +102,7 @@ export default function PaymentSetupPage() {
         }
       } catch (err) {
         if (cancelled) return;
-        console.error("[ONBOARDING][PAYMENT] status error", err);
+        logger.error("[ONBOARDING][PAYMENT] status error", err);
         setStatus({ loading: false, state: "error", mpStatus: null });
       }
     };
@@ -132,7 +133,7 @@ export default function PaymentSetupPage() {
         throw new Error("No se recibió el enlace de pago.");
       }
     } catch (err) {
-      console.error("[ONBOARDING][PAYMENT] connect error", err);
+      logger.error("[ONBOARDING][PAYMENT] connect error", err);
       setError(
         err.response?.data?.error ||
           err.message ||

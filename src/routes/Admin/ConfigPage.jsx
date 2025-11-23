@@ -34,6 +34,7 @@ import BusinessTypeConfig from "./BusinessTypeConfig.jsx";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/UseApp";
 import Button from "../../components/ui/Button";
+import { logger } from "../../utils/logger.js";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
@@ -250,7 +251,7 @@ export default function ConfigPage() {
       const plans = await apiClient.listMembershipPlans();
       setMembershipPlans(Array.isArray(plans) ? plans : []);
     } catch (error) {
-      console.error("Error cargando planes de membresía:", error);
+      logger.error("Error cargando planes de membresía:", error);
       setMembershipError(error?.response?.data?.error || error?.message || "No se pudieron cargar las membresías");
       setMembershipPlans([]);
     } finally {
@@ -430,20 +431,20 @@ export default function ConfigPage() {
         let branchesList = [];
         try {
           setBranchesLoading(true);
-          console.log("[ConfigPage] Cargando sucursales...");
+          logger.log("[ConfigPage] Cargando sucursales...");
           const response = await apiClient.listBranches();
-          console.log("[ConfigPage] Respuesta de listBranches:", response);
+          logger.log("[ConfigPage] Respuesta de listBranches:", response);
           branchesList = Array.isArray(response) ? response : [];
-          console.log("[ConfigPage] Sucursales procesadas:", branchesList);
+          logger.log("[ConfigPage] Sucursales procesadas:", branchesList);
           setBranches(branchesList);
           // Seleccionar la primera sucursal por defecto si hay sucursales y no hay una seleccionada
           if (branchesList.length > 0 && !selectedBranchId) {
-            console.log("[ConfigPage] Seleccionando primera sucursal:", branchesList[0].id);
+            logger.log("[ConfigPage] Seleccionando primera sucursal:", branchesList[0].id);
             setSelectedBranchId(branchesList[0].id);
           }
         } catch (e) {
-          console.error("[ConfigPage] Error cargando sucursales:", e);
-          console.error("[ConfigPage] Error details:", e.response?.data || e.message);
+          logger.error("[ConfigPage] Error cargando sucursales:", e);
+          logger.error("[ConfigPage] Error details:", e.response?.data || e.message);
           setBranches([]);
         } finally {
           setBranchesLoading(false);
@@ -486,7 +487,7 @@ export default function ConfigPage() {
         
         setWorkingHours(loadedWorkingHours);
       } catch (e) {
-        console.error("Load config failed", e);
+        logger.error("Load config failed", e);
       }
     })();
   }, []);
@@ -524,7 +525,7 @@ export default function ConfigPage() {
         deposit_max: d.deposit_max ?? null,
       });
     } catch (e) {
-      console.error("Load payments failed", e);
+      logger.error("Load payments failed", e);
     }
   };
 
@@ -550,7 +551,7 @@ export default function ConfigPage() {
         accountError: data.accountError || null,
       });
     } catch (err) {
-      console.error('Error verificando estado MP:', err);
+      logger.error('Error verificando estado MP:', err);
       setMpStatus({
         connected: false,
         userId: null,
@@ -587,7 +588,7 @@ export default function ConfigPage() {
       const response = await apiClient.verifyArcaConnection();
       setArcaConnectionStatus(response);
     } catch (error) {
-      console.error("Error verificando ARCA:", error);
+      logger.error("Error verificando ARCA:", error);
       setArcaConnectionStatus({
         ok: false,
         error: error.response?.data?.error || error.message,
@@ -669,12 +670,12 @@ export default function ConfigPage() {
       setConnectingMP(true);
       setMessage('');
 
-      console.log('🔍 [Frontend] Solicitando URL de autorización...');
+      logger.log('🔍 [Frontend] Solicitando URL de autorización...');
       const data = await apiClient.getMPAuthUrl({ fresh: true });
-      console.log('✅ [Frontend] URL recibida:', data);
+      logger.log('✅ [Frontend] URL recibida:', data);
 
       if (data.ok && data.authUrl) {
-        console.log('🔄 [Frontend] Redirigiendo a Mercado Pago...');
+        logger.log('🔄 [Frontend] Redirigiendo a Mercado Pago...');
         // Redirigir a Mercado Pago
         window.location.href = data.authUrl;
       } else {
@@ -682,7 +683,7 @@ export default function ConfigPage() {
         setConnectingMP(false);
       }
     } catch (err) {
-      console.error('❌ [Frontend] Error conectando MP:', err);
+      logger.error('❌ [Frontend] Error conectando MP:', err);
       toast.error('Error al conectar con Mercado Pago', {
         description: err.response?.data?.error || err.message
       });
@@ -710,7 +711,7 @@ export default function ConfigPage() {
         toast.success('Mercado Pago desconectado');
       }
     } catch (err) {
-      console.error('Error desconectando MP:', err);
+      logger.error('Error desconectando MP:', err);
       toast.error('Error al desconectar');
     }
   };
@@ -888,8 +889,8 @@ export default function ConfigPage() {
     setSaving(true);
     try {
       // Log para debug
-      console.log("[handleSaveAll] Contact data a guardar:", contact);
-      console.log("[handleSaveAll] arca_cuit:", contact.arca_cuit);
+      logger.log("[handleSaveAll] Contact data a guardar:", contact);
+      logger.log("[handleSaveAll] arca_cuit:", contact.arca_cuit);
 
       await Promise.all([
         apiClient.saveConfigSection("general", general),
@@ -932,13 +933,13 @@ export default function ConfigPage() {
           use_certificates: !!(contactData.arca_cert_path && contactData.arca_key_path),
         });
       } catch (e) {
-        console.error("Error recargando configuración de contacto:", e);
+        logger.error("Error recargando configuración de contacto:", e);
       }
 
       // Recargar conexión ARCA después de guardar
       checkArcaConnection();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
       toast.error(`❌ Error al guardar la configuración: ${errorMessage}`);
     } finally {

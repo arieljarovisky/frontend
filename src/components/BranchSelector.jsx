@@ -3,6 +3,7 @@ import { Building2, Check, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient, getBranchViewMode, setBranchViewMode } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { logger } from "../utils/logger.js";
 
 export default function BranchSelector() {
   const { user, refreshSession } = useAuth();
@@ -28,7 +29,7 @@ export default function BranchSelector() {
         if (!mounted) return;
         setBranches(Array.isArray(response?.data) ? response.data : []);
       } catch (error) {
-        console.error("[BranchSelector] list error:", error);
+        logger.error("[BranchSelector] list error:", error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -65,7 +66,7 @@ export default function BranchSelector() {
         window.location.reload();
       }, 150);
     } catch (error) {
-      console.error("[BranchSelector] select error:", error);
+      logger.error("[BranchSelector] select error:", error);
       toast.error(error?.response?.data?.error || error?.message || "No se pudo cambiar de sucursal");
       // Si falla, revertir el cambio de modo de vista
       if (viewMode === "all") {

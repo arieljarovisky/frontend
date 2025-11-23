@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/UseApp";
 import apiClient from "../api/client";
 import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 
 const FEATURE_LABELS = {
   appointments: "Turnos individuales",
@@ -86,7 +87,7 @@ export default function FeatureRequestPage() {
       setSubmitted(true);
       toast.success("Solicitud enviada correctamente");
     } catch (err) {
-      console.error("Error enviando solicitud de funcionalidades:", err);
+      logger.error("Error enviando solicitud de funcionalidades:", err);
       setError("No pudimos enviar tu solicitud. Probá nuevamente en unos minutos.");
       toast.error("Error al enviar la solicitud");
     } finally {

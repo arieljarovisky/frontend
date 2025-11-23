@@ -4,6 +4,7 @@ import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
 import { CheckCircle2 } from "lucide-react";
 import apiClient from "../api/client";
+import { logger } from "../utils/logger.js";
 
 export default function EnterpriseRequest() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function EnterpriseRequest() {
       await apiClient.post("/public/enterprise/request", form);
       setSubmitted(true);
     } catch (err) {
-      console.error("Error enviando solicitud Pro a medida:", err);
+      logger.error("Error enviando solicitud Pro a medida:", err);
       setError("No pudimos enviar tu solicitud. Probá nuevamente en unos minutos.");
     } finally {
       setSubmitting(false);

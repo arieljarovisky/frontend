@@ -25,6 +25,7 @@ import { AppContext } from "../context/AppProvider";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import resourcePlugin from "@fullcalendar/resource";
 import apiClient from "../api/client";
+import { logger } from "../utils/logger.js";
 
 /* =========================
    Helpers Responsive
@@ -276,7 +277,7 @@ export default function CalendarView() {
               allWorkingHours.push(...hours);
             }
           } catch (e) {
-            console.warn(`[CalendarView] No se pudieron cargar horarios para instructor ${instructor.id}:`, e);
+            logger.warn(`[CalendarView] No se pudieron cargar horarios para instructor ${instructor.id}:`, e);
           }
         }
 
@@ -310,10 +311,10 @@ export default function CalendarView() {
         const minTime = `${String(Math.max(0, minHour - 1)).padStart(2, '0')}:00:00`;
         const maxTime = `${String(Math.min(23, maxHour + 1)).padStart(2, '0')}:00:00`;
 
-        console.log(`[CalendarView] Rango de horarios calculado: ${minTime} - ${maxTime} (basado en ${allWorkingHours.length} horarios)`);
+        logger.log(`[CalendarView] Rango de horarios calculado: ${minTime} - ${maxTime} (basado en ${allWorkingHours.length} horarios)`);
         setCalendarTimeRange({ min: minTime, max: maxTime });
       } catch (e) {
-        console.error("[CalendarView] Error calculando rango de horarios:", e);
+        logger.error("[CalendarView] Error calculando rango de horarios:", e);
         setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
       }
     };

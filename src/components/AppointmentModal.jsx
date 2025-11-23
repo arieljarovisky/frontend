@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useApp } from "../context/UseApp";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 import {
   X,
   Save,
@@ -135,7 +136,7 @@ export default function AppointmentModal({ open, onClose, event }) {
       const detail = await apiClient.getClassSession(classSessionId);
       setClassDetail(detail);
     } catch (err) {
-      console.error("❌ [AppointmentModal] Error cargando clase:", err);
+      logger.error("❌ [AppointmentModal] Error cargando clase:", err);
       setClassError(err?.message || "No se pudo cargar la clase seleccionada.");
     } finally {
       setClassLoading(false);

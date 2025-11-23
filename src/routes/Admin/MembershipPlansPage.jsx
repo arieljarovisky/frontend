@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Edit3, RefreshCw, Save, Plus } from "lucide-react";
 import { toast } from "sonner";
 import Button from "../../components/ui/Button";
 import { apiClient } from "../../api/client.js";
+import { logger } from "../../utils/logger.js";
 
 const DEFAULT_PLAN_FORM = {
   id: null,
@@ -84,7 +85,7 @@ export default function MembershipPlansPage() {
       const response = await apiClient.listMembershipPlans();
       setPlans(Array.isArray(response) ? response : []);
     } catch (error) {
-      console.error("[MembershipPlansPage] loadPlans error:", error);
+      logger.error("[MembershipPlansPage] loadPlans error:", error);
       setPlans([]);
       setPlansError(error.response?.data?.error || "No se pudieron cargar los planes.");
       toast.error("No pudimos obtener los planes de membresía.");
@@ -226,7 +227,7 @@ export default function MembershipPlansPage() {
         handleNewPlan();
       }
     } catch (error) {
-      console.error("[MembershipPlansPage] handleSubmit error:", error);
+      logger.error("[MembershipPlansPage] handleSubmit error:", error);
       toast.error(error.response?.data?.error || "No pudimos guardar el plan.");
     } finally {
       setSaving(false);
@@ -241,7 +242,7 @@ export default function MembershipPlansPage() {
       );
       await loadPlans();
     } catch (error) {
-      console.error("[MembershipPlansPage] handleToggleActive error:", error);
+      logger.error("[MembershipPlansPage] handleToggleActive error:", error);
       toast.error("No pudimos actualizar el estado del plan.");
     }
   };

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { apiClient } from "../../api";
 import { XCircle, Clock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 
 // Modal para facturar membresías
 export function InvoiceMembershipsModal({ customers, constants, onClose, onSave }) {
@@ -25,7 +26,7 @@ export function InvoiceMembershipsModal({ customers, constants, onClose, onSave 
         
         setSubscriptions(subscriptionsData);
       } catch (error) {
-        console.error("Error cargando suscripciones:", error);
+        logger.error("Error cargando suscripciones:", error);
         toast.error("Error al cargar las membresías");
       } finally {
         setLoadingSubscriptions(false);

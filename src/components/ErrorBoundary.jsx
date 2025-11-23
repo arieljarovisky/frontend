@@ -1,4 +1,5 @@
 import React from "react";
+import { logger } from "../utils/logger.js";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,7 +14,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary capturó un error:", error, errorInfo);
+    logger.error("ErrorBoundary capturó un error:", error, errorInfo);
     this.setState({
       error,
       errorInfo,

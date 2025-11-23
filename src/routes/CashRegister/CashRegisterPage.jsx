@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
+import { logger } from "../../utils/logger.js";
 
 const PAYMENT_METHODS = {
   cash: "Efectivo",
@@ -71,10 +72,10 @@ export default function CashRegisterPage() {
           : Array.isArray(response?.data) 
             ? response.data 
             : [];
-        console.log("[CashRegisterPage] Sucursales cargadas:", branchesList);
+        logger.log("[CashRegisterPage] Sucursales cargadas:", branchesList);
         setBranches(branchesList);
       } catch (error) {
-        console.error("[CashRegisterPage] Error cargando sucursales:", error);
+        logger.error("[CashRegisterPage] Error cargando sucursales:", error);
         setBranches([]);
       } finally {
         setBranchesLoading(false);
@@ -119,7 +120,7 @@ export default function CashRegisterPage() {
           setExpectedTotals(response.data.data);
         }
       } catch (error) {
-        console.error("[CashRegisterPage] Error calculando totales esperados:", error);
+        logger.error("[CashRegisterPage] Error calculando totales esperados:", error);
         // Si hay error, resetear a 0
         setExpectedTotals({
           expected_cash: 0,
@@ -262,7 +263,7 @@ export default function CashRegisterPage() {
         });
       }
     } catch (error) {
-      console.error("[CashRegisterPage] Error recalculando totales:", error);
+      logger.error("[CashRegisterPage] Error recalculando totales:", error);
       // Si falla, usar los valores del closure
       setCloseForm({
         actual_cash: closure.expected_cash || "",

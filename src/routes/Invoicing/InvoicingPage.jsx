@@ -23,6 +23,7 @@ import {
   Package
 } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 import "./invoicingModal.css";
 import { InvoiceMembershipsModal } from "./InvoiceMembershipsModal.jsx";
 import { InvoiceProductsModal } from "./InvoiceProductsModal.jsx";
@@ -373,11 +374,11 @@ export default function InvoicingPage() {
             return hasValidStatus && isNotInvoiced;
           });
         
-        console.log(`[InvoicingPage] Cargados ${filtered.length} turnos pendientes de facturar de ${appointmentsData.length} totales`);
+        logger.log(`[InvoicingPage] Cargados ${filtered.length} turnos pendientes de facturar de ${appointmentsData.length} totales`);
         
         return filtered;
       } catch (error) {
-        console.error("Error loading appointments:", error);
+        logger.error("Error loading appointments:", error);
         return [];
       }
     },
@@ -2142,7 +2143,7 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
         const productsData = response.data?.data || response.data || [];
         setProducts(productsData.filter(p => p.active !== false));
       } catch (error) {
-        console.error("Error cargando productos:", error);
+        logger.error("Error cargando productos:", error);
         // No mostrar error, simplemente no habrá autocomplete
       }
     };
@@ -2189,7 +2190,7 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
             [customerId]: Array.from(purchasedProducts.values()).sort((a, b) => b.times_purchased - a.times_purchased)
           }));
         } catch (error) {
-          console.warn(`Error cargando historial del cliente ${customerId}:`, error);
+          logger.warn(`Error cargando historial del cliente ${customerId}:`, error);
         }
       }
     };
@@ -2468,19 +2469,19 @@ function InvoiceAppointmentsModal({ appointments, customers, constants, onClose,
       try {
         await refetchAppointments();
       } catch (refetchError) {
-        console.warn("Error al recargar appointments:", refetchError);
+        logger.warn("Error al recargar appointments:", refetchError);
       }
       
       try {
         await refetch();
       } catch (refetchError) {
-        console.warn("Error al recargar facturas:", refetchError);
+        logger.warn("Error al recargar facturas:", refetchError);
       }
       
       try {
         onSave();
       } catch (onSaveError) {
-        console.warn("Error en onSave:", onSaveError);
+        logger.warn("Error en onSave:", onSaveError);
       }
     } catch (error) {
       toast.error(error.response?.data?.error || "Error al facturar turnos");
@@ -2867,7 +2868,7 @@ function InvoiceClassesModal({ customers, constants, onClose, onSave }) {
                 enrollments: enrollResponse.data?.enrollments || []
               };
             } catch (err) {
-              console.warn(`Error cargando enrollments para clase ${classItem.id}:`, err);
+              logger.warn(`Error cargando enrollments para clase ${classItem.id}:`, err);
               return { ...classItem, enrollments: [] };
             }
           })
@@ -2875,7 +2876,7 @@ function InvoiceClassesModal({ customers, constants, onClose, onSave }) {
         
         setClasses(classesWithEnrollments);
       } catch (error) {
-        console.error("Error cargando clases:", error);
+        logger.error("Error cargando clases:", error);
         toast.error("Error al cargar las clases");
       } finally {
         setLoadingClasses(false);

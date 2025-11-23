@@ -5,6 +5,7 @@ import { Mail, Phone, MapPin, Send, ArrowLeft } from "lucide-react";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
 import apiClient from "../api/client";
+import { logger } from "../utils/logger.js";
 
 export default function ContactPage() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function ContactPage() {
       await apiClient.post("/public/contact", form);
       setSubmitted(true);
     } catch (err) {
-      console.error("Error enviando contacto:", err);
+      logger.error("Error enviando contacto:", err);
       setError("No pudimos enviar tu mensaje. Probá nuevamente en unos minutos.");
     } finally {
       setSubmitting(false);

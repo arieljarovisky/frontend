@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { apiClient } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import Button from "../../components/ui/Button";
+import { logger } from "../../utils/logger.js";
 
 const EMPTY_FORM = {
   name: "",
@@ -383,26 +384,26 @@ export default function BranchesPage() {
     setLoading(true);
     setError("");
     try {
-      console.log("[BranchesPage] Cargando sucursales...");
+      logger.log("[BranchesPage] Cargando sucursales...");
       // listBranches ya devuelve el array directamente, pero necesitamos también el limitInfo
       // Por eso hacemos la llamada directa al endpoint
       const { data } = await apiClient.get("/api/branches", {
         headers: { "X-Branch-Mode": "skip" },
       });
-      console.log("[BranchesPage] Respuesta completa:", data);
+      logger.log("[BranchesPage] Respuesta completa:", data);
       
       // El endpoint retorna { ok: true, data: [...], limit: {...} }
       const branchesList = Array.isArray(data?.data) ? data.data : [];
       const limitInfo = data?.limit || { multiBranch: false, maxBranches: 1 };
       
-      console.log("[BranchesPage] Sucursales extraídas:", branchesList);
-      console.log("[BranchesPage] Limit info:", limitInfo);
+      logger.log("[BranchesPage] Sucursales extraídas:", branchesList);
+      logger.log("[BranchesPage] Limit info:", limitInfo);
       
       setBranches(branchesList);
       setLimitInfo(limitInfo);
     } catch (err) {
-      console.error("[BranchesPage] list error:", err);
-      console.error("[BranchesPage] error response:", err?.response?.data);
+      logger.error("[BranchesPage] list error:", err);
+      logger.error("[BranchesPage] error response:", err?.response?.data);
       setError(err?.response?.data?.error || err?.message || "No se pudieron cargar las sucursales");
       setBranches([]);
     } finally {
@@ -431,8 +432,8 @@ export default function BranchesPage() {
       
       setUsers(usersList);
     } catch (err) {
-      console.error("[BranchesPage] loadUsers error:", err);
-      console.error("[BranchesPage] loadUsers error response:", err?.response);
+      logger.error("[BranchesPage] loadUsers error:", err);
+      logger.error("[BranchesPage] loadUsers error response:", err?.response);
       const errorMessage = err?.response?.data?.error || err?.message || "No se pudieron cargar los usuarios";
       toast.error(errorMessage);
       setUsers([]);
@@ -526,7 +527,7 @@ export default function BranchesPage() {
       closeModal();
       await loadBranches();
     } catch (err) {
-      console.error("[BranchesPage] save error:", err);
+      logger.error("[BranchesPage] save error:", err);
       toast.error(err?.response?.data?.error || err?.message || "No se pudo guardar la sucursal");
     } finally {
       setSaving(false);

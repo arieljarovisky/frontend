@@ -11,6 +11,7 @@ import TrialWarning from "../components/TrialWarning";
 import TrialExpiredBlock from "../components/TrialExpiredBlock";
 import { useQuery } from "../shared/useQuery";
 import { useApp } from "../context/UseApp.js";
+import { logger } from "../utils/logger.js";
 import {
   LayoutDashboard,
   Users,
@@ -110,7 +111,7 @@ export default function AppLayout() {
         const response = await apiClient.get("/api/business-types/tenant/business-type");
         return response.data?.data || null;
       } catch (error) {
-        console.error("Error loading business type:", error);
+        logger.error("Error loading business type:", error);
         return null;
       }
     },
@@ -148,7 +149,7 @@ export default function AppLayout() {
         const result = await apiClient.getUnreadCount();
         setUnreadCount(result?.count || 0);
       } catch (error) {
-        console.error("Error loading unread count:", error);
+        logger.error("Error loading unread count:", error);
         setUnreadCount(0);
       }
     };

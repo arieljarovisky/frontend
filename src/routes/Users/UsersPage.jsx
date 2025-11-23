@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { validatePassword } from "../../utils/passwordValidation.js";
+import { logger } from "../../utils/logger.js";
 
 // Traducciones de módulos y acciones
 const moduleTranslations = {
@@ -67,7 +68,7 @@ export default function UsersPage() {
       const response = await apiClient.listActiveBranches();
       setBranches(Array.isArray(response?.data) ? response.data : []);
     } catch (error) {
-      console.error("[UsersPage] loadBranches error:", error);
+      logger.error("[UsersPage] loadBranches error:", error);
       toast.error("No se pudieron cargar las sucursales");
     } finally {
       setBranchesLoading(false);

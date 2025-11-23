@@ -13,6 +13,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import { logger } from "../utils/logger.js";
 
 function safeNextParam(search) {
   const next = new URLSearchParams(search).get("next");
@@ -140,7 +141,7 @@ export default function LoginPage() {
 
       goAfterLogin(resp);
     } catch (err) {
-      console.error("Error en login:", err);
+      logger.error("Error en login:", err);
       
       // Extraer mensaje de error del backend si está disponible
       let errorMessage = "No se pudo conectar con el servidor";
@@ -184,7 +185,7 @@ export default function LoginPage() {
 
       goAfterLogin(resp, slug);
     } catch (err) {
-      console.error("Error en login tenant:", err);
+      logger.error("Error en login tenant:", err);
       
       // Extraer mensaje de error del backend si está disponible
       let errorMessage = "Error al conectar con el servidor";

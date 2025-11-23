@@ -4,6 +4,7 @@ import { Loader2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { apiClient } from "../../api/client";
 import ThemeToggle from "../../components/ThemeToggle";
 import Logo from "../../components/Logo";
+import { logger } from "../../utils/logger.js";
 
 export default function PaymentCompletePage() {
   const location = useLocation();
@@ -43,7 +44,7 @@ export default function PaymentCompletePage() {
         }
       } catch (err) {
         if (cancelled) return;
-        console.error("[ONBOARDING][PAYMENT_COMPLETE] status error", err);
+        logger.error("[ONBOARDING][PAYMENT_COMPLETE] status error", err);
         setStatus({ loading: false, state: "error" });
       }
     };

@@ -25,4 +25,14 @@ export default defineConfig({
   define: {
     __API_BASE__: JSON.stringify(API_BASE),
   },
+  build: {
+    // Eliminar console.log/error/warn en producción
+    minify: 'esbuild',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+  },
 });

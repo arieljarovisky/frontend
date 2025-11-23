@@ -7,6 +7,7 @@ import ThemeToggle from "../../components/ThemeToggle";
 import Logo from "../../components/Logo";
 import { useAuth } from "../../context/AuthContext";
 import { validatePassword } from "../../utils/passwordValidation.js";
+import { logger } from "../../utils/logger.js";
 
 const STEP_IDS = ["owner", "business", "branding", "plan"];
 
@@ -220,7 +221,7 @@ export default function OnboardingPage() {
         setStepIndex((prev) => prev + 1);
       }
     } catch (err) {
-      console.error("[ONBOARDING] next error", err);
+      logger.error("[ONBOARDING] next error", err);
       setError(
         err.response?.data?.error ||
           err.message ||
@@ -284,13 +285,13 @@ export default function OnboardingPage() {
           await authApi.loginTenant(email, formData.owner.password, tenantSlug);
         }
       } catch (loginError) {
-        console.error("[ONBOARDING] auto login error", loginError);
+        logger.error("[ONBOARDING] auto login error", loginError);
       }
 
       try {
         await refreshSession();
       } catch (err) {
-        console.warn("[ONBOARDING] refreshSession warning:", err);
+        logger.warn("[ONBOARDING] refreshSession warning:", err);
       }
 
       // Redirigir directo al dashboard sin pedir pago (trial de 14 días)
@@ -301,7 +302,7 @@ export default function OnboardingPage() {
         navigate("/login", { replace: true });
       }
     } catch (err) {
-      console.error("[ONBOARDING] finish error", err);
+      logger.error("[ONBOARDING] finish error", err);
       setError(
         err.response?.data?.error ||
           err.message ||
@@ -336,7 +337,7 @@ export default function OnboardingPage() {
               : "Este subdominio ya está en uso",
           });
         } catch (err) {
-          console.error("[ONBOARDING] check subdomain error", err);
+          logger.error("[ONBOARDING] check subdomain error", err);
           setSubdomainStatus({
             checking: false,
             available: null,

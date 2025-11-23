@@ -5,6 +5,7 @@ import { Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import apiClient from "../api/client";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import { logger } from "../utils/logger.js";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function ForgotPasswordPage() {
         setError(data?.error || "Error al enviar el correo");
       }
     } catch (err) {
-      console.error("Error en forgot-password:", err);
+      logger.error("Error en forgot-password:", err);
       setError("No se pudo conectar con el servidor");
     } finally {
       setLoading(false);

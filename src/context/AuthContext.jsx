@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authApi, getAccessToken, setAccessToken } from "../api/client";
+import { logger } from "../utils/logger.js";
 
 const AuthContext = createContext(null);
 
@@ -32,7 +33,7 @@ export function AuthProvider({ children }) {
           setTenant(null);
         }
       } catch (err) {
-        console.error("[AuthContext] Error inicializando sesión:", err);
+        logger.error("[AuthContext] Error inicializando sesión:", err);
         setAccessToken(null);
         setTenant(null);
       } finally {
@@ -76,7 +77,7 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } catch (err) {
-      console.warn("[AuthContext] logout warning:", err.message);
+      logger.warn("[AuthContext] logout warning:", err.message);
     } finally {
       setUser(null);
       setAccessToken(null);
@@ -99,7 +100,7 @@ export function AuthProvider({ children }) {
       setAccessToken(null);
       return { ok: false };
     } catch (err) {
-      console.error("[AuthContext] refreshSession error:", err);
+      logger.error("[AuthContext] refreshSession error:", err);
       setUser(null);
       setTenant(null);
       setAccessToken(null);

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 
 export default function ProductsPage() {
   const { tenantSlug } = useParams();
@@ -58,7 +59,7 @@ export default function ProductsPage() {
           setBranchFilter(String(branchesData[0].id));
         }
       } catch (error) {
-        console.error("[ProductsPage] loadBranches error", error);
+        logger.error("[ProductsPage] loadBranches error", error);
         if (error?.response?.status === 403) {
           setHasBranchesPermission(false);
         } else {
@@ -155,7 +156,7 @@ export default function ProductsPage() {
     // Verificar si hay productos con stock bajo
     const hasLowStock = lowStockProducts && Array.isArray(lowStockProducts) && lowStockProducts.length > 0;
     
-    console.log('[StockAlerts] Estado:', {
+    logger.log('[StockAlerts] Estado:', {
       loadingLowStock,
       hasLowStock,
       lowStockProductsCount: lowStockProducts?.length || 0,
@@ -164,7 +165,7 @@ export default function ProductsPage() {
     });
     
     if (hasLowStock && !hasShownAlertsInSession) {
-      console.log('[StockAlerts] Mostrando modal de alertas');
+      logger.log('[StockAlerts] Mostrando modal de alertas');
       setShowAlertsModal(true);
       // Marcar que ya se mostró la alerta en esta sesión
       sessionStorage.setItem('stockAlertsShown', 'true');
@@ -1452,7 +1453,7 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             setAvailableStock(0);
           }
         } catch (error) {
-          console.error("Error al obtener stock disponible:", error);
+          logger.error("Error al obtener stock disponible:", error);
           setAvailableStock(0);
         }
       } else {

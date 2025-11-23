@@ -4,6 +4,7 @@ import { apiClient } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { Package, Plus, Calendar, X, CheckCircle, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 
 export default function StockReservationsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -25,7 +26,7 @@ export default function StockReservationsPage() {
         // listStockReservations ya devuelve el array directamente
         return Array.isArray(result) ? result : [];
       } catch (error) {
-        console.error("Error al cargar reservas:", error);
+        logger.error("Error al cargar reservas:", error);
         return [];
       }
     },

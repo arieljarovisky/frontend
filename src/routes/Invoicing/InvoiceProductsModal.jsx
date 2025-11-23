@@ -3,6 +3,7 @@ import { X, Package, Plus, Minus, Search, User } from "lucide-react";
 import { apiClient } from "../../api";
 import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
+import { logger } from "../../utils/logger.js";
 
 export function InvoiceProductsModal({ onClose, customers, constants, onInvoice }) {
   const { user: currentUser } = useAuth();
@@ -36,11 +37,11 @@ export function InvoiceProductsModal({ onClose, customers, constants, onInvoice 
             setSelectedSellerId(currentUser.id.toString());
           }
         } catch (error) {
-          console.warn("Error cargando usuarios:", error);
+          logger.warn("Error cargando usuarios:", error);
           // No mostrar error, simplemente no habrá selector de vendedor
         }
       } catch (error) {
-        console.error("Error cargando productos:", error);
+        logger.error("Error cargando productos:", error);
         toast.error("Error al cargar productos");
       } finally {
         setLoading(false);
@@ -161,7 +162,7 @@ export function InvoiceProductsModal({ onClose, customers, constants, onInvoice 
         toast.error(response.data?.error || "Error al facturar productos");
       }
     } catch (error) {
-      console.error("Error al facturar productos:", error);
+      logger.error("Error al facturar productos:", error);
       toast.error(error.response?.data?.error || "Error al facturar productos");
     } finally {
       setLoading(false);

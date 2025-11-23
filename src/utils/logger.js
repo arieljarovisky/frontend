@@ -1,20 +1,42 @@
 // src/utils/logger.js
 // Utilidad para logs que solo funcionan en desarrollo
 
-const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+// Detectar si estamos en desarrollo de manera más robusta
+const isDev = 
+  import.meta.env.DEV === true ||
+  import.meta.env.MODE === 'development' ||
+  import.meta.env.PROD === false ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname.includes('localhost')));
 
+// En producción, funciones vacías (los logs se eliminan en el build de todas formas)
 export const logger = {
-  log: (...args) => {
-    if (isDev) console.log(...args);
-  },
-  error: (...args) => {
-    if (isDev) console.error(...args);
-  },
-  warn: (...args) => {
-    if (isDev) console.warn(...args);
-  },
-  info: (...args) => {
-    if (isDev) console.info(...args);
-  },
+  log: isDev ? (...args) => {
+    try {
+      console.log(...args);
+    } catch (e) {
+      // Ignorar errores de logging
+    }
+  } : () => {},
+  error: isDev ? (...args) => {
+    try {
+      console.error(...args);
+    } catch (e) {
+      // Ignorar errores de logging
+    }
+  } : () => {},
+  warn: isDev ? (...args) => {
+    try {
+      console.warn(...args);
+    } catch (e) {
+      // Ignorar errores de logging
+    }
+  } : () => {},
+  info: isDev ? (...args) => {
+    try {
+      console.info(...args);
+    } catch (e) {
+      // Ignorar errores de logging
+    }
+  } : () => {},
 };
 

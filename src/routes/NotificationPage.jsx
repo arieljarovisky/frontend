@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 import {
   Bell,
   Check,
@@ -343,7 +344,7 @@ export default function NotificationsPage() {
       setCurrentPage(1);
     } catch (error) {
       toast.error("Error al cargar notificaciones");
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }
@@ -354,7 +355,7 @@ export default function NotificationsPage() {
       const result = await apiClient.getUnreadCount();
       setUnreadCount(result?.count || 0);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       setUnreadCount(0);
     }
   };
@@ -414,7 +415,7 @@ export default function NotificationsPage() {
       handleRefresh();
     } catch (error) {
       toast.error("Error al eliminar las notificaciones");
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }

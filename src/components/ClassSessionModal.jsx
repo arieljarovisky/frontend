@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../api/client";
+import { logger } from "../utils/logger.js";
 import { X, RefreshCw, Users, CalendarClock, DollarSign, AlertTriangle } from "lucide-react";
 
 function formatDateTime(value) {
@@ -43,7 +44,7 @@ export default function ClassSessionModal({ open, sessionId, onClose }) {
       const detail = await apiClient.getClassSession(id);
       setSession(detail);
     } catch (e) {
-      console.error("❌ [ClassSessionModal] Error cargando clase:", e);
+      logger.error("❌ [ClassSessionModal] Error cargando clase:", e);
       setError(e?.message || "No se pudo cargar la información de la clase.");
       setSession(null);
     } finally {

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { apiClient } from "../api/client";
 import { useAuth } from "./AuthContext";
+import { logger } from "../utils/logger.js";
 
 const BUSINESS_TYPE_DEFAULT_FEATURES = {
   salon: { classes: false },
@@ -133,7 +134,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
         return fallback ? { ...prev, branchId: fallback } : { ...prev, branchId: "" };
       });
     } catch (error) {
-      console.error("❌ [AppProvider] Error cargando sucursales:", error);
+      logger.error("❌ [AppProvider] Error cargando sucursales:", error);
       setBranchesError(error?.message || "No se pudieron cargar las sucursales");
     } finally {
       setBranchesLoading(false);
@@ -201,7 +202,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
         setServices(srv);
         setInstructors(sty);
       } catch (e) {
-        console.error("❌ Error cargando metadata:", e);
+        logger.error("❌ Error cargando metadata:", e);
         setMetaError(String(e.message || e));
       } finally {
         setMetaLoading(false);
@@ -247,7 +248,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
       });
       setFeatures(merged);
     } catch (e) {
-      console.warn("⚠️ [AppProvider] No se pudo obtener features del tenant:", e?.message || e);
+      logger.warn("⚠️ [AppProvider] No se pudo obtener features del tenant:", e?.message || e);
       setFeatures((prev) =>
         Object.keys(prev || {}).length ? prev : { classes: false }
       );
@@ -401,7 +402,7 @@ export function AppProvider({ children, pollMs = 15000 }) {
         error: validSlots.length === 0 ? "No hay horarios disponibles" : "",
       });
     } catch (e) {
-      console.error("❌ [AVAIL] error", e);
+      logger.error("❌ [AVAIL] error", e);
       setAvailability({
         slots: [],
         busySlots: [],

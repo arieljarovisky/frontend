@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "../../api/client";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
 } from "recharts";
@@ -69,7 +70,7 @@ function WorkingHoursEditor({ instructorId }) {
         : [];
       setBranches(branchesArray);
     } catch (e) {
-      console.error("Error cargando sucursales:", e);
+      logger.error("Error cargando sucursales:", e);
       toast.error("Error al cargar sucursales");
       setBranches([]);
     } finally {
@@ -81,9 +82,9 @@ function WorkingHoursEditor({ instructorId }) {
     if (!instructorId) return;
     setErr("");
     try {
-      console.log(`[loadWorkingHours] Cargando horarios para instructor ${instructorId}`);
+      logger.log(`[loadWorkingHours] Cargando horarios para instructor ${instructorId}`);
       const server = await apiClient.getWorkingHours({ instructorId });
-      console.log(`[loadWorkingHours] Respuesta del servidor:`, server);
+      logger.log(`[loadWorkingHours] Respuesta del servidor:`, server);
       
       // Agrupar por weekday, cada día puede tener múltiples horarios (uno por sucursal)
       const byWeekday = new Map();
@@ -98,7 +99,7 @@ function WorkingHoursEditor({ instructorId }) {
             start_time: x.start_time?.slice(0, 5) || null,
             end_time: x.end_time?.slice(0, 5) || null,
           };
-          console.log(`[loadWorkingHours] Agregando horario para día ${wd}:`, schedule);
+          logger.log(`[loadWorkingHours] Agregando horario para día ${wd}:`, schedule);
           byWeekday.get(wd).push(schedule);
         }
       });
@@ -108,13 +109,13 @@ function WorkingHoursEditor({ instructorId }) {
         schedules: byWeekday.get(d) || [],
       }));
       
-      console.log(`[loadWorkingHours] Horarios agrupados por día:`, full);
-      console.log(`[loadWorkingHours] Total de días con horarios:`, full.filter(d => d.schedules.length > 0).length);
+      logger.log(`[loadWorkingHours] Horarios agrupados por día:`, full);
+      logger.log(`[loadWorkingHours] Total de días con horarios:`, full.filter(d => d.schedules.length > 0).length);
       
       setRows(full);
     } catch (e) {
       setErr("No pude cargar horarios.");
-      console.error("[loadWorkingHours] Error:", e);
+      logger.error("[loadWorkingHours] Error:", e);
     }
   }, [instructorId]);
 
@@ -132,7 +133,7 @@ function WorkingHoursEditor({ instructorId }) {
       });
       setBlocks(res?.data || []);
     } catch (e) {
-      console.error("Error cargando bloqueos:", e);
+      logger.error("Error cargando bloqueos:", e);
     }
   }, [instructorId]);
 
@@ -213,7 +214,7 @@ function WorkingHoursEditor({ instructorId }) {
                 branch_id: branchId,
               });
               
-              console.log(`[saveWorkingHours] Agregando horario: weekday=${day.weekday}, branch_id=${branchId}, start=${st}, end=${et}`);
+              logger.log(`[saveWorkingHours] Agregando horario: weekday=${day.weekday}, branch_id=${branchId}, start=${st}, end=${et}`);
             }
           });
         }
@@ -278,7 +279,7 @@ function WorkingHoursEditor({ instructorId }) {
         });
         
         const errorMsg = `No se pueden guardar horarios que se solapen:\n${overlapMessages.join('\n')}`;
-        console.error(`[saveWorkingHours] ❌ Horarios solapados detectados:`, overlaps);
+        logger.error(`[saveWorkingHours] ❌ Horarios solapados detectados:`, overlaps);
         toast.error("Horarios solapados", {
           description: overlapMessages.join('; '),
           duration: 8000
@@ -288,11 +289,11 @@ function WorkingHoursEditor({ instructorId }) {
         return;
       }
       
-      console.log(`[saveWorkingHours] ==========================================`);
-      console.log(`[saveWorkingHours] RESUMEN ANTES DE ENVIAR:`);
-      console.log(`[saveWorkingHours] Instructor ID: ${instructorId}`);
-      console.log(`[saveWorkingHours] Total de horarios a guardar: ${hours.length}`);
-      console.log(`[saveWorkingHours] Detalle de horarios:`, JSON.stringify(hours, null, 2));
+      logger.log(`[saveWorkingHours] ==========================================`);
+      logger.log(`[saveWorkingHours] RESUMEN ANTES DE ENVIAR:`);
+      logger.log(`[saveWorkingHours] Instructor ID: ${instructorId}`);
+      logger.log(`[saveWorkingHours] Total de horarios a guardar: ${hours.length}`);
+      logger.log(`[saveWorkingHours] Detalle de horarios:`, JSON.stringify(hours, null, 2));
       
       // Agrupar por día para verificar duplicados
       const byDay = {};
@@ -306,11 +307,11 @@ function WorkingHoursEditor({ instructorId }) {
       
       const duplicates = Object.entries(byDay).filter(([_, items]) => items.length > 1);
       if (duplicates.length > 0) {
-        console.warn(`[saveWorkingHours] ⚠️ ADVERTENCIA: Se detectaron claves duplicadas:`, duplicates);
+        logger.warn(`[saveWorkingHours] ⚠️ ADVERTENCIA: Se detectaron claves duplicadas:`, duplicates);
       }
       
-      console.log(`[saveWorkingHours] Horarios agrupados por día/sucursal:`, byDay);
-      console.log(`[saveWorkingHours] ==========================================`);
+      logger.log(`[saveWorkingHours] Horarios agrupados por día/sucursal:`, byDay);
+      logger.log(`[saveWorkingHours] ==========================================`);
 
       await apiClient.saveWorkingHours({ instructorId, hours });
       toast.success("Horarios guardados correctamente");
@@ -368,7 +369,7 @@ function WorkingHoursEditor({ instructorId }) {
           duration: 5000,
         });
       }
-      console.error("[saveWorkingHours]", e);
+      logger.error("[saveWorkingHours]", e);
     } finally {
       setSaving(false);
     }
@@ -382,7 +383,7 @@ function WorkingHoursEditor({ instructorId }) {
       loadBlocks();
     } catch (e) {
       toast.error("Error al eliminar bloqueo");
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -566,7 +567,7 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
       onRefresh();
     } catch (e) {
       toast.error(e?.response?.data?.error || "Error al crear bloqueo");
-      console.error(e);
+      logger.error(e);
     } finally {
       setSaving(false);
     }
@@ -825,7 +826,7 @@ export default function InstructorStatsPage() {
         if (list?.length) setSelected(String(list[0].id));
       } catch (e) {
         setErr("No pude traer la lista de instructores.");
-        console.error(e);
+        logger.error(e);
       }
     })();
   }, []);
@@ -889,7 +890,7 @@ export default function InstructorStatsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       alert("No pude exportar.");
     }
   };

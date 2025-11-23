@@ -3,6 +3,7 @@ import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { AlertTriangle, TrendingDown, TrendingUp, Package, RefreshCw, CheckCircle, X } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "../../utils/logger.js";
 
 export default function StockAlertsPage() {
   const [branchFilter, setBranchFilter] = useState("");
@@ -23,7 +24,7 @@ export default function StockAlertsPage() {
         // listStockAlerts ya devuelve el array directamente
         return Array.isArray(result) ? result : [];
       } catch (error) {
-        console.error("Error al cargar alertas:", error);
+        logger.error("Error al cargar alertas:", error);
         return [];
       }
     },
@@ -38,7 +39,7 @@ export default function StockAlertsPage() {
         const response = await apiClient.listActiveBranches();
         return Array.isArray(response?.data) ? response.data : [];
       } catch (error) {
-        console.error("Error al cargar sucursales:", error);
+        logger.error("Error al cargar sucursales:", error);
         return [];
       }
     },

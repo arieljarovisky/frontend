@@ -14,6 +14,7 @@ import {
 import { apiClient } from "../../api";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../context/AuthContext";
+import { logger } from "../../utils/logger.js";
 
 const DEFAULT_INSTRUCTOR_FORM = {
   name: "",
@@ -165,7 +166,7 @@ export default function InstructorsPage() {
       const response = await apiClient.listActiveBranches();
       setBranches(Array.isArray(response?.data) ? response.data : []);
     } catch (error) {
-      console.error("[InstructorsPage] loadBranches error:", error);
+      logger.error("[InstructorsPage] loadBranches error:", error);
       toast.error("No se pudieron cargar las sucursales");
     } finally {
       setBranchesLoading(false);
@@ -182,7 +183,7 @@ export default function InstructorsPage() {
       setInstructors(sortByName(instructorsData));
       setServices(sortByName(servicesData));
     } catch (error) {
-      console.error("Error cargando instructores o servicios", error);
+      logger.error("Error cargando instructores o servicios", error);
       toast.error("No se pudieron cargar los datos", {
         description: error?.response?.data?.error || error?.message,
       });
@@ -247,7 +248,7 @@ export default function InstructorsPage() {
       resetInstructorForm();
       await loadData();
     } catch (error) {
-      console.error("Error guardando instructor", error);
+      logger.error("Error guardando instructor", error);
       toast.error("No se pudo guardar el instructor", {
         description: error?.response?.data?.error || error?.message,
       });
@@ -293,7 +294,7 @@ export default function InstructorsPage() {
       resetServiceForm();
       await loadData();
     } catch (error) {
-      console.error("Error guardando servicio", error);
+      logger.error("Error guardando servicio", error);
       toast.error("No se pudo guardar el servicio", {
         description: error?.response?.data?.error || error?.message,
       });
@@ -314,7 +315,7 @@ export default function InstructorsPage() {
       }
       await loadData();
     } catch (error) {
-      console.error("Error eliminando instructor", error);
+      logger.error("Error eliminando instructor", error);
       toast.error("No se pudo desactivar el instructor", {
         description: error?.response?.data?.error || error?.message,
       });
@@ -333,7 +334,7 @@ export default function InstructorsPage() {
       }
       await loadData();
     } catch (error) {
-      console.error("Error eliminando servicio", error);
+      logger.error("Error eliminando servicio", error);
       toast.error("No se pudo desactivar el servicio", {
         description: error?.response?.data?.error || error?.message,
       });

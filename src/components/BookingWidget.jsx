@@ -8,6 +8,7 @@ import SlotGrid from "./SlotGrid";
 import Button from "./ui/Button";
 import { Field } from "./ui/Field";
 import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -144,7 +145,7 @@ export default function BookingWidget() {
         repeatUntil: booking.repeatUntil || undefined,
       });
     } catch (error) {
-      console.error("❌ Error:", error);
+      logger.error("❌ Error:", error);
     }
   };
 

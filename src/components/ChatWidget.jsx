@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatConfig } from "../config/chatConfig";
 import apiClient from "../api/client";
+import { logger } from "../utils/logger.js";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function ChatWidget() {
         const response = await apiClient.get("/api/chat/status");
         setAiAvailable(response.data?.available || false);
       } catch (error) {
-        console.warn("[Chat] No se pudo verificar disponibilidad de IA:", error);
+        logger.warn("[Chat] No se pudo verificar disponibilidad de IA:", error);
         setAiAvailable(false);
       }
     };
@@ -79,7 +80,7 @@ export default function ChatWidget() {
 
       setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
-      console.error("[Chat] Error al enviar mensaje:", error);
+      logger.error("[Chat] Error al enviar mensaje:", error);
       
       // Respuesta de fallback
       const botResponse = {
