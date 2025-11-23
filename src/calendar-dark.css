@@ -301,13 +301,17 @@
 
   /* Eventos en vista de lista - texto legible */
   .calendar-dark .fc-list-event {
-    background: var(--fc-card-bg);
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
     color: var(--fc-text-primary) !important;
   }
 
-  .calendar-dark .fc-list-event .fc-list-event-title,
-  .calendar-dark .fc-list-event .fc-list-event-time {
+  .calendar-dark .fc-list-event .fc-list-event-title {
     color: var(--fc-text-primary) !important;
+  }
+  
+  .calendar-dark .fc-list-event .fc-list-event-time {
+    color: var(--fc-text-secondary) !important;
   }
 
   /* Texto personalizado en eventos */
@@ -381,15 +385,52 @@
      VISTA DE LISTA/AGENDA
      ========================================== */
   .calendar-dark .fc-list {
-    background: var(--fc-card-bg);
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
     border: none;
     border-radius: var(--fc-radius-lg);
     overflow: hidden;
   }
   
+  .calendar-dark .fc-list-view {
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+  }
+  
+  .calendar-dark .fc-list-view table {
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+    border: none !important;
+    border-collapse: collapse !important;
+  }
+  
+  .calendar-dark .fc-list-view table td,
+  .calendar-dark .fc-list-view table th {
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
+  .calendar-dark .fc-list-view tbody {
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+  }
+  
+  .calendar-dark .fc-list-view tbody tr {
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
+  .calendar-dark .fc-list-view tbody tr td {
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
   .calendar-dark .fc-list-day {
     background: var(--fc-surface-bg);
-    border-bottom: 1px solid var(--fc-border-medium);
+    border-bottom: none !important;
+    border: none !important;
   }
   
   .calendar-dark .fc-list-day-cushion {
@@ -402,27 +443,51 @@
   }
   
   .calendar-dark .fc-list-event {
-    background: var(--fc-card-bg);
-    border-bottom: 1px solid var(--fc-border-soft);
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+    border-bottom: none !important;
+    border: none !important;
     cursor: pointer;
     transition: var(--fc-transition);
   }
   
   .calendar-dark .fc-list-event:hover {
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(59, 130, 246, 0.2) !important;
+    background-color: rgba(59, 130, 246, 0.2) !important;
+  }
+  
+  .calendar-dark .fc-list-event td {
+    background: var(--fc-card-bg) !important;
+    background-color: var(--fc-card-bg) !important;
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
+  .calendar-dark .fc-list-event:hover td {
+    background: rgba(59, 130, 246, 0.2) !important;
+    background-color: rgba(59, 130, 246, 0.2) !important;
   }
   
   .calendar-dark .fc-list-event-time {
-    color: var(--fc-text-secondary);
+    color: var(--fc-text-secondary) !important;
     font-weight: 500;
     white-space: nowrap;
     padding: 8px 12px;
   }
   
   .calendar-dark .fc-list-event-title {
-    color: var(--fc-text-primary);
+    color: var(--fc-text-primary) !important;
     font-weight: 600;
     padding: 8px;
+  }
+  
+  /* Asegurar que todo el contenido de los eventos sea visible */
+  .calendar-dark .fc-list-event * {
+    color: var(--fc-text-primary) !important;
+  }
+  
+  .calendar-dark .fc-list-event .fc-list-event-time {
+    color: var(--fc-text-secondary) !important;
   }
   
   /* Badge de instructores en vista de lista */
@@ -699,33 +764,65 @@
   }
   
   /* ==========================================
-     CORRECCIÓN: Hover de eventos en vista Agenda - Fondo negro
+     CORRECCIÓN: Hover de eventos en vista Agenda - Fondo oscuro con acento azul
      ========================================== */
   /* Solo afectar el hover de los eventos de lista, no otros elementos */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event {
+    background-color: var(--fc-card-bg) !important;
+    background: var(--fc-card-bg) !important;
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
+  .calendar-dark .fc-list-view tbody tr.fc-list-event td {
+    background-color: var(--fc-card-bg) !important;
+    background: var(--fc-card-bg) !important;
+    color: var(--fc-text-primary) !important;
+    border: none !important;
+    border-bottom: none !important;
+  }
+  
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover {
-    background-color: #000000 !important;
-    background: #000000 !important;
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    background: rgba(59, 130, 246, 0.2) !important;
+    border: none !important;
+    border-bottom: none !important;
   }
   
-  /* Celdas en hover - fondo negro */
+  /* Celdas en hover - fondo azul oscuro */
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    color: #ffffff !important;
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    background: rgba(59, 130, 246, 0.2) !important;
+    color: var(--fc-text-primary) !important;
+    border: none !important;
+    border-bottom: none !important;
   }
   
-  /* Texto legible en hover - blanco sobre negro */
+  /* Texto legible en hover - mantener colores del tema */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event .fc-list-event-time,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event .fc-list-event-title,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event td *,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event td span,
+  .calendar-dark .fc-list-view tbody tr.fc-list-event td div {
+    color: var(--fc-text-primary) !important;
+  }
+  
+  .calendar-dark .fc-list-view tbody tr.fc-list-event .fc-list-event-time {
+    color: var(--fc-text-secondary) !important;
+  }
+  
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .fc-list-event-time,
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .fc-list-event-title,
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td *,
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td span,
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover td div {
-    color: #ffffff !important;
+    color: var(--fc-text-primary) !important;
   }
   
   /* Asegurar que el contenido personalizado también sea visible */
+  .calendar-dark .fc-list-view tbody tr.fc-list-event .text-foreground,
   .calendar-dark .fc-list-view tbody tr.fc-list-event:hover .text-foreground {
-    color: #ffffff !important;
+    color: var(--fc-text-primary) !important;
   }
 
   /* ==========================================

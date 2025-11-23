@@ -6,7 +6,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import esLocale from "@fullcalendar/core/locales/es";
-import "../calendar-light.css"; // Forzar siempre modo light en el calendario
+import "../calendar-dark.css"; // Estilos dark del calendario
+import "../calendar-light.css"; // Estilos light del calendario
 import { 
   Filter, 
   RefreshCw, 
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
 import { AppContext } from "../context/AppProvider";
+import { useTheme } from "../context/ThemeContext";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import resourcePlugin from "@fullcalendar/resource";
 import apiClient from "../api/client";
@@ -230,6 +232,7 @@ function useCalendarEvents(events, instructorColors, useResources = false) {
 
 export default function CalendarView() {
   const appCtx = useContext(AppContext);
+  const { theme } = useTheme();
 
   if (!appCtx) {
     return (
@@ -631,7 +634,7 @@ export default function CalendarView() {
   }, []);
 
   return (
-    <div className="calendar-light relative min-h-screen overflow-hidden">
+    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative min-h-screen overflow-hidden`}>
       <div className="relative z-10">
         <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-6 transition-all duration-500 shadow-2xl">
           {/* Header mejorado */}
