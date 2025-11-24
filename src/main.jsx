@@ -47,6 +47,7 @@ import SuperAdminRoute from "./components/SuperAdminRoute.jsx";
 import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
 import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
 import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
+import ActivationPendingPage from "./routes/Onboarding/ActivationPendingPage.jsx";
 import InstructorsPage from "./routes/Admin/InstructorsPage.jsx";
 import MembershipPlansPage from "./routes/Admin/MembershipPlansPage.jsx";
 import BranchesPage from "./routes/Admin/BranchesPage.jsx";
@@ -55,6 +56,7 @@ import { AppProvider } from "./context/AppProvider.jsx";
 import EnterpriseRequest from "./routes/EnterpriseRequest.jsx";
 import ForgotPasswordPage from "./routes/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./routes/ResetPasswordPage.jsx";
+import ActivatePage from "./routes/ActivatePage.jsx";
 import HelpPage from "./routes/HelpPage.jsx";
 import ContactPage from "./routes/ContactPage.jsx";
 import TermsPage from "./routes/TermsPage.jsx";
@@ -76,6 +78,7 @@ const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
+  { path: "/activate", element: <ActivatePage /> },
   { path: "/enterprise-request", element: <EnterpriseRequest /> },
   { path: "/help", element: <HelpPage /> },
   { path: "/contact", element: <ContactPage /> },
@@ -84,6 +87,7 @@ const router = createBrowserRouter([
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
   { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },
+  { path: "/onboarding/activation-pending", element: <ActivationPendingPage /> },
 
   // 👇 TODA la app del tenant cuelga de /:tenantSlug
   {

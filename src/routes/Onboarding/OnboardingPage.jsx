@@ -262,6 +262,7 @@ export default function OnboardingPage() {
       }
 
       const tenantSlug = response.tenant.subdomain;
+      const tenantName = response.tenant.name;
       const email = response.user?.email || session.email;
 
       if (response.session?.id) {
@@ -279,28 +280,12 @@ export default function OnboardingPage() {
           ""
       );
 
-      try {
-        const loginResp = await authApi.login(email, formData.owner.password);
-        if (loginResp?.multiTenant && tenantSlug) {
-          await authApi.loginTenant(email, formData.owner.password, tenantSlug);
-        }
-      } catch (loginError) {
-        logger.error("[ONBOARDING] auto login error", loginError);
-      }
-
-      try {
-        await refreshSession();
-      } catch (err) {
-        logger.warn("[ONBOARDING] refreshSession warning:", err);
-      }
-
-      // Redirigir directo al dashboard sin pedir pago (trial de 14 días)
-      if (tenantSlug) {
-        navigate(`/${tenantSlug}/dashboard`, { replace: true });
-      } else {
-        // Si no hay slug, intentar login y redirigir
-        navigate("/login", { replace: true });
-      }
+      // Redirigir a la página de activación pendiente
+      // El usuario necesita activar su cuenta por email antes de poder hacer login
+      navigate(
+        `/onboarding/activation-pending?email=${encodeURIComponent(email)}&tenant=${encodeURIComponent(tenantName || "")}`,
+        { replace: true }
+      );
     } catch (err) {
       logger.error("[ONBOARDING] finish error", err);
       setError(

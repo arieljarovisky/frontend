@@ -143,6 +143,20 @@ export default function LoginPage() {
     } catch (err) {
       logger.error("Error en login:", err);
       
+      // Verificar si es error de activación pendiente
+      if (err?.response?.data?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
+        const activationError = err.response.data;
+        setError({
+          type: "activation_required",
+          title: activationError.error || "Cuenta pendiente de activación",
+          message: activationError.message || "Revisá tu correo electrónico para activar tu cuenta.",
+          tenant: activationError.tenant,
+          helpUrl: activationError.helpUrl,
+        });
+        setLoading(false);
+        return;
+      }
+      
       // Extraer mensaje de error del backend si está disponible
       let errorMessage = "No se pudo conectar con el servidor";
       
@@ -186,6 +200,20 @@ export default function LoginPage() {
       goAfterLogin(resp, slug);
     } catch (err) {
       logger.error("Error en login tenant:", err);
+      
+      // Verificar si es error de activación pendiente
+      if (err?.response?.data?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
+        const activationError = err.response.data;
+        setError({
+          type: "activation_required",
+          title: activationError.error || "Cuenta pendiente de activación",
+          message: activationError.message || "Revisá tu correo electrónico para activar tu cuenta.",
+          tenant: activationError.tenant,
+          helpUrl: activationError.helpUrl,
+        });
+        setLoading(false);
+        return;
+      }
       
       // Extraer mensaje de error del backend si está disponible
       let errorMessage = "Error al conectar con el servidor";
@@ -364,10 +392,57 @@ export default function LoginPage() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                className={`p-4 rounded-lg border ${
+                  typeof error === "object" && error.type === "activation_required"
+                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                }`}
               >
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                {typeof error === "object" && error.type === "activation_required" ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                          {error.title}
+                        </h3>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                          {error.message}
+                        </p>
+                        {error.tenant && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                            Cuenta: <strong>{error.tenant.name || error.tenant.subdomain}</strong>
+                          </p>
+                        )}
+                        <div className="space-y-2">
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            <strong>¿Qué hacer?</strong>
+                          </p>
+                          <ol className="text-xs text-amber-700 dark:text-amber-300 space-y-1 ml-4 list-decimal">
+                            <li>Revisá tu bandeja de entrada (y la carpeta de spam)</li>
+                            <li>Hacé clic en el botón "Activar mi cuenta" del email</li>
+                            <li>Una vez activada, podrás iniciar sesión</li>
+                          </ol>
+                        </div>
+                        {error.helpUrl && (
+                          <a
+                            href={error.helpUrl}
+                            className="inline-block mt-3 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline"
+                          >
+                            ¿No recibiste el email? Contactar soporte
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {typeof error === "string" ? error : error.message || "Error al iniciar sesión"}
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
 
