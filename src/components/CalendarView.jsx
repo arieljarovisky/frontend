@@ -5,7 +5,29 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
-import esLocale from "@fullcalendar/core/locales/es";
+// Locale en español - definido manualmente para evitar problemas de importación
+const esLocale = {
+  code: "es",
+  week: { dow: 1, doy: 4 },
+  buttonText: {
+    prev: "Ant",
+    next: "Sig",
+    today: "Hoy",
+    year: "Año",
+    month: "Mes",
+    week: "Semana",
+    day: "Día",
+    list: "Agenda"
+  },
+  weekText: "Sm",
+  allDayText: "Todo el día",
+  moreLinkText: "más",
+  noEventsText: "No hay eventos para mostrar",
+  monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+  monthNamesShort: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+  dayNames: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
+  dayNamesShort: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+};
 import "../calendar-dark.css"; // Estilos dark del calendario
 import "../calendar-light.css"; // Estilos light del calendario
 import { 
