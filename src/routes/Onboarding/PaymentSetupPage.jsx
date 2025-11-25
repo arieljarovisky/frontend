@@ -56,6 +56,7 @@ export default function PaymentSetupPage() {
   });
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     if (!sessionId) {
@@ -149,20 +150,13 @@ export default function PaymentSetupPage() {
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
         <header className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            {tenant?.logo_url ? (
-              <div className="flex items-center gap-3">
-                <img 
-                  src={tenant.logo_url} 
-                  alt={tenant?.name || "Logo"} 
-                  className="w-9 h-9 object-contain rounded-lg"
-                  onError={(e) => {
-                    // Si falla la carga del logo, mostrar el logo de ARJA
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <Logo size="small" showText style={{ display: 'none' }} />
-              </div>
+            {tenant?.logo_url && !logoError ? (
+              <img 
+                src={tenant.logo_url} 
+                alt={tenant?.name || "Logo"} 
+                className="w-9 h-9 object-contain rounded-lg"
+                onError={() => setLogoError(true)}
+              />
             ) : (
               <Logo size="small" showText />
             )}
