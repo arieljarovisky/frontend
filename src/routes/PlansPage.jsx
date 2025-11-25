@@ -86,6 +86,10 @@ export default function PlansPage() {
   const [loading, setLoading] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [mpConnected, setMpConnected] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [payerEmail, setPayerEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     loadCurrentSubscription();
@@ -127,26 +131,30 @@ export default function PlansPage() {
       return;
     }
 
-    // Solicitar email del pagador para la suscripción
-    // Mercado Pago requiere que el email del pagador coincida con payer_email
-    const payerEmail = prompt("Ingresá el email que vas a usar para pagar la suscripción:\n\n(El pago debe realizarse con este mismo email en Mercado Pago)");
-    
+    // Mostrar modal para solicitar email
+    setSelectedPlan(plan);
+    setPayerEmail(user?.email || "");
+    setEmailError("");
+    setShowEmailModal(true);
+  };
+
+  const handleEmailSubmit = async () => {
     if (!payerEmail || !payerEmail.trim()) {
-      toast.error("El email es requerido para crear la suscripción");
+      setEmailError("El email es requerido");
       return;
     }
 
     // Validar formato básico de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(payerEmail.trim())) {
-      toast.error("Por favor, ingresá un email válido");
+      setEmailError("Por favor, ingresá un email válido");
       return;
     }
 
-    setLoading(true);
+    setShowEmailModal(false);
     try {
       const response = await apiClient.post("/api/config/platform-subscription/create", {
-        plan: plan.code,
+        plan: selectedPlan.code,
         payerEmail: payerEmail.trim()
       });
 
@@ -336,6 +344,73 @@ export default function PlansPage() {
           ))}
         </div>
       </main>
+
+      {/* Modal para solicitar email del pagador */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-foreground mb-2">
+                  Email para el pago
+                </h3>
+                <p className="text-sm text-foreground-secondary mb-4">
+                  Mercado Pago requiere que el email del pagador coincida <strong>exactamente</strong> con el email de tu cuenta de Mercado Pago.
+                </p>
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-foreground-secondary">
+                    <strong>⚠️ Importante:</strong> Usá el mismo email que tenés registrado en tu cuenta de Mercado Pago. Si pagás con un email diferente, el pago será rechazado.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Email de tu cuenta de Mercado Pago
+                  </label>
+                  <input
+                    type="email"
+                    value={payerEmail}
+                    onChange={(e) => {
+                      setPayerEmail(e.target.value);
+                      setEmailError("");
+                    }}
+                    placeholder="tu-email@ejemplo.com"
+                    className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground ${
+                      emailError
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-border focus:border-primary focus:ring-primary"
+                    } focus:outline-none focus:ring-2`}
+                    autoFocus
+                  />
+                  {emailError && (
+                    <p className="text-sm text-red-500">{emailError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setPayerEmail("");
+                  setEmailError("");
+                }}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background-secondary transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEmailSubmit}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
