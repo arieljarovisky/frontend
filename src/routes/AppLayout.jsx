@@ -93,6 +93,32 @@ const getNavigationLabels = (businessTypeCode) => {
   return labels[businessTypeCode] || labels.other;
 };
 
+// Componente para refrescar el estado del tenant cuando está en trial
+function TenantStatusRefresher() {
+  const { tenant, refreshSession } = useAuth();
+  
+  useEffect(() => {
+    // Solo refrescar si el tenant está en trial
+    if (!tenant || tenant.status !== "trial") {
+      return;
+    }
+    
+    // Refrescar cada 30 segundos para detectar cuando cambia a "active"
+    const interval = setInterval(async () => {
+      try {
+        await refreshSession();
+      } catch (error) {
+        // Silenciar errores de refresco
+        console.debug("[TenantStatusRefresher] Error refrescando:", error);
+      }
+    }, 30000); // 30 segundos
+    
+    return () => clearInterval(interval);
+  }, [tenant, refreshSession]);
+  
+  return null; // Componente invisible
+}
+
 export default function AppLayout() {
   const { pathname } = useLocation();
   const { tenantSlug } = useParams();
@@ -386,6 +412,8 @@ export default function AppLayout() {
       <div className="arja-main">
         {/* Trial Warning Banner */}
         <TrialWarning />
+        {/* Auto-refresh tenant status when in trial */}
+        <TenantStatusRefresher />
 
         {/* Mobile Header */}
         <header className="arja-main__header arja-main__header--mobile">
