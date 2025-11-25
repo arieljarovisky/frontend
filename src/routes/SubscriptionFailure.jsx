@@ -12,7 +12,13 @@ export default function SubscriptionFailure() {
   const reason = searchParams.get("reason") || "";
 
   const getErrorMessage = () => {
-    if (reason) return reason;
+    if (reason) {
+      // Si el error menciona email, mostrar mensaje más específico
+      if (reason.toLowerCase().includes("email") || reason.toLowerCase().includes("e-mail")) {
+        return "Tu email no coincide con el de la suscripción. Necesitás crear una nueva suscripción con el email correcto.";
+      }
+      return reason;
+    }
     if (status === "cancelled") return "Cancelaste el proceso de pago.";
     if (status === "rejected") return "El pago fue rechazado. Verificá los datos de tu tarjeta.";
     return "No pudimos procesar tu pago. Por favor, intentá nuevamente.";
@@ -45,10 +51,21 @@ export default function SubscriptionFailure() {
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
-              <div className="text-left">
+              <div className="text-left space-y-2">
                 <p className="text-sm text-foreground-secondary">
                   No te preocupes, tu cuenta sigue activa. Podés intentar suscribirte nuevamente cuando quieras.
                 </p>
+                {(reason?.toLowerCase().includes("email") || reason?.toLowerCase().includes("e-mail") || 
+                  getErrorMessage().toLowerCase().includes("email")) && (
+                  <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
+                    <p className="text-sm font-semibold text-foreground mb-1">
+                      💡 Solución para error de email:
+                    </p>
+                    <p className="text-xs text-foreground-secondary">
+                      Al crear una nueva suscripción, asegurate de usar el <strong>mismo email</strong> que tenés registrado en tu cuenta de Mercado Pago. El email que ingreses debe coincidir exactamente con el de tu cuenta.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
