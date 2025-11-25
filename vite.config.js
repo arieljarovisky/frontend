@@ -25,6 +25,12 @@ export default defineConfig({
   define: {
     __API_BASE__: JSON.stringify(API_BASE),
   },
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-is'],
+  },
+  optimizeDeps: {
+    include: ['react-is'],
+  },
   build: {
     // Eliminar console.log/error/warn en producción
     minify: 'esbuild',
@@ -33,6 +39,9 @@ export default defineConfig({
         drop_console: true,
         drop_debugger: true,
       },
+    },
+    commonjsOptions: {
+      include: [/react-is/, /node_modules/],
     },
   },
 });
