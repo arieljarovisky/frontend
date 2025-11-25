@@ -15,13 +15,10 @@ export default defineConfig({
     __API_BASE__: JSON.stringify(API_BASE),
   },
   resolve: {
-    alias: {
-      "react-is": "/node_modules/react-is",
-    },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react-is"],
   },
   optimizeDeps: {
-    include: ["react-is"],
+    include: ["react-is", "recharts"],
   },
   build: {
     minify: "esbuild",
@@ -32,10 +29,11 @@ export default defineConfig({
       },
     },
     commonjsOptions: {
-      include: [/react-is/, /node_modules/],
+      include: [/react-is/, /recharts/, /node_modules/],
+      transformMixedEsModules: true,
     },
     rollupOptions: {
-      external: ["react-is"],   // 💥 el fix definitivo
+      // NO marcar react-is como external - debe incluirse en el bundle
     },
   },
 });
