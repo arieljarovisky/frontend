@@ -41,6 +41,7 @@ const initialForm = {
     email: "",
     phone: "",
     password: "",
+    passwordConfirm: "",
   },
   business: {
     business_type: "",
@@ -83,11 +84,47 @@ export default function OnboardingPage() {
     available: null,
     message: "",
   });
+  const [emailStatus, setEmailStatus] = useState({
+    checking: false,
+    exists: null,
+    message: "",
+  });
   const currentStep = STEP_IDS[stepIndex];
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [stepIndex]);
+
+  // Verificar email cuando cambie
+  useEffect(() => {
+    const checkEmail = async () => {
+      const email = formData.owner.email?.trim();
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        setEmailStatus({ checking: false, exists: null, message: "" });
+        return;
+      }
+
+      setEmailStatus({ checking: true, exists: null, message: "" });
+      try {
+        const response = await apiClient.onboarding.checkEmail(email);
+        if (response?.exists) {
+          setEmailStatus({
+            checking: false,
+            exists: true,
+            message: response.error || "Este email ya está registrado como propietario de otro local",
+          });
+        } else {
+          setEmailStatus({ checking: false, exists: false, message: "" });
+        }
+      } catch (error) {
+        setEmailStatus({ checking: false, exists: null, message: "" });
+      }
+    };
+
+    // Debounce para no hacer muchas peticiones
+    const timeoutId = setTimeout(checkEmail, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.owner.email]);
 
   const handleInput = (section, field, value) => {
     setFormData((prev) => ({
@@ -112,15 +149,23 @@ export default function OnboardingPage() {
   const validateCurrentStep = () => {
     setError("");
     if (currentStep === "owner") {
-      const { name, email, password } = formData.owner;
+      const { name, email, password, passwordConfirm } = formData.owner;
       if (!name.trim()) return "Necesitamos tu nombre";
       if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) {
         return "Ingresá un email válido";
+      }
+      // Validar que las contraseñas coincidan
+      if (password !== passwordConfirm) {
+        return "Las contraseñas no coinciden";
       }
       // Validar contraseña con restricciones de seguridad
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.valid) {
         return passwordValidation.error || "La contraseña no cumple con los requisitos de seguridad";
+      }
+      // Validar que el email no esté registrado
+      if (emailStatus.exists === true) {
+        return emailStatus.message || "Este email ya está registrado";
       }
     } else if (currentStep === "business") {
       if (!formData.business.business_type) {
@@ -363,6 +408,7 @@ export default function OnboardingPage() {
           <OwnerStep
             data={formData.owner}
             onChange={handleInput}
+            emailStatus={emailStatus}
           />
         );
       case "business":
@@ -544,7 +590,7 @@ function InputField({ label, hint, ...props }) {
   );
 }
 
-function OwnerStep({ data, onChange }) {
+function OwnerStep({ data, onChange, emailStatus = { checking: false, exists: null, message: "" } }) {
   // Validar contraseña en tiempo real
   const passwordValidation = useMemo(() => {
     if (!data.password) return null;
@@ -563,13 +609,28 @@ function OwnerStep({ data, onChange }) {
           onChange={(e) => onChange("owner", "name", e.target.value)}
           placeholder="Ej: Ana González"
         />
-        <InputField
-          label="Email de contacto"
-          value={data.email}
-          onChange={(e) => onChange("owner", "email", e.target.value)}
-          placeholder="tu@email.com"
-          type="email"
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground">
+            Email de contacto
+          </label>
+          <input
+            type="email"
+            value={data.email}
+            onChange={(e) => onChange("owner", "email", e.target.value)}
+            placeholder="tu@email.com"
+            className={`w-full rounded-2xl border ${
+              emailStatus.exists === true
+                ? "border-red-500 focus:border-red-500"
+                : "border-border/60"
+            } bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition shadow-sm`}
+          />
+          {emailStatus.checking && (
+            <p className="text-xs text-foreground-secondary">Verificando email...</p>
+          )}
+          {emailStatus.exists === true && (
+            <p className="text-xs text-red-500">{emailStatus.message}</p>
+          )}
+        </div>
         <InputField
           label="Teléfono (opcional)"
           value={data.phone}
@@ -664,6 +725,34 @@ function OwnerStep({ data, onChange }) {
                 </li>
               </ul>
             </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground">
+            Confirmar contraseña
+          </label>
+          <input
+            type="password"
+            value={data.passwordConfirm || ""}
+            onChange={(e) => onChange("owner", "passwordConfirm", e.target.value)}
+            placeholder="Repetí tu contraseña"
+            className={`w-full rounded-2xl border ${
+              data.passwordConfirm && data.password !== data.passwordConfirm
+                ? "border-red-500 focus:border-red-500"
+                : data.passwordConfirm && data.password === data.passwordConfirm && data.password
+                ? "border-green-500 focus:border-green-500"
+                : "border-border/60"
+            } bg-background-secondary/70 px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition shadow-sm`}
+            minLength={8}
+          />
+          {data.passwordConfirm && data.password !== data.passwordConfirm && (
+            <p className="text-xs text-red-500">Las contraseñas no coinciden</p>
+          )}
+          {data.passwordConfirm && data.password === data.passwordConfirm && data.password && (
+            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+              <Check className="w-3 h-3" />
+              Las contraseñas coinciden
+            </p>
           )}
         </div>
       </StepSection>

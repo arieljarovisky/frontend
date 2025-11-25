@@ -1125,6 +1125,12 @@ apiClient.superAdmin = {
 ========================= */
 
 apiClient.onboarding = {
+  checkEmail: async function (email) {
+    const { data } = await apiClient.get("/public/onboarding/check-email", {
+      params: { email }
+    });
+    return data;
+  },
   async start(payload) {
     const { data } = await apiClient.post("/public/onboarding/start", payload);
     return data;
