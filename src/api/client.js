@@ -1182,6 +1182,11 @@ apiClient.onboarding = {
     );
     return data;
   },
+
+  async resendActivation(email) {
+    const { data } = await apiClient.post("/public/onboarding/resend-activation", { email });
+    return data;
+  },
 };
 
 /* =========================

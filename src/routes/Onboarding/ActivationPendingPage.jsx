@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
+import { Mail, CheckCircle2, ArrowRight, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { apiClient } from "../../api/client";
+import { toast } from "sonner";
 import Logo from "../../components/Logo";
 import ThemeToggle from "../../components/ThemeToggle";
 
@@ -13,6 +16,42 @@ export default function ActivationPendingPage() {
   const emailError = searchParams.get("emailError") === "true";
   const errorMessage = searchParams.get("errorMessage") || "";
   const activationToken = sessionStorage.getItem("activationToken");
+  
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  const handleResendEmail = async () => {
+    if (!email) {
+      toast.error("No hay email disponible para reenviar");
+      return;
+    }
+
+    setResending(true);
+    setResendSuccess(false);
+    
+    try {
+      const response = await apiClient.onboarding.resendActivation(email);
+      
+      if (response?.ok) {
+        setResendSuccess(true);
+        toast.success("Email de activación reenviado exitosamente");
+        
+        // Ocultar el mensaje de éxito después de 5 segundos
+        setTimeout(() => {
+          setResendSuccess(false);
+        }, 5000);
+      } else {
+        toast.error(response?.error || "Error al reenviar el email");
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error || 
+        "Error al reenviar el email. Intentá nuevamente más tarde."
+      );
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -150,21 +189,59 @@ export default function ActivationPendingPage() {
               </p>
             </div>
 
+            {/* Mensaje de éxito al reenviar */}
+            {resendSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 w-full"
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                  <p className="text-sm text-emerald-200">
+                    <strong>¡Email reenviado!</strong> Revisá tu bandeja de entrada nuevamente.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full mt-4">
-              <button
-                onClick={() => navigate("/login")}
-                className="flex-1 inline-flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 px-6 py-3 text-sm font-semibold transition-colors"
-              >
-                Ir al inicio de sesión
-              </button>
-              <button
-                onClick={() => navigate("/contact")}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold hover:from-indigo-600 hover:to-fuchsia-600 transition-all"
-              >
-                Contactar soporte
-                <ArrowRight className="w-4 h-4" />
-              </button>
+            <div className="flex flex-col gap-3 w-full mt-4">
+              {email && !emailError && (
+                <button
+                  onClick={handleResendEmail}
+                  disabled={resending}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:opacity-50 px-6 py-3 text-sm font-semibold transition-all"
+                >
+                  {resending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Reenviando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Reenviar email de activación
+                    </>
+                  )}
+                </button>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="flex-1 inline-flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 px-6 py-3 text-sm font-semibold transition-colors"
+                >
+                  Ir al inicio de sesión
+                </button>
+                <button
+                  onClick={() => navigate("/contact")}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold hover:from-indigo-600 hover:to-fuchsia-600 transition-all"
+                >
+                  Contactar soporte
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
