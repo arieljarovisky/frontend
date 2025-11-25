@@ -149,7 +149,23 @@ export default function PaymentSetupPage() {
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
         <header className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Logo size="small" showText />
+            {tenant?.logo_url ? (
+              <div className="flex items-center gap-3">
+                <img 
+                  src={tenant.logo_url} 
+                  alt={tenant?.name || "Logo"} 
+                  className="w-9 h-9 object-contain rounded-lg"
+                  onError={(e) => {
+                    // Si falla la carga del logo, mostrar el logo de ARJA
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <Logo size="small" showText style={{ display: 'none' }} />
+              </div>
+            ) : (
+              <Logo size="small" showText />
+            )}
             <span className="text-sm text-slate-300">
               Paso final: Configurá tu método de cobro
             </span>
