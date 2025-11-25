@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Mail, CheckCircle2, ArrowRight } from "lucide-react";
+import { Mail, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../../components/Logo";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -9,6 +9,10 @@ export default function ActivationPendingPage() {
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email") || "";
   const tenantName = searchParams.get("tenant") || "";
+  const emailSent = searchParams.get("emailSent") === "true";
+  const emailError = searchParams.get("emailError") === "true";
+  const errorMessage = searchParams.get("errorMessage") || "";
+  const activationToken = sessionStorage.getItem("activationToken");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -52,21 +56,66 @@ export default function ActivationPendingPage() {
             </div>
 
             {/* Mensaje principal */}
-            <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50 w-full">
-              <div className="flex items-start gap-4">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <h2 className="text-lg font-semibold text-slate-100 mb-2">
-                    Revisá tu correo electrónico
-                  </h2>
-                  <p className="text-slate-300 mb-3">
-                    Te enviamos un email a <strong className="text-indigo-300">{email || "tu correo"}</strong> con un enlace para activar tu cuenta.
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Hacé clic en el botón "Activar mi cuenta" del email para comenzar a usar ARJA ERP.
-                  </p>
+            <div className={`rounded-xl p-6 border w-full ${
+              emailError 
+                ? "bg-red-900/20 border-red-700/50" 
+                : "bg-slate-800/50 border-slate-700/50"
+            }`}>
+              {emailError ? (
+                <div className="flex items-start gap-4">
+                  <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-left flex-1">
+                    <h2 className="text-lg font-semibold text-red-200 mb-2">
+                      No se pudo enviar el email de activación
+                    </h2>
+                    <p className="text-red-300 mb-3">
+                      {errorMessage || "Hubo un problema al enviar el email de activación."}
+                    </p>
+                    {activationToken && (
+                      <div className="mt-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                        <p className="text-xs text-slate-400 mb-2">
+                          <strong>Modo desarrollo:</strong> Podés activar tu cuenta manualmente usando este token:
+                        </p>
+                        <code className="block text-xs text-indigo-300 break-all p-2 bg-slate-800 rounded">
+                          {activationToken}
+                        </code>
+                        <a
+                          href={`/activate?token=${activationToken}`}
+                          className="inline-block mt-2 text-xs text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          Activar cuenta ahora
+                        </a>
+                      </div>
+                    )}
+                    <p className="text-sm text-red-300/80 mt-3">
+                      Por favor, contactá a soporte para que te ayuden a activar tu cuenta.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-4">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <h2 className="text-lg font-semibold text-slate-100 mb-2">
+                      Revisá tu correo electrónico
+                    </h2>
+                    <p className="text-slate-300 mb-3">
+                      {emailSent ? (
+                        <>
+                          Te enviamos un email a <strong className="text-indigo-300">{email || "tu correo"}</strong> con un enlace para activar tu cuenta.
+                        </>
+                      ) : (
+                        <>
+                          Se enviará un email a <strong className="text-indigo-300">{email || "tu correo"}</strong> con un enlace para activar tu cuenta.
+                        </>
+                      )}
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      Hacé clic en el botón "Activar mi cuenta" del email para comenzar a usar ARJA ERP.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Instrucciones */}
