@@ -127,10 +127,27 @@ export default function PlansPage() {
       return;
     }
 
+    // Solicitar email del pagador para la suscripción
+    // Mercado Pago requiere que el email del pagador coincida con payer_email
+    const payerEmail = prompt("Ingresá el email que vas a usar para pagar la suscripción:\n\n(El pago debe realizarse con este mismo email en Mercado Pago)");
+    
+    if (!payerEmail || !payerEmail.trim()) {
+      toast.error("El email es requerido para crear la suscripción");
+      return;
+    }
+
+    // Validar formato básico de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(payerEmail.trim())) {
+      toast.error("Por favor, ingresá un email válido");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await apiClient.post("/api/config/platform-subscription/create", {
-        plan: plan.code
+        plan: plan.code,
+        payerEmail: payerEmail.trim()
       });
 
       if (response?.data?.ok && response?.data?.init_point) {
