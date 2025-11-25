@@ -54,7 +54,7 @@ const getNavigationLabels = (businessTypeCode) => {
       deposits: "Depósitos",
     },
     gym: {
-      appointments: "Clases",
+      appointments: "Calendario",
       classes: "Clases",
       professionals: "Instructores",
       customers: "Socios",
@@ -68,7 +68,7 @@ const getNavigationLabels = (businessTypeCode) => {
       deposits: "Pagos",
     },
     pilates: {
-      appointments: "Clases",
+      appointments: "Calendario",
       classes: "Clases",
       professionals: "Instructores",
       customers: "Alumnos",

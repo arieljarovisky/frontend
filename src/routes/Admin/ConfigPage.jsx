@@ -2657,11 +2657,15 @@ export default function ConfigPage() {
                 <AlertCircle className="w-5 h-5 text-foreground-muted mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-foreground-muted">
                   <p className="mb-2">Al conectar, Mercado Pago te pedirá autorización para:</p>
-                  <ul className="space-y-1 list-disc list-inside ml-2">
+                  <ul className="space-y-1 list-disc list-inside ml-2 mb-3">
                     <li>Crear preferencias de pago</li>
                     <li>Recibir notificaciones de pagos</li>
                     <li>Acceder a información de transacciones</li>
                   </ul>
+                  <p className="text-xs text-foreground-muted/80 mt-2 pt-2 border-t border-border">
+                    <strong>Nota:</strong> Si aparece un error de "aplicación no preparada", verifica que el redirect_uri esté configurado en tu aplicación de Mercado Pago. 
+                    El redirect_uri debe ser: <code className="text-xs bg-background px-1 py-0.5 rounded">{window.location.origin}/mp/oauth/callback</code>
+                  </p>
                 </div>
               </div>
             </div>
