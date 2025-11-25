@@ -90,6 +90,8 @@ export default function PlansPage() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [payerEmail, setPayerEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [activeSubscriptionInfo, setActiveSubscriptionInfo] = useState(null);
 
   useEffect(() => {
     loadCurrentSubscription();
@@ -98,8 +100,15 @@ export default function PlansPage() {
 
   const loadCurrentSubscription = async () => {
     try {
+      // Verificar si hay una suscripción activa consultando el endpoint de business-type
+      // que incluye información de la suscripción
       const response = await apiClient.get("/api/business-types/tenant/business-type");
-      // Aquí podrías obtener información de la suscripción actual si existe
+      const subscription = response?.data?.data?.plan;
+      
+      if (subscription && subscription.status === "authorized") {
+        setHasActiveSubscription(true);
+        setActiveSubscriptionInfo(subscription);
+      }
     } catch (error) {
       logger.error("Error cargando suscripción:", error);
     }
@@ -188,10 +197,32 @@ export default function PlansPage() {
       }
     } catch (error) {
       logger.error("Error suscribiéndose:", error);
-      toast.error(
-        error?.response?.data?.error ||
-        "No se pudo crear la suscripción. Verificá tu conexión a Mercado Pago."
-      );
+      
+      // Si ya tiene una suscripción activa
+      if (error?.response?.status === 409 && error?.response?.data?.requiresContact) {
+        const errorData = error.response.data;
+        toast.error(errorData.message || errorData.error, {
+          duration: 6000,
+          action: {
+            label: "Contactar ventas",
+            onClick: () => {
+              // Abrir email o WhatsApp para contactar a ventas
+              const email = "ventas@arjaerp.com"; // Ajustar según corresponda
+              const subject = encodeURIComponent("Cambio de plan de suscripción");
+              const body = encodeURIComponent(
+                `Hola,\n\nYa tengo una suscripción activa al plan "${errorData.existingSubscription?.plan || 'N/A'}" y me gustaría cambiar de plan.\n\nPor favor, contactame para coordinar el cambio.\n\nGracias.`
+              );
+              window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+            }
+          }
+        });
+      } else {
+        toast.error(
+          error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "No se pudo crear la suscripción. Verificá tu conexión a Mercado Pago."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -316,7 +347,7 @@ export default function PlansPage() {
 
               <button
                 onClick={() => handleSubscribe(plan)}
-                disabled={loading || (!mpConnected && !plan.custom)}
+                disabled={loading || hasActiveSubscription || (!mpConnected && !plan.custom)}
                 className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                   plan.popular
                     ? "bg-primary text-white hover:bg-primary-hover shadow-md"
@@ -327,6 +358,11 @@ export default function PlansPage() {
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Procesando...
+                  </>
+                ) : hasActiveSubscription ? (
+                  <>
+                    <AlertCircle className="w-4 h-4" />
+                    Ya tenés una suscripción activa
                   </>
                 ) : plan.custom ? (
                   <>
