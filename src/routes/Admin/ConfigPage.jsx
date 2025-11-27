@@ -244,17 +244,17 @@ export default function ConfigPage() {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
-  // Estado para colapsar/expandir días (por defecto todos expandidos)
+  // Estado para colapsar/expandir días (por defecto todos colapsados)
   const [expandedDays, setExpandedDays] = useState({
-    monday: true,
-    tuesday: true,
-    wednesday: true,
-    thursday: true,
-    friday: true,
-    saturday: true,
-    sunday: true,
+    monday: false,
+    tuesday: false,
+    wednesday: false,
+    thursday: false,
+    friday: false,
+    saturday: false,
+    sunday: false,
   });
-  const [allDaysExpanded, setAllDaysExpanded] = useState(true); // Estado para expandir/colapsar todos
+  const [allDaysExpanded, setAllDaysExpanded] = useState(false); // Estado para expandir/colapsar todos
   const [bookingConfig, setBookingConfig] = useState({
     require_membership: false,
   });
@@ -1666,7 +1666,7 @@ export default function ConfigPage() {
                       const branchKey = `branch_${selectedBranchId}`;
                       const branchHours = workingHours[branchKey] || {};
                       const dayConfig = branchHours[day.key] || { enabled: true, start: "09:00", end: "18:00" };
-                      const isExpanded = expandedDays[day.key] !== false; // Por defecto expandido
+                      const isExpanded = expandedDays[day.key] === true; // Solo expandido si está explícitamente en true
                       
                       return (
                         <div
