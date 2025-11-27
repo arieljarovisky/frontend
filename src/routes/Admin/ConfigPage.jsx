@@ -877,11 +877,11 @@ export default function ConfigPage() {
   };
 
   const handleSendWhatsAppTest = async () => {
-    if (!whatsappConfig.hubConfigured) {
-      toast.info("Nuestro equipo debe completar la integración antes de poder enviar mensajes de prueba.");
+    if (!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) {
+      toast.info("Conectá tu cuenta de WhatsApp Business antes de poder enviar mensajes de prueba.");
       return;
     }
-    if (!whatsappConfig.hubActive) {
+    if (!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) {
       toast.error("Activá el asistente de WhatsApp antes de enviar un mensaje de prueba.");
       return;
     }
@@ -1938,7 +1938,7 @@ export default function ConfigPage() {
                     label="Asistente activo"
                     description="Enviá confirmaciones y recordatorios automáticos"
                     checked={whatsappConfig.hubActive}
-                    disabled={!whatsappConfig.hubConfigured || savingWhatsApp}
+                    disabled={(!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) || savingWhatsApp}
                     onChange={(event) => handleToggleWhatsAppActive(event.target.checked)}
                   />
                 </div>
@@ -1959,7 +1959,7 @@ export default function ConfigPage() {
                     Enviar mensaje de prueba
                   </h4>
                   <p className="text-xs text-foreground-secondary mt-1">
-                    {whatsappConfig.hubConfigured
+                    {whatsappConfig.hubConfigured || whatsappConfig.hasOAuthToken
                       ? "Probá la integración enviándote un mensaje desde tu número configurado."
                       : "Guardá tu número y esperá a que soporte termine la conexión para poder hacer pruebas."}
                   </p>
@@ -1971,7 +1971,7 @@ export default function ConfigPage() {
                   <input
                     type="text"
                     value={whatsappTest.to}
-                    disabled={!whatsappConfig.hubActive}
+                    disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
                     onChange={(e) =>
                       setWhatsappTest((prev) => ({ ...prev, to: e.target.value }))
                     }
@@ -1983,7 +1983,7 @@ export default function ConfigPage() {
                 <FieldGroup label="Mensaje">
                   <textarea
                     value={whatsappTest.message}
-                    disabled={!whatsappConfig.hubActive}
+                    disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
                     onChange={(e) =>
                       setWhatsappTest((prev) => ({ ...prev, message: e.target.value }))
                     }
@@ -1993,11 +1993,11 @@ export default function ConfigPage() {
               </div>
 
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <Button
+                  <Button
                   type="button"
                   variant="secondary"
                   onClick={handleSendWhatsAppTest}
-                  disabled={!whatsappConfig.hubActive || testingWhatsApp}
+                  disabled={(!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) || testingWhatsApp}
                   className="flex items-center gap-2"
                 >
                   {testingWhatsApp ? (
