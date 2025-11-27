@@ -27,6 +27,7 @@ import {
   Plus,
   Edit3,
   Clock,
+  ExternalLink,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -198,6 +199,8 @@ export default function ConfigPage() {
     hubActive: false,
     status: "pending",
     supportMessage: null,
+    useOAuth: false,
+    oauthAvailable: false,
     createdAt: null,
     updatedAt: null,
   });
@@ -216,6 +219,7 @@ export default function ConfigPage() {
 
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [testingWhatsApp, setTestingWhatsApp] = useState(false);
+  const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
   const [whatsappTest, setWhatsappTest] = useState({
     to: "",
     message: "Hola 👋 Este es un mensaje de prueba desde tu asistente de turnos.",
@@ -333,10 +337,9 @@ export default function ConfigPage() {
   // ============================================
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
   // ============================================
-  useEffect(() => {
-    (async () => {
-      try {
-        const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
+  const loadData = useCallback(async () => {
+    try {
+      const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
@@ -406,7 +409,9 @@ export default function ConfigPage() {
             w.supportMessage ??
             (w.hubConfigured
               ? null
-              : "Nuestro equipo completará la integración con WhatsApp Business por vos."),
+              : "Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta."),
+          useOAuth: w.useOAuth ?? false,
+          oauthAvailable: w.oauthAvailable ?? false,
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
         });
@@ -489,8 +494,12 @@ export default function ConfigPage() {
       } catch (e) {
         logger.error("Load config failed", e);
       }
-    })();
-  }, []);
+    }, [tenant, tenantInfo]);
+
+  // Llamar loadData al montar el componente
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Establecer configuración inicial después de que todos los estados estén cargados
   useEffect(() => {
@@ -791,6 +800,55 @@ export default function ConfigPage() {
       });
     } finally {
       setSavingWhatsApp(false);
+    }
+  };
+
+  // Manejar callback de OAuth cuando regresa de Meta
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    
+    if (success === "connected") {
+      toast.success("¡WhatsApp Business conectado exitosamente!");
+      // Recargar configuración
+      loadData();
+      // Limpiar parámetros de URL
+      const currentPath = window.location.pathname;
+      navigate(currentPath + "?tab=whatsapp", { replace: true });
+    } else if (error) {
+      const errorMessages = {
+        token_error: "Error al obtener el token de acceso. Intentá nuevamente.",
+        business_error: "No se pudo obtener información de tu cuenta de WhatsApp Business.",
+        no_phone_number: "No se encontró un número de teléfono configurado en tu cuenta de Meta.",
+        invalid_state: "La sesión expiró. Intentá conectar nuevamente.",
+        no_tenant: "No se pudo identificar tu cuenta. Intentá nuevamente.",
+      };
+      toast.error(errorMessages[error] || "Error al conectar WhatsApp Business", {
+        description: "Intentá nuevamente o contactá a soporte si el problema persiste.",
+      });
+      // Limpiar parámetros de URL
+      navigate(window.location.pathname + "?tab=whatsapp", { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  const handleConnectWhatsApp = async () => {
+    try {
+      setConnectingWhatsApp(true);
+      const { authUrl } = await apiClient.getWhatsAppAuthUrl();
+      
+      if (!authUrl) {
+        toast.error("No se pudo generar la URL de autorización");
+        return;
+      }
+      
+      // Redirigir a Meta OAuth
+      window.location.href = authUrl;
+    } catch (error) {
+      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
+      toast.error("No se pudo iniciar la conexión con WhatsApp Business", {
+        description: errorMessage,
+      });
+      setConnectingWhatsApp(false);
     }
   };
 
@@ -1668,20 +1726,55 @@ export default function ConfigPage() {
           icon={MessageCircle}
         >
           <div className="space-y-6">
-            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-foreground mb-1">Integración centralizada ARJA</h4>
-                  <p className="text-xs text-foreground-secondary">
-                    Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business.
-                  </p>
-                  {whatsappConfig.supportMessage ? (
-                    <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
-                  ) : null}
+            {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && whatsappConfig.oauthAvailable ? (
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <MessageCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-foreground mb-1">Conectá tu WhatsApp Business</h4>
+                    <p className="text-xs text-foreground-secondary mb-3">
+                      Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta y nosotros nos encargamos del resto.
+                    </p>
+                    <Button
+                      onClick={handleConnectWhatsApp}
+                      disabled={connectingWhatsApp}
+                      className="flex items-center gap-2 w-full sm:w-auto"
+                    >
+                      {connectingWhatsApp ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Conectando...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="w-4 h-4" />
+                          Conectar WhatsApp Business
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-foreground mb-1">
+                      {whatsappConfig.hubConfigured ? "WhatsApp Business conectado" : "Integración centralizada ARJA"}
+                    </h4>
+                    <p className="text-xs text-foreground-secondary">
+                      {whatsappConfig.hubConfigured
+                        ? "Tu cuenta de WhatsApp Business está conectada y lista para usar."
+                        : "Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business."}
+                    </p>
+                    {whatsappConfig.supportMessage ? (
+                      <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
               <FieldGroup

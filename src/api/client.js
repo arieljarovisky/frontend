@@ -942,6 +942,15 @@ apiClient.testWhatsAppConfig = async function (payload) {
 };
 
 /* =========================
+   WHATSAPP OAUTH API
+========================= */
+
+apiClient.getWhatsAppAuthUrl = async function () {
+  const { data } = await apiClient.get("/api/config/whatsapp/connect");
+  return data;
+};
+
+/* =========================
    TENANT / FEATURES API
 ========================= */
 
