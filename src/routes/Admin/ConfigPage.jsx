@@ -440,7 +440,7 @@ export default function ConfigPage() {
             (hubConfigured
               ? null
               : hasOAuthToken
-              ? "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente."
+              ? "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo. Luego podés activar el asistente cuando lo necesites."
               : "Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta."),
           useOAuth: w.useOAuth ?? false,
           oauthAvailable: w.oauthAvailable ?? false,
@@ -798,8 +798,6 @@ export default function ConfigPage() {
       toast.success(
         normalized.hubConfigured && normalized.hubActive
           ? "Número guardado. El asistente está activo y listo para usar."
-          : normalized.hasOAuthToken
-          ? "Número guardado. El asistente se activará automáticamente."
           : "Número guardado correctamente."
       );
     } catch (error) {
@@ -1293,7 +1291,7 @@ export default function ConfigPage() {
           bulletClass: "bg-slate-300",
           description:
             whatsappConfig.supportMessage ||
-            "Guardá tu número y el asistente se activará automáticamente.",
+            "Guardá tu número de WhatsApp para completar la configuración.",
         };
     }
   })();
@@ -1309,7 +1307,7 @@ export default function ConfigPage() {
     ],
     oauth_pending: [
       "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo.",
-      "Una vez guardado el número, el asistente se activará automáticamente.",
+      "Una vez guardado el número, podés activar el asistente manualmente.",
     ],
     pending: [
       "Guardá el número y contactanos para finalizar la vinculación en Meta Business.",
