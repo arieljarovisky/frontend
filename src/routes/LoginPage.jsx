@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import {
   authApi,
   setAccessToken,
   setTenantId,
   setAuthEmail,
   setUserData,
+  apiClient,
 } from "../api/client";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
@@ -30,6 +32,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resendingActivation, setResendingActivation] = useState(false);
 
   // Multi-tenant
   const [showTenantSelector, setShowTenantSelector] = useState(false);
@@ -103,6 +106,30 @@ export default function LoginPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, [user]);
 
+  const handleResendActivation = async () => {
+    if (!email) {
+      toast.error("Por favor, ingresá tu email primero");
+      return;
+    }
+
+    setResendingActivation(true);
+    try {
+      const response = await apiClient.onboarding.resendActivation(email);
+      if (response?.ok) {
+        toast.success("Email de activación reenviado. Revisá tu bandeja de entrada.");
+      } else {
+        toast.error(response?.error || "Error al reenviar el email");
+      }
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.error || 
+        "Error al reenviar el email. Intentá nuevamente más tarde."
+      );
+    } finally {
+      setResendingActivation(false);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -112,7 +139,18 @@ export default function LoginPage() {
       const resp = await authApi.login(email, password);
 
       if (!resp?.ok) {
-        setError(resp?.error || "Credenciales incorrectas");
+        // Verificar si es error de activación pendiente
+        if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
+          setError({
+            type: "activation_required",
+            title: resp.error || "Cuenta pendiente de activación",
+            message: resp.message || "Revisá tu correo electrónico para activar tu cuenta.",
+            tenant: resp.tenant,
+            helpUrl: resp.helpUrl,
+          });
+        } else {
+          setError(resp?.error || "Credenciales incorrectas");
+        }
         setLoading(false);
         return;
       }
@@ -187,7 +225,18 @@ export default function LoginPage() {
       const resp = await authApi.loginTenant(email, password, slug);
 
       if (!resp?.ok) {
-        setError(resp?.error || "Error al iniciar sesión");
+        // Verificar si es error de activación pendiente
+        if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
+          setError({
+            type: "activation_required",
+            title: resp.error || "Cuenta pendiente de activación",
+            message: resp.message || "Revisá tu correo electrónico para activar tu cuenta.",
+            tenant: resp.tenant,
+            helpUrl: resp.helpUrl,
+          });
+        } else {
+          setError(resp?.error || "Error al iniciar sesión");
+        }
         setLoading(false);
         return;
       }
@@ -432,6 +481,24 @@ export default function LoginPage() {
                             ¿No recibiste el email? Contactar soporte
                           </a>
                         )}
+                        <button
+                          type="button"
+                          onClick={handleResendActivation}
+                          disabled={resendingActivation || !email}
+                          className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                        >
+                          {resendingActivation ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Reenviando...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4" />
+                              Reenviar email de activación
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>

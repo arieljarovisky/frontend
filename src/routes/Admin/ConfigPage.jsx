@@ -28,6 +28,9 @@ import {
   Edit3,
   Clock,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  ChevronsDownUp,
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 import { toast } from "sonner";
@@ -241,6 +244,17 @@ export default function ConfigPage() {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+  // Estado para colapsar/expandir días (por defecto todos expandidos)
+  const [expandedDays, setExpandedDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: true,
+    sunday: true,
+  });
+  const [allDaysExpanded, setAllDaysExpanded] = useState(true); // Estado para expandir/colapsar todos
   const [bookingConfig, setBookingConfig] = useState({
     require_membership: false,
   });
@@ -1609,6 +1623,37 @@ export default function ConfigPage() {
 
                 {selectedBranchId && (
                   <div className="space-y-4">
+                    {/* Botón para expandir/colapsar todos */}
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          const newExpanded = !allDaysExpanded;
+                          setAllDaysExpanded(newExpanded);
+                          const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+                          const newState = {};
+                          days.forEach(day => {
+                            newState[day] = newExpanded;
+                          });
+                          setExpandedDays(newState);
+                        }}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        {allDaysExpanded ? (
+                          <>
+                            <ChevronsDownUp className="w-4 h-4" />
+                            Colapsar todos
+                          </>
+                        ) : (
+                          <>
+                            <ChevronsDownUp className="w-4 h-4" />
+                            Expandir todos
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
                     {[
                       { key: "monday", label: "Lunes" },
                       { key: "tuesday", label: "Martes" },
@@ -1621,14 +1666,15 @@ export default function ConfigPage() {
                       const branchKey = `branch_${selectedBranchId}`;
                       const branchHours = workingHours[branchKey] || {};
                       const dayConfig = branchHours[day.key] || { enabled: true, start: "09:00", end: "18:00" };
+                      const isExpanded = expandedDays[day.key] !== false; // Por defecto expandido
                       
                       return (
                         <div
                           key={day.key}
-                          className="p-4 rounded-lg border border-border bg-background-secondary"
+                          className="rounded-lg border border-border bg-background-secondary overflow-hidden"
                         >
-                          <div className="flex items-center justify-between mb-4">
-                            <label className="flex items-center gap-3 cursor-pointer">
+                          <div className="flex items-center justify-between p-4">
+                            <label className="flex items-center gap-3 cursor-pointer flex-1">
                               <input
                                 type="checkbox"
                                 checked={dayConfig.enabled}
@@ -1649,10 +1695,28 @@ export default function ConfigPage() {
                               />
                               <span className="text-sm font-semibold text-foreground">{day.label}</span>
                             </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedDays(prev => ({
+                                  ...prev,
+                                  [day.key]: !isExpanded
+                                }));
+                                setAllDaysExpanded(false);
+                              }}
+                              className="p-1 rounded hover:bg-background transition-colors"
+                              aria-label={isExpanded ? "Colapsar" : "Expandir"}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-5 h-5 text-foreground-secondary" />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 text-foreground-secondary" />
+                              )}
+                            </button>
                           </div>
 
-                          {dayConfig.enabled && (
-                            <div className="grid grid-cols-2 gap-4">
+                          {dayConfig.enabled && isExpanded && (
+                            <div className="px-4 pb-4 grid grid-cols-2 gap-4">
                               <FieldGroup label="Hora de inicio">
                                 <input
                                   type="time"
@@ -1726,7 +1790,8 @@ export default function ConfigPage() {
           icon={MessageCircle}
         >
           <div className="space-y-6">
-            {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && whatsappConfig.oauthAvailable ? (
+            {/* Botón OAuth - Mostrar si useOAuth está habilitado y no está configurado */}
+            {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth ? (
               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-start gap-3">
                   <MessageCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
@@ -1735,46 +1800,54 @@ export default function ConfigPage() {
                     <p className="text-xs text-foreground-secondary mb-3">
                       Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta y nosotros nos encargamos del resto.
                     </p>
-                    <Button
-                      onClick={handleConnectWhatsApp}
-                      disabled={connectingWhatsApp}
-                      className="flex items-center gap-2 w-full sm:w-auto"
-                    >
-                      {connectingWhatsApp ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Conectando...
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="w-4 h-4" />
-                          Conectar WhatsApp Business
-                        </>
-                      )}
-                    </Button>
+                    {whatsappConfig.oauthAvailable ? (
+                      <Button
+                        onClick={handleConnectWhatsApp}
+                        disabled={connectingWhatsApp}
+                        className="flex items-center gap-2 w-full sm:w-auto"
+                      >
+                        {connectingWhatsApp ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Conectando...
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="w-4 h-4" />
+                            Conectar WhatsApp Business
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-xs text-amber-200/90">
+                          ⚠️ Las credenciales de Meta App no están configuradas en el servidor. Contactá a soporte para configurar META_APP_ID y META_APP_SECRET.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ) : (
-            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
+            ) : !whatsappConfig.hubConfigured ? (
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
                     <h4 className="text-sm font-semibold text-foreground mb-1">
                       {whatsappConfig.hubConfigured ? "WhatsApp Business conectado" : "Integración centralizada ARJA"}
                     </h4>
-                  <p className="text-xs text-foreground-secondary">
+                    <p className="text-xs text-foreground-secondary">
                       {whatsappConfig.hubConfigured
                         ? "Tu cuenta de WhatsApp Business está conectada y lista para usar."
                         : "Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business."}
-                  </p>
-                  {whatsappConfig.supportMessage ? (
-                    <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
-                  ) : null}
+                    </p>
+                    {whatsappConfig.supportMessage ? (
+                      <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-            )}
+            ) : null}
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
               <FieldGroup
