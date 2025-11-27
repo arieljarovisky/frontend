@@ -777,7 +777,7 @@ export default function ConfigPage() {
           data.supportMessage ??
           (data.hubConfigured
             ? null
-            : "Nuestro equipo completará la integración con WhatsApp Business por vos."),
+            : "Conectá tu cuenta de WhatsApp Business con un solo clic."),
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? false,
@@ -796,9 +796,11 @@ export default function ConfigPage() {
       }));
 
       toast.success(
-        normalized.hubConfigured
-          ? "Número guardado. El asistente usa la integración centralizada."
-          : "Número guardado. Nuestro equipo completará la integración por vos."
+        normalized.hubConfigured && normalized.hubActive
+          ? "Número guardado. El asistente está activo y listo para usar."
+          : normalized.hasOAuthToken
+          ? "Número guardado. El asistente se activará automáticamente."
+          : "Número guardado correctamente."
       );
     } catch (error) {
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
@@ -823,7 +825,7 @@ export default function ConfigPage() {
           data.supportMessage ??
           (data.hubConfigured
             ? null
-            : "Nuestro equipo completará la integración con WhatsApp Business por vos."),
+            : "Conectá tu cuenta de WhatsApp Business con un solo clic."),
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? whatsappConfig.hasOAuthToken ?? false,
@@ -1291,7 +1293,7 @@ export default function ConfigPage() {
           bulletClass: "bg-slate-300",
           description:
             whatsappConfig.supportMessage ||
-            "Guardá tu número y nuestro equipo completará la integración con WhatsApp Business.",
+            "Guardá tu número y el asistente se activará automáticamente.",
         };
     }
   })();
