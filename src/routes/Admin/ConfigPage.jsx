@@ -823,7 +823,9 @@ export default function ConfigPage() {
     const error = searchParams.get("error");
     
     if (success === "connected") {
-      toast.success("¡WhatsApp Business conectado exitosamente!");
+      toast.success("¡WhatsApp Business conectado exitosamente!", {
+        description: "Ahora ingresá tu número de WhatsApp y hacé clic en 'Guardar número' para activar el asistente.",
+      });
       // Recargar configuración
       loadData();
       // Limpiar parámetros de URL
