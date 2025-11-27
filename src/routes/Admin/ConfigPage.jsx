@@ -893,6 +893,34 @@ export default function ConfigPage() {
     }
   };
 
+  const handleDisconnectWhatsApp = async () => {
+    if (!confirm("¿Estás seguro de desconectar WhatsApp Business? Se eliminarán todas las credenciales y no podrás enviar mensajes hasta que vuelvas a conectar.")) {
+      return;
+    }
+
+    try {
+      setConnectingWhatsApp(true);
+      const data = await apiClient.disconnectWhatsApp();
+      
+      if (data.ok) {
+        // Recargar la configuración
+        await loadData();
+        toast.success("WhatsApp Business desconectado correctamente");
+      } else {
+        toast.error("Error al desconectar", {
+          description: data.error || "Error desconocido",
+        });
+      }
+    } catch (error) {
+      console.error("Error desconectando WhatsApp:", error);
+      toast.error("Error al desconectar WhatsApp", {
+        description: error?.response?.data?.error || error?.message || "Error desconocido",
+      });
+    } finally {
+      setConnectingWhatsApp(false);
+    }
+  };
+
   const handleSendWhatsAppTest = async () => {
     if (!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) {
       toast.info("Conectá tu cuenta de WhatsApp Business antes de poder enviar mensajes de prueba.");
@@ -1961,6 +1989,27 @@ export default function ConfigPage() {
                     </>
                   )}
                 </Button>
+
+                {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
+                  <Button 
+                    onClick={handleDisconnectWhatsApp} 
+                    disabled={connectingWhatsApp || savingWhatsApp} 
+                    variant="secondary"
+                    className="flex items-center gap-2 shadow-sm hover:shadow transition-shadow border-red-500/30 hover:border-red-500/50 text-red-400 hover:text-red-300"
+                  >
+                    {connectingWhatsApp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Desconectando…
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="w-4 h-4" />
+                        Desconectar
+                      </>
+                    )}
+                  </Button>
+                )}
 
                 <div className="w-full sm:w-auto rounded-lg border border-border/60 bg-background-secondary/50 p-3.5">
                   <SwitchField

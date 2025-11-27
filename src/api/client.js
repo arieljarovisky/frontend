@@ -950,6 +950,11 @@ apiClient.getWhatsAppAuthUrl = async function () {
   return data;
 };
 
+apiClient.disconnectWhatsApp = async function () {
+  const { data } = await apiClient.delete("/api/config/whatsapp/disconnect");
+  return data;
+};
+
 /* =========================
    TENANT / FEATURES API
 ========================= */
