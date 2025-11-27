@@ -114,17 +114,20 @@ export default function LoginPage() {
 
     setResendingActivation(true);
     try {
+      logger.log("[LOGIN] Reenviando email de activación para:", email);
       const response = await apiClient.onboarding.resendActivation(email);
+      logger.log("[LOGIN] Respuesta del servidor:", response);
       if (response?.ok) {
         toast.success("Email de activación reenviado. Revisá tu bandeja de entrada.");
       } else {
         toast.error(response?.error || "Error al reenviar el email");
       }
     } catch (err) {
-      toast.error(
-        err?.response?.data?.error || 
-        "Error al reenviar el email. Intentá nuevamente más tarde."
-      );
+      logger.error("[LOGIN] Error al reenviar email de activación:", err);
+      const errorMessage = err?.response?.data?.error || 
+        err?.response?.data?.message ||
+        "Error al reenviar el email. Intentá nuevamente más tarde.";
+      toast.error(errorMessage);
     } finally {
       setResendingActivation(false);
     }
