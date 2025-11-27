@@ -338,8 +338,8 @@ export default function ConfigPage() {
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
   // ============================================
   const loadData = useCallback(async () => {
-    try {
-      const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
+      try {
+        const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
@@ -1756,24 +1756,24 @@ export default function ConfigPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
                     <h4 className="text-sm font-semibold text-foreground mb-1">
                       {whatsappConfig.hubConfigured ? "WhatsApp Business conectado" : "Integración centralizada ARJA"}
                     </h4>
-                    <p className="text-xs text-foreground-secondary">
+                  <p className="text-xs text-foreground-secondary">
                       {whatsappConfig.hubConfigured
                         ? "Tu cuenta de WhatsApp Business está conectada y lista para usar."
                         : "Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business."}
-                    </p>
-                    {whatsappConfig.supportMessage ? (
-                      <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
-                    ) : null}
-                  </div>
+                  </p>
+                  {whatsappConfig.supportMessage ? (
+                    <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
+                  ) : null}
                 </div>
               </div>
+            </div>
             )}
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
