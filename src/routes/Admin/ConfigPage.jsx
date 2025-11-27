@@ -835,7 +835,7 @@ export default function ConfigPage() {
       const errorMessages = {
         token_error: "Error al obtener el token de acceso. Intentá nuevamente.",
         business_error: "No se pudo obtener información de tu cuenta de WhatsApp Business.",
-        no_phone_number: "No se encontró un número de teléfono configurado en tu cuenta de Meta.",
+        no_phone_number: "No se encontró un número de WhatsApp Business configurado en tu cuenta de Meta. Configurá un número en Meta Business Manager y luego ingresalo manualmente aquí.",
         invalid_state: "La sesión expiró. Intentá conectar nuevamente.",
         no_tenant: "No se pudo identificar tu cuenta. Intentá nuevamente.",
       };
