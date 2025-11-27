@@ -204,6 +204,7 @@ export default function ConfigPage() {
     supportMessage: null,
     useOAuth: false,
     oauthAvailable: false,
+    hasOAuthToken: false,
     createdAt: null,
     updatedAt: null,
   });
@@ -426,6 +427,7 @@ export default function ConfigPage() {
               : "Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta."),
           useOAuth: w.useOAuth ?? false,
           oauthAvailable: w.oauthAvailable ?? false,
+          hasOAuthToken: w.hasOAuthToken ?? false,
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
         });
@@ -740,7 +742,7 @@ export default function ConfigPage() {
   };
 
   const handleSaveWhatsApp = async () => {
-    const phoneDisplay = (whatsappConfig.phoneDisplay || "").trim();
+    const phoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
     if (!phoneDisplay) {
       toast.error("Ingresá el número de WhatsApp con código de país (ej: +54911...)");
       return;
@@ -759,6 +761,9 @@ export default function ConfigPage() {
           (data.hubConfigured
             ? null
             : "Nuestro equipo completará la integración con WhatsApp Business por vos."),
+        useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
+        oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
+        hasOAuthToken: data.hasOAuthToken ?? false,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
       };
@@ -802,6 +807,9 @@ export default function ConfigPage() {
           (data.hubConfigured
             ? null
             : "Nuestro equipo completará la integración con WhatsApp Business por vos."),
+        useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
+        oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
+        hasOAuthToken: data.hasOAuthToken ?? whatsappConfig.hasOAuthToken ?? false,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
       };
@@ -878,7 +886,7 @@ export default function ConfigPage() {
       return;
     }
 
-    const to = (whatsappTest.to || whatsappConfig.phoneDisplay || "").trim();
+    const to = String(whatsappTest.to || whatsappConfig.phoneDisplay || "").trim();
     if (!to) {
       toast.error("Ingresá un número de WhatsApp de prueba");
       return;
@@ -1224,6 +1232,13 @@ export default function ConfigPage() {
           bulletClass: "bg-amber-300",
           description: "El asistente está pausado. Podés volver a activarlo cuando quieras.",
         };
+      case "oauth_pending":
+        return {
+          label: "OAuth conectado",
+          className: "bg-blue-500/10 border border-blue-500/30 text-blue-300",
+          bulletClass: "bg-blue-400",
+          description: "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente.",
+        };
       default:
         return {
           label: "Pendiente",
@@ -1244,6 +1259,10 @@ export default function ConfigPage() {
     disabled: [
       "Activá el asistente para volver a enviar recordatorios y confirmaciones.",
       "Mientras esté pausado, las automatizaciones quedan suspendidas.",
+    ],
+    oauth_pending: [
+      "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo.",
+      "Una vez guardado el número, el asistente se activará automáticamente.",
     ],
     pending: [
       "Guardá el número y contactanos para finalizar la vinculación en Meta Business.",
@@ -1792,8 +1811,8 @@ export default function ConfigPage() {
           icon={MessageCircle}
         >
           <div className="space-y-6">
-            {/* Botón OAuth - Mostrar si useOAuth está habilitado y no está configurado */}
-            {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth ? (
+            {/* Botón OAuth - Mostrar si useOAuth está habilitado y no está configurado ni tiene OAuth token */}
+            {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && !whatsappConfig.hasOAuthToken ? (
               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-start gap-3">
                   <MessageCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
