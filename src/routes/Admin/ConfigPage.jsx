@@ -1896,48 +1896,27 @@ export default function ConfigPage() {
                   </div>
                 </div>
               </div>
-            ) : !whatsappConfig.hubConfigured ? (
-              <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg bg-primary/20 border border-primary/30">
-                    <Shield className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                      {whatsappConfig.hubConfigured ? "WhatsApp Business conectado" : "Integración centralizada ARJA"}
-                    </h4>
-                    <p className="text-xs text-foreground-secondary leading-relaxed">
-                      {whatsappConfig.hubConfigured
-                        ? "Tu cuenta de WhatsApp Business está conectada y lista para usar."
-                        : "Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business."}
-                    </p>
-                    {whatsappConfig.supportMessage ? (
-                      <p className="mt-3 text-xs text-primary-200/90 leading-relaxed bg-primary/5 p-2.5 rounded-lg border border-primary/10">
-                        {whatsappConfig.supportMessage}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
             ) : null}
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
-              <FieldGroup
-                label="Número de WhatsApp"
-                hint="Incluí el código de país. Ejemplo: +5491123456789"
-              >
-                <input
-                  type="text"
-                  value={whatsappConfig.phoneDisplay}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
-                    setContact((prev) => ({ ...prev, whatsapp: value }));
-                  }}
-                  className="input w-full text-base font-medium tracking-wide"
-                  placeholder="+5491123456789"
-                />
-              </FieldGroup>
+            {/* Mostrar campo de número solo si hay OAuth token o está configurado */}
+            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
+              <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
+                <FieldGroup
+                  label="Número de WhatsApp"
+                  hint="Incluí el código de país. Ejemplo: +5491123456789"
+                >
+                  <input
+                    type="text"
+                    value={whatsappConfig.phoneDisplay}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
+                      setContact((prev) => ({ ...prev, whatsapp: value }));
+                    }}
+                    className="input w-full text-base font-medium tracking-wide"
+                    placeholder="+5491123456789"
+                  />
+                </FieldGroup>
 
               <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
@@ -1968,9 +1947,12 @@ export default function ConfigPage() {
                   </ul>
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/40">
+            {/* Mostrar botones solo si hay OAuth token o está configurado */}
+            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/40">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button 
                   onClick={handleSaveWhatsApp} 
@@ -2028,79 +2010,83 @@ export default function ConfigPage() {
                   : "Guardá el número para mantener la base de WhatsApp sincronizada."}
               </p>
             </div>
+            )}
 
-            <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                  <TestTube className="w-5 h-5 text-primary-400" />
+            {/* Sección de prueba - Solo mostrar si hay OAuth token o está configurado */}
+            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
+              <div className="border-t border-border pt-6 mt-6">
+                <div className="mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                      <TestTube className="w-5 h-5 text-primary-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-foreground mb-1.5">
+                        Enviar mensaje de prueba
+                      </h4>
+                      <p className="text-xs text-foreground-secondary leading-relaxed">
+                        Probá la integración enviándote un mensaje desde tu número configurado.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                    Enviar mensaje de prueba
-                  </h4>
-                  <p className="text-xs text-foreground-secondary leading-relaxed">
-                    {whatsappConfig.hubConfigured || whatsappConfig.hasOAuthToken
-                      ? "Probá la integración enviándote un mensaje desde tu número configurado."
-                      : "Guardá tu número y esperá a que soporte termine la conexión para poder hacer pruebas."}
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <FieldGroup label="Enviar a">
+                    <input
+                      type="text"
+                      value={whatsappTest.to}
+                      disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
+                      onChange={(e) =>
+                        setWhatsappTest((prev) => ({ ...prev, to: e.target.value }))
+                      }
+                      className="input w-full"
+                      placeholder="Número con código de país"
+                    />
+                  </FieldGroup>
+
+                  <FieldGroup label="Mensaje">
+                    <textarea
+                      value={whatsappTest.message}
+                      disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
+                      onChange={(e) =>
+                        setWhatsappTest((prev) => ({ ...prev, message: e.target.value }))
+                      }
+                      className="input w-full min-h-[80px]"
+                    />
+                  </FieldGroup>
+                </div>
+
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSendWhatsAppTest}
+                    disabled={(!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) || testingWhatsApp}
+                    className="flex items-center gap-2"
+                  >
+                    {testingWhatsApp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Enviar prueba
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-foreground-muted/80 italic">
+                    {!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken
+                      ? "Activá el asistente para habilitar los envíos de prueba."
+                      : whatsappConfig.hubActive
+                      ? "El mensaje se enviará desde tu número de WhatsApp Business configurado."
+                      : "Conectá tu cuenta de WhatsApp Business para enviar mensajes de prueba."}
                   </p>
                 </div>
               </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <FieldGroup label="Enviar a">
-                  <input
-                    type="text"
-                    value={whatsappTest.to}
-                    disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
-                    onChange={(e) =>
-                      setWhatsappTest((prev) => ({ ...prev, to: e.target.value }))
-                    }
-                    className="input w-full"
-                    placeholder="Número con código de país"
-                  />
-                </FieldGroup>
-
-                <FieldGroup label="Mensaje">
-                  <textarea
-                    value={whatsappTest.message}
-                    disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
-                    onChange={(e) =>
-                      setWhatsappTest((prev) => ({ ...prev, message: e.target.value }))
-                    }
-                    className="input w-full min-h-[80px]"
-                  />
-                </FieldGroup>
-              </div>
-
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleSendWhatsAppTest}
-                  disabled={(!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) || testingWhatsApp}
-                  className="flex items-center gap-2"
-                >
-                  {testingWhatsApp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Enviar prueba
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-foreground-muted/80 italic">
-                  {!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken
-                    ? "Activá el asistente para habilitar los envíos de prueba."
-                    : whatsappConfig.hubActive
-                    ? "El mensaje se enviará desde tu número de WhatsApp Business configurado."
-                    : "Conectá tu cuenta de WhatsApp Business para enviar mensajes de prueba."}
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Configuración del Bot de WhatsApp */}
             <div className="border-t border-border pt-6 mt-6">
