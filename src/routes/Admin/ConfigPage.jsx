@@ -1813,19 +1813,21 @@ export default function ConfigPage() {
           <div className="space-y-6">
             {/* Botón OAuth - Mostrar si useOAuth está habilitado y no está configurado ni tiene OAuth token */}
             {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && !whatsappConfig.hasOAuthToken ? (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-start gap-3">
-                  <MessageCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-foreground mb-1">Conectá tu WhatsApp Business</h4>
-                    <p className="text-xs text-foreground-secondary mb-3">
+              <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 rounded-lg bg-primary/20 border border-primary/30">
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-foreground mb-1.5">Conectá tu WhatsApp Business</h4>
+                    <p className="text-xs text-foreground-secondary mb-4 leading-relaxed">
                       Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta y nosotros nos encargamos del resto.
                     </p>
                     {whatsappConfig.oauthAvailable ? (
                       <Button
                         onClick={handleConnectWhatsApp}
                         disabled={connectingWhatsApp}
-                        className="flex items-center gap-2 w-full sm:w-auto"
+                        className="flex items-center gap-2 w-full sm:w-auto shadow-sm hover:shadow transition-shadow"
                       >
                         {connectingWhatsApp ? (
                           <>
@@ -1840,8 +1842,8 @@ export default function ConfigPage() {
                         )}
                       </Button>
                     ) : (
-                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-xs text-amber-200/90">
+                      <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-xs text-amber-200/90 leading-relaxed">
                           ⚠️ Las credenciales de Meta App no están configuradas en el servidor. Contactá a soporte para configurar META_APP_ID y META_APP_SECRET.
                         </p>
                       </div>
@@ -1850,20 +1852,24 @@ export default function ConfigPage() {
                 </div>
               </div>
             ) : !whatsappConfig.hubConfigured ? (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-foreground mb-1">
+              <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 rounded-lg bg-primary/20 border border-primary/30">
+                    <Shield className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-foreground mb-1.5">
                       {whatsappConfig.hubConfigured ? "WhatsApp Business conectado" : "Integración centralizada ARJA"}
                     </h4>
-                    <p className="text-xs text-foreground-secondary">
+                    <p className="text-xs text-foreground-secondary leading-relaxed">
                       {whatsappConfig.hubConfigured
                         ? "Tu cuenta de WhatsApp Business está conectada y lista para usar."
                         : "Solo necesitás cargar el número de WhatsApp del negocio. Nuestro equipo gestiona las credenciales y certificados en Meta Business."}
                     </p>
                     {whatsappConfig.supportMessage ? (
-                      <p className="mt-2 text-xs text-primary-200/90">{whatsappConfig.supportMessage}</p>
+                      <p className="mt-3 text-xs text-primary-200/90 leading-relaxed bg-primary/5 p-2.5 rounded-lg border border-primary/10">
+                        {whatsappConfig.supportMessage}
+                      </p>
                     ) : null}
                   </div>
                 </div>
@@ -1888,38 +1894,44 @@ export default function ConfigPage() {
                 />
               </FieldGroup>
 
-              <div className="rounded-lg border border-border bg-background-secondary p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Estado del asistente</p>
-                    <p className="text-xs text-foreground-muted mt-1">
+              <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Estado del asistente</p>
+                    <p className="text-xs text-foreground-muted leading-relaxed">
                       {whatsappStatusMeta.description}
                     </p>
                   </div>
                   <span
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full ${whatsappStatusMeta.className}`}
+                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-full shrink-0 ${whatsappStatusMeta.className} shadow-sm`}
                   >
-                    <span className={`inline-flex w-2 h-2 rounded-full ${whatsappStatusMeta.bulletClass}`} />
+                    <span className={`inline-flex w-2 h-2 rounded-full ${whatsappStatusMeta.bulletClass} animate-pulse`} />
                     {whatsappStatusMeta.label}
                   </span>
                 </div>
-                <ul className="space-y-2">
-                  {highlightedTips.map((tip, index) => (
-                    <li
-                      key={`${whatsappConfig.status}-${index}`}
-                      className="flex items-start gap-2 text-xs text-foreground-secondary"
-                    >
-                      <CheckCircle className="mt-[2px] h-3.5 w-3.5 text-primary/80 flex-shrink-0" />
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="pt-2 border-t border-border/40">
+                  <ul className="space-y-2.5">
+                    {highlightedTips.map((tip, index) => (
+                      <li
+                        key={`${whatsappConfig.status}-${index}`}
+                        className="flex items-start gap-2.5 text-xs text-foreground-secondary leading-relaxed"
+                      >
+                        <CheckCircle className="mt-0.5 h-3.5 w-3.5 text-primary/90 flex-shrink-0" />
+                        <span className="flex-1">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/40">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button onClick={handleSaveWhatsApp} disabled={savingWhatsApp} className="flex items-center gap-2">
+                <Button 
+                  onClick={handleSaveWhatsApp} 
+                  disabled={savingWhatsApp} 
+                  className="flex items-center gap-2 shadow-sm hover:shadow transition-shadow"
+                >
                   {savingWhatsApp ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1933,7 +1945,7 @@ export default function ConfigPage() {
                   )}
                 </Button>
 
-                <div className="w-full sm:w-auto">
+                <div className="w-full sm:w-auto rounded-lg border border-border/60 bg-background-secondary/50 p-3.5">
                   <SwitchField
                     label="Asistente activo"
                     description="Enviá confirmaciones y recordatorios automáticos"
@@ -1944,21 +1956,23 @@ export default function ConfigPage() {
                 </div>
               </div>
 
-              <p className="text-xs text-foreground-muted">
+              <p className="text-xs text-foreground-muted/80 italic">
                 {whatsappConfig.updatedAt
                   ? `Última actualización: ${new Date(whatsappConfig.updatedAt).toLocaleString("es-AR")}`
                   : "Guardá el número para mantener la base de WhatsApp sincronizada."}
               </p>
             </div>
 
-            <div className="rounded-lg border border-border bg-background-secondary p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <TestTube className="w-5 h-5 text-primary-400" />
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">
+            <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <TestTube className="w-5 h-5 text-primary-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-foreground mb-1.5">
                     Enviar mensaje de prueba
                   </h4>
-                  <p className="text-xs text-foreground-secondary mt-1">
+                  <p className="text-xs text-foreground-secondary leading-relaxed">
                     {whatsappConfig.hubConfigured || whatsappConfig.hasOAuthToken
                       ? "Probá la integración enviándote un mensaje desde tu número configurado."
                       : "Guardá tu número y esperá a que soporte termine la conexión para poder hacer pruebas."}
@@ -2012,10 +2026,12 @@ export default function ConfigPage() {
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-foreground-muted">
-                  {whatsappConfig.hubActive
-                    ? "Si es la primera vez, aceptá el mensaje desde WhatsApp Business para habilitar la conversación."
-                    : "Activá el asistente para habilitar los envíos de prueba."}
+                <p className="text-xs text-foreground-muted/80 italic">
+                  {!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken
+                    ? "Activá el asistente para habilitar los envíos de prueba."
+                    : whatsappConfig.hubActive
+                    ? "El mensaje se enviará desde tu número de WhatsApp Business configurado."
+                    : "Conectá tu cuenta de WhatsApp Business para enviar mensajes de prueba."}
                 </p>
               </div>
             </div>
