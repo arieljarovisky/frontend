@@ -415,19 +415,36 @@ export default function ConfigPage() {
           use_certificates: !!(contactData.arca_cert_path && contactData.arca_key_path),
         });
         const resolvedPhone = w.phoneDisplay ?? contactData.whatsapp ?? "";
+        // Calcular estado correctamente considerando OAuth
+        const hasOAuthToken = w.hasOAuthToken ?? false;
+        const hubConfigured = !!w.hubConfigured;
+        const hubActive = !!w.hubActive;
+        let calculatedStatus = w.status;
+        if (!calculatedStatus) {
+          if (hubConfigured) {
+            calculatedStatus = hubActive ? "ready" : "disabled";
+          } else if (hasOAuthToken) {
+            calculatedStatus = hubActive ? "ready" : "oauth_pending";
+          } else {
+            calculatedStatus = "pending";
+          }
+        }
+        
         setWhatsappConfig({
           phoneDisplay: resolvedPhone,
-          hubConfigured: !!w.hubConfigured,
-          hubActive: !!w.hubActive,
-          status: w.status ?? (w.hubConfigured ? (w.hubActive ? "ready" : "disabled") : "pending"),
+          hubConfigured: hubConfigured,
+          hubActive: hubActive,
+          status: calculatedStatus,
           supportMessage:
             w.supportMessage ??
-            (w.hubConfigured
+            (hubConfigured
               ? null
+              : hasOAuthToken
+              ? "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente."
               : "Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta."),
           useOAuth: w.useOAuth ?? false,
           oauthAvailable: w.oauthAvailable ?? false,
-          hasOAuthToken: w.hasOAuthToken ?? false,
+          hasOAuthToken: hasOAuthToken,
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
         });
