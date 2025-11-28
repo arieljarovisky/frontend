@@ -800,7 +800,7 @@ export default function ConfigPage() {
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? false,
         needsPhoneNumberId: data.needsPhoneNumberId ?? false,
-        phoneNumberId: data.phoneNumberId ?? whatsappConfig.phoneNumberId ?? null,
+        phoneNumberId: data.phoneNumberId ?? (payload.phoneNumberId || whatsappConfig.phoneNumberId) ?? null, // ✅ Mantener el phoneNumberId enviado si no viene en la respuesta
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
       };
