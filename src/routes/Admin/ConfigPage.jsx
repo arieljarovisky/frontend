@@ -871,15 +871,27 @@ export default function ConfigPage() {
       navigate(currentPath + "?tab=whatsapp", { replace: true });
     } else if (error) {
       const errorMessages = {
-        token_error: "Error al obtener el token de acceso. Intentá nuevamente.",
-        business_error: "No se pudo obtener información de tu cuenta de WhatsApp Business.",
+        token_error: "Error al obtener el token de acceso. Verificá que tu cuenta de Meta esté correctamente configurada e intentá nuevamente.",
+        business_error: "No se pudo obtener información de tu cuenta de WhatsApp Business. Esto puede ocurrir si tu Empresa no tiene una cuenta de WhatsApp Business configurada todavía. Podés configurarla después y el token OAuth quedará guardado.",
         no_phone_number: "No se encontró un número de WhatsApp Business configurado en tu cuenta de Meta. Configurá un número en Meta Business Manager y luego ingresalo manualmente aquí.",
         invalid_state: "La sesión expiró. Intentá conectar nuevamente.",
         no_tenant: "No se pudo identificar tu cuenta. Intentá nuevamente.",
       };
-      toast.error(errorMessages[error] || "Error al conectar WhatsApp Business", {
-        description: "Intentá nuevamente o contactá a soporte si el problema persiste.",
-      });
+      
+      // Si es business_error, mostrar un mensaje más útil
+      if (error === "business_error") {
+        toast.warning("OAuth conectado, pero falta configurar WhatsApp Business", {
+          description: "El token OAuth se guardó correctamente, pero tu Empresa aún no tiene una cuenta de WhatsApp Business. Podés configurarla en Meta Business Manager y luego usar el botón 'Obtener automáticamente' o ingresar el phone_number_id manualmente.",
+          duration: 10000,
+        });
+      } else {
+        toast.error(errorMessages[error] || "Error al conectar WhatsApp Business", {
+          description: "Intentá nuevamente o contactá a soporte si el problema persiste.",
+        });
+      }
+      
+      // Recargar configuración para ver el estado actual
+      loadData();
       // Limpiar parámetros de URL
       navigate(window.location.pathname + "?tab=whatsapp", { replace: true });
     }
