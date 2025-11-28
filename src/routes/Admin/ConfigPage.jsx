@@ -1933,7 +1933,7 @@ export default function ConfigPage() {
                   </FieldGroup>
 
                   {/* Campo para ingresar phone_number_id manualmente (útil cuando Standard access no permite obtenerlo automáticamente) */}
-                  {whatsappConfig.needsPhoneNumberId && (
+                  {(whatsappConfig.needsPhoneNumberId || whatsappConfig.hasOAuthToken) && (
                     <FieldGroup
                       label="Phone Number ID (opcional - para demos)"
                       hint={
@@ -1951,16 +1951,60 @@ export default function ConfigPage() {
                         </span>
                       }
                     >
-                      <input
-                        type="text"
-                        value={whatsappConfig.phoneNumberId || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
-                        }}
-                        className="input w-full text-sm font-mono"
-                        placeholder="Ej: 123456789012345"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={whatsappConfig.phoneNumberId || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
+                          }}
+                          className="input flex-1 text-sm font-mono"
+                          placeholder="Ej: 123456789012345"
+                        />
+                        {whatsappConfig.hasOAuthToken && (
+                          <Button
+                            type="button"
+                            onClick={async () => {
+                              setSavingWhatsApp(true);
+                              try {
+                                const data = await apiClient.refreshWhatsAppPhoneId();
+                                if (data.ok && data.data?.phoneNumberId) {
+                                  toast.success(
+                                    `Phone_number_id actualizado automáticamente: ${data.data.phoneNumberId}`
+                                  );
+                                  // Recargar la configuración
+                                  await loadData();
+                                } else {
+                                  toast.error(
+                                    data.error || "No se pudo obtener el phone_number_id automáticamente"
+                                  );
+                                }
+                              } catch (error) {
+                                toast.error(
+                                  error?.response?.data?.error ||
+                                    error?.message ||
+                                    "Error al obtener el phone_number_id"
+                                );
+                              } finally {
+                                setSavingWhatsApp(false);
+                              }
+                            }}
+                            disabled={savingWhatsApp}
+                            variant="secondary"
+                            className="shrink-0"
+                          >
+                            {savingWhatsApp ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <RefreshCw className="w-4 h-4" />
+                                Obtener automáticamente
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </FieldGroup>
                   )}
                 </div>

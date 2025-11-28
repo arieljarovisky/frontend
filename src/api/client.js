@@ -955,6 +955,11 @@ apiClient.disconnectWhatsApp = async function () {
   return data;
 };
 
+apiClient.refreshWhatsAppPhoneId = async function () {
+  const { data } = await apiClient.post("/api/config/whatsapp/refresh-phone-id");
+  return data;
+};
+
 /* =========================
    TENANT / FEATURES API
 ========================= */
