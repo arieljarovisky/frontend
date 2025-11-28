@@ -776,7 +776,16 @@ export default function ConfigPage() {
       if (whatsappConfig.phoneNumberId) {
         payload.phoneNumberId = whatsappConfig.phoneNumberId.trim();
       }
-      const data = await apiClient.saveWhatsAppConfig(payload);
+      
+      logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
+      logger.log("[WhatsApp Config] Payload:", payload);
+      
+      const response = await apiClient.saveWhatsAppConfig(payload);
+      logger.log("[WhatsApp Config] Respuesta del servidor:", response);
+      
+      // Asegurarse de que tenemos los datos correctos
+      const data = response?.data || response || {};
+      
       const normalized = {
         phoneDisplay: data.phoneDisplay ?? phoneDisplay,
         hubConfigured: !!data.hubConfigured,
@@ -796,6 +805,8 @@ export default function ConfigPage() {
         updatedAt: data.updatedAt ?? null,
       };
 
+      logger.log("[WhatsApp Config] Datos normalizados:", normalized);
+      
       setWhatsappConfig(normalized);
       setContact((prev) => ({
         ...prev,
@@ -806,12 +817,16 @@ export default function ConfigPage() {
         to: prev.to || normalized.phoneDisplay || "",
       }));
 
+      // Recargar datos para asegurar consistencia
+      await loadData();
+
       toast.success(
         normalized.hubConfigured && normalized.hubActive
           ? "Número guardado. El asistente está activo y listo para usar."
           : "Número guardado correctamente."
       );
     } catch (error) {
+      logger.error("[WhatsApp Config] Error al guardar:", error);
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
       toast.error("No se pudo guardar el número de WhatsApp", {
         description: errorMessage,
