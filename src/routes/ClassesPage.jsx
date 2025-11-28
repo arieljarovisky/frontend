@@ -507,13 +507,12 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         next.instructorId = String(template.default_instructor_id);
       }
       if (template.default_duration_min) {
-        next.endsAt = addMinutesToISO(prev.startsAt || defaultStartsAt, template.default_duration_min);
+        const duration = Number(template.default_duration_min);
+        setSessionDurationMin(duration);
+        next.endsAt = addMinutesToISO(prev.startsAt || defaultStartsAt, duration);
       }
       return next;
     });
-    if (template.default_duration_min) {
-      setSessionDurationMin(Number(template.default_duration_min));
-    }
   };
 
   const handleSessionFormChange = (field, value) => {
@@ -542,12 +541,41 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       return;
     }
 
+    // Calcular endsAt si no está definido o si la duración es válida
+    let calculatedEndsAt = sessionForm.endsAt;
+    if (!calculatedEndsAt && sessionForm.startsAt && sessionDurationMin > 0) {
+      calculatedEndsAt = addMinutesToISO(sessionForm.startsAt, sessionDurationMin);
+    }
+    
+    // Validar que endsAt sea posterior a startsAt
+    if (sessionForm.startsAt && calculatedEndsAt) {
+      const startDate = new Date(sessionForm.startsAt);
+      const endDate = new Date(calculatedEndsAt);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
+        setActionMessage({ 
+          type: "error", 
+          title: "La hora de fin debe ser posterior al inicio.",
+          body: "Asegurate de que la duración sea mayor a cero y que las fechas sean válidas."
+        });
+        return;
+      }
+    }
+
+    if (!calculatedEndsAt) {
+      setActionMessage({ 
+        type: "error", 
+        title: "No se pudo calcular la fecha de fin.",
+        body: "Verificá que la fecha de inicio y la duración sean correctas."
+      });
+      return;
+    }
+
     const payload = {
       templateId: sessionForm.templateId ? Number(sessionForm.templateId) : undefined,
       instructorId: Number(sessionForm.instructorId),
       serviceId: sessionForm.serviceId ? Number(sessionForm.serviceId) : undefined,
       startsAt: sessionForm.startsAt,
-      endsAt: sessionForm.endsAt || addMinutesToISO(sessionForm.startsAt, sessionDurationMin),
+      endsAt: calculatedEndsAt,
       activityType: sessionForm.activityType.trim(),
       capacityMax: Number(sessionForm.capacityMax || 0),
       priceDecimal: Number(sessionForm.priceDecimal || 0),
@@ -557,6 +585,11 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
     if (payload.capacityMax <= 0) {
       setActionMessage({ type: "error", title: "El cupo debe ser mayor a cero." });
+      return;
+    }
+
+    if (!sessionDurationMin || sessionDurationMin <= 0) {
+      setActionMessage({ type: "error", title: "La duración debe ser mayor a cero." });
       return;
     }
 
@@ -1277,8 +1310,6 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
         </div>
       </div>
 
-      <ActionBanner message={actionMessage} onClose={dismissMessage} />
-
       <section className="card p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -1892,6 +1923,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 <XCircle className="w-5 h-5" />
               </button>
             </header>
+            <div className="px-6 pt-5">
+              <ActionBanner message={actionMessage} onClose={dismissMessage} />
+            </div>
             <form onSubmit={handleSessionFormSubmit} className="px-6 py-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1 text-sm">
@@ -1982,18 +2016,15 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                     type="datetime-local"
                     className="input"
                     value={sessionForm.startsAt}
-                    onChange={(e) => handleSessionFormChange("startsAt", e.target.value)}
+                    onChange={(e) => {
+                      handleSessionFormChange("startsAt", e.target.value);
+                      // Calcular automáticamente la fecha de fin basada en la duración
+                      if (e.target.value && sessionDurationMin > 0) {
+                        const calculatedEnd = addMinutesToISO(e.target.value, sessionDurationMin);
+                        handleSessionFormChange("endsAt", calculatedEnd);
+                      }
+                    }}
                     required
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Fin</span>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    value={sessionForm.endsAt}
-                    onChange={(e) => handleSessionFormChange("endsAt", e.target.value)}
                   />
                 </label>
 
@@ -2001,9 +2032,19 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   <span className="text-foreground-secondary">Duración (min)</span>
                   <input
                     type="number"
+                    min={1}
                     className="input"
                     value={sessionDurationMin}
-                    onChange={(e) => setSessionDurationMin(Number(e.target.value || 0))}
+                    onChange={(e) => {
+                      const newDuration = Number(e.target.value || 0);
+                      setSessionDurationMin(newDuration);
+                      // Calcular automáticamente la fecha de fin cuando cambia la duración
+                      if (sessionForm.startsAt && newDuration > 0) {
+                        const calculatedEnd = addMinutesToISO(sessionForm.startsAt, newDuration);
+                        handleSessionFormChange("endsAt", calculatedEnd);
+                      }
+                    }}
+                    required
                   />
                 </label>
 
