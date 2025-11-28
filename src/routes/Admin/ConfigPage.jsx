@@ -205,6 +205,8 @@ export default function ConfigPage() {
     useOAuth: false,
     oauthAvailable: false,
     hasOAuthToken: false,
+    needsPhoneNumberId: false,
+    phoneNumberId: null,
     createdAt: null,
     updatedAt: null,
   });
@@ -445,6 +447,8 @@ export default function ConfigPage() {
           useOAuth: w.useOAuth ?? false,
           oauthAvailable: w.oauthAvailable ?? false,
           hasOAuthToken: hasOAuthToken,
+          needsPhoneNumberId: w.needsPhoneNumberId ?? false,
+          phoneNumberId: w.phoneNumberId ?? null,
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
         });
@@ -767,7 +771,12 @@ export default function ConfigPage() {
 
     setSavingWhatsApp(true);
     try {
-      const data = await apiClient.saveWhatsAppConfig({ phoneDisplay });
+      const payload = { phoneDisplay };
+      // Si hay un phoneNumberId ingresado manualmente, incluirlo
+      if (whatsappConfig.phoneNumberId) {
+        payload.phoneNumberId = whatsappConfig.phoneNumberId.trim();
+      }
+      const data = await apiClient.saveWhatsAppConfig(payload);
       const normalized = {
         phoneDisplay: data.phoneDisplay ?? phoneDisplay,
         hubConfigured: !!data.hubConfigured,
@@ -781,6 +790,8 @@ export default function ConfigPage() {
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? false,
+        needsPhoneNumberId: data.needsPhoneNumberId ?? false,
+        phoneNumberId: data.phoneNumberId ?? whatsappConfig.phoneNumberId ?? null,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
       };
@@ -827,6 +838,8 @@ export default function ConfigPage() {
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? whatsappConfig.hasOAuthToken ?? false,
+        needsPhoneNumberId: data.needsPhoneNumberId ?? whatsappConfig.needsPhoneNumberId ?? false,
+        phoneNumberId: data.phoneNumberId ?? whatsappConfig.phoneNumberId ?? null,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
       };
@@ -1901,22 +1914,56 @@ export default function ConfigPage() {
             {/* Mostrar campo de número solo si hay OAuth token o está configurado */}
             {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
               <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
-                <FieldGroup
-                  label="Número de WhatsApp"
-                  hint="Incluí el código de país. Ejemplo: +5491123456789"
-                >
-                  <input
-                    type="text"
-                    value={whatsappConfig.phoneDisplay}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
-                      setContact((prev) => ({ ...prev, whatsapp: value }));
-                    }}
-                    className="input w-full text-base font-medium tracking-wide"
-                    placeholder="+5491123456789"
-                  />
-                </FieldGroup>
+                <div className="space-y-4">
+                  <FieldGroup
+                    label="Número de WhatsApp"
+                    hint="Incluí el código de país. Ejemplo: +5491123456789"
+                  >
+                    <input
+                      type="text"
+                      value={whatsappConfig.phoneDisplay}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
+                        setContact((prev) => ({ ...prev, whatsapp: value }));
+                      }}
+                      className="input w-full text-base font-medium tracking-wide"
+                      placeholder="+5491123456789"
+                    />
+                  </FieldGroup>
+
+                  {/* Campo para ingresar phone_number_id manualmente (útil cuando Standard access no permite obtenerlo automáticamente) */}
+                  {whatsappConfig.needsPhoneNumberId && (
+                    <FieldGroup
+                      label="Phone Number ID (opcional - para demos)"
+                      hint={
+                        <span>
+                          Si no se obtuvo automáticamente, podés ingresarlo manualmente desde{" "}
+                          <a
+                            href="https://business.facebook.com/settings/whatsapp-business-accounts"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-400 hover:text-primary-300 underline"
+                          >
+                            Meta Business Manager
+                          </a>
+                          . Útil para hacer demos con Standard access.
+                        </span>
+                      }
+                    >
+                      <input
+                        type="text"
+                        value={whatsappConfig.phoneNumberId || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
+                        }}
+                        className="input w-full text-sm font-mono"
+                        placeholder="Ej: 123456789012345"
+                      />
+                    </FieldGroup>
+                  )}
+                </div>
 
               <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
