@@ -226,6 +226,7 @@ export default function ConfigPage() {
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [testingWhatsApp, setTestingWhatsApp] = useState(false);
   const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
+  const [originalPhoneDisplay, setOriginalPhoneDisplay] = useState(""); // Para rastrear si el número fue modificado
   const [whatsappTest, setWhatsappTest] = useState({
     to: "",
     message: "Hola 👋 Este es un mensaje de prueba desde tu asistente de turnos.",
@@ -452,6 +453,9 @@ export default function ConfigPage() {
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
         });
+        
+        // Guardar el número original para comparar si fue modificado
+        setOriginalPhoneDisplay(resolvedPhone);
 
         setWhatsappTest((prev) => ({
           ...prev,
@@ -763,6 +767,11 @@ export default function ConfigPage() {
   };
 
   const handleSaveWhatsApp = async () => {
+    // Actualizar el número original cuando se guarda
+    const currentPhoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
+    if (currentPhoneDisplay) {
+      setOriginalPhoneDisplay(currentPhoneDisplay);
+    }
     const phoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
     if (!phoneDisplay) {
       toast.error("Ingresá el número de WhatsApp con código de país (ej: +54911...)");
@@ -1965,18 +1974,27 @@ export default function ConfigPage() {
                       label="Phone Number ID (opcional - para demos)"
                       hint={
                         <span>
-                          <strong className="text-foreground">Paso 1:</strong> Guardá tu número arriba.{" "}
-                          <strong className="text-foreground">Paso 2:</strong> Usá "Obtener automáticamente" para buscar el ID del número guardado.{" "}
-                          Si no funciona, podés ingresarlo manualmente desde{" "}
-                          <a
-                            href="https://business.facebook.com/settings/whatsapp-business-accounts"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary-400 hover:text-primary-300 underline"
-                          >
-                            Meta Business Manager
-                          </a>
-                          .
+                          {String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? (
+                            <>
+                              <strong className="text-foreground">⚠️ Modificá el número de WhatsApp arriba</strong> para habilitar este campo.{" "}
+                              Una vez que cambies el número y lo guardes, podrás obtener el Phone Number ID automáticamente o ingresarlo manualmente.
+                            </>
+                          ) : (
+                            <>
+                              <strong className="text-foreground">Paso 1:</strong> Guardá tu número arriba.{" "}
+                              <strong className="text-foreground">Paso 2:</strong> Usá "Obtener automáticamente" para buscar el ID del número guardado.{" "}
+                              Si no funciona, podés ingresarlo manualmente desde{" "}
+                              <a
+                                href="https://business.facebook.com/settings/whatsapp-business-accounts"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary-400 hover:text-primary-300 underline"
+                              >
+                                Meta Business Manager
+                              </a>
+                              .
+                            </>
+                          )}
                         </span>
                       }
                     >
@@ -1988,8 +2006,10 @@ export default function ConfigPage() {
                             const value = e.target.value;
                             setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
                           }}
-                          className="input flex-1 text-sm font-mono"
+                          disabled={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim()}
+                          className="input flex-1 text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Ej: 123456789012345"
+                          title={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? "Modificá el número de WhatsApp arriba para habilitar este campo" : ""}
                         />
                         {whatsappConfig.hasOAuthToken && (
                           <div className="flex flex-col gap-1">
