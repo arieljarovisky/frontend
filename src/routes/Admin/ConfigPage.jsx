@@ -215,6 +215,7 @@ export default function ConfigPage() {
     greeting: "",
     greetingWithName: "",
     welcomeMessage: "",
+    welcomeFullMessage: "",
     nameRequest: "",
     branchSelectionMessage: "",
     serviceSelectionHeader: "",
@@ -2296,6 +2297,18 @@ export default function ConfigPage() {
                     onChange={(e) => setBotConfig({ ...botConfig, welcomeMessage: e.target.value })}
                     className="input w-full"
                     placeholder="¿Qué querés hacer?"
+                  />
+                </FieldGroup>
+
+                <FieldGroup
+                  label="Mensaje completo de bienvenida (opcional)"
+                  hint="Mensaje más extenso y personalizado que aparece en el menú principal. Podés usar {name} para incluir el nombre del cliente. Si está vacío, se usará el mensaje de bienvenida corto."
+                >
+                  <textarea
+                    value={botConfig.welcomeFullMessage || ""}
+                    onChange={(e) => setBotConfig({ ...botConfig, welcomeFullMessage: e.target.value })}
+                    className="input w-full min-h-[120px]"
+                    placeholder="¡Bienvenido a nuestro salón! {name} 👋\n\nEstamos acá para ayudarte a reservar tu turno, ver tus citas y mucho más. ¿Qué te gustaría hacer hoy?"
                   />
                 </FieldGroup>
 
