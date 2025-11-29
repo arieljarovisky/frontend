@@ -808,7 +808,13 @@ export default function ConfigPage() {
       payload.supportAgentPhone = whatsappConfig.supportAgentPhone ? whatsappConfig.supportAgentPhone.trim() : "";
       
       logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
-      logger.log("[WhatsApp Config] Payload:", payload);
+      logger.log("[WhatsApp Config] Payload completo:", JSON.stringify(payload, null, 2));
+      logger.log("[WhatsApp Config] Valores de agente:", {
+        supportAgentEnabled: payload.supportAgentEnabled,
+        supportAgentPhone: payload.supportAgentPhone,
+        tipo: typeof payload.supportAgentPhone,
+        longitud: payload.supportAgentPhone?.length,
+      });
       
       const response = await apiClient.saveWhatsAppConfig(payload);
       logger.log("[WhatsApp Config] Respuesta del servidor:", response);
