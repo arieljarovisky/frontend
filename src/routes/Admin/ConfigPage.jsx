@@ -1918,40 +1918,41 @@ export default function ConfigPage() {
           description="Conectá tu número de WhatsApp para automatizar reservas y recordatorios"
           icon={MessageCircle}
         >
-          <div className="space-y-6">
-            {/* Botón OAuth - Mostrar si useOAuth está habilitado y no está configurado ni tiene OAuth token */}
+          <div className="space-y-8">
+            {/* PASO 1: Conexión inicial */}
             {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && !whatsappConfig.hasOAuthToken ? (
-              <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg bg-primary/20 border border-primary/30">
-                    <MessageCircle className="w-5 h-5 text-primary" />
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/30 shadow-lg">
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-primary/20 border-2 border-primary/40">
+                    <MessageCircle className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-foreground mb-1.5">Conectá tu WhatsApp Business</h4>
-                    <p className="text-xs text-foreground-secondary mb-4 leading-relaxed">
+                    <h3 className="text-lg font-bold text-foreground mb-2">Conectá tu WhatsApp Business</h3>
+                    <p className="text-sm text-foreground-secondary mb-6 leading-relaxed">
                       Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta y nosotros nos encargamos del resto.
                     </p>
                     {whatsappConfig.oauthAvailable ? (
                       <Button
                         onClick={handleConnectWhatsApp}
                         disabled={connectingWhatsApp}
-                        className="flex items-center gap-2 w-full sm:w-auto shadow-sm hover:shadow transition-shadow"
+                        size="lg"
+                        className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                       >
                         {connectingWhatsApp ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-5 h-5 animate-spin" />
                             Conectando...
                           </>
                         ) : (
                           <>
-                            <ExternalLink className="w-4 h-4" />
+                            <ExternalLink className="w-5 h-5" />
                             Conectar WhatsApp Business
                           </>
                         )}
                       </Button>
                     ) : (
-                      <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-xs text-amber-200/90 leading-relaxed">
+                      <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/30">
+                        <p className="text-sm text-amber-200/90 leading-relaxed">
                           ⚠️ Las credenciales de Meta App no están configuradas en el servidor. Contactá a soporte para configurar META_APP_ID y META_APP_SECRET.
                         </p>
                       </div>
@@ -1961,309 +1962,265 @@ export default function ConfigPage() {
               </div>
             ) : null}
 
-            {/* Mostrar campo de número solo si hay OAuth token o está configurado */}
+            {/* PASO 2: Configuración cuando ya está conectado */}
             {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-              <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
-                <div className="space-y-4">
-                  <FieldGroup
-                    label="Número de WhatsApp"
-                    hint="Incluí el código de país. Ejemplo: +5491123456789"
-                  >
-                    <input
-                      type="text"
-                      value={whatsappConfig.phoneDisplay}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
-                        setContact((prev) => ({ ...prev, whatsapp: value }));
-                      }}
-                      className="input w-full text-base font-medium tracking-wide"
-                      placeholder="+5491123456789"
-                    />
-                  </FieldGroup>
+              <>
+                {/* Estado y Control Principal */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                  {/* Estado del Asistente - Sidebar */}
+                  <div className="lg:col-span-1">
+                    <div className="sticky top-6 rounded-2xl border-2 border-border/60 bg-gradient-to-br from-background-secondary/90 to-background-secondary/50 backdrop-blur-sm p-6 shadow-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-bold text-foreground">Estado</h3>
+                        <span
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full ${whatsappStatusMeta.className} shadow-md`}
+                        >
+                          <span className={`inline-flex w-2 h-2 rounded-full ${whatsappStatusMeta.bulletClass} animate-pulse`} />
+                          {whatsappStatusMeta.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground-muted mb-4 leading-relaxed">
+                        {whatsappStatusMeta.description}
+                      </p>
+                      <div className="space-y-3 pt-4 border-t border-border/40">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground">Asistente activo</span>
+                          <SwitchField
+                            label=""
+                            checked={whatsappConfig.hubActive}
+                            disabled={(!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) || savingWhatsApp}
+                            onChange={(event) => handleToggleWhatsAppActive(event.target.checked)}
+                          />
+                        </div>
+                        {whatsappConfig.updatedAt && (
+                          <p className="text-xs text-foreground-muted/70 pt-2 border-t border-border/30">
+                            Última actualización:<br />
+                            <span className="font-medium">{new Date(whatsappConfig.updatedAt).toLocaleString("es-AR")}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* Campo para ingresar phone_number_id manualmente (útil cuando Standard access no permite obtenerlo automáticamente) */}
-                  {(whatsappConfig.needsPhoneNumberId || whatsappConfig.hasOAuthToken) && (
-                    <FieldGroup
-                      label="Phone Number ID (opcional - para demos)"
-                      hint={
-                        <span>
-                          {String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? (
+                  {/* Configuración Principal */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Número de WhatsApp */}
+                    <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-bold text-foreground mb-2">Número de WhatsApp</h3>
+                        <p className="text-sm text-foreground-secondary">Configurá el número desde el cual se enviarán los mensajes</p>
+                      </div>
+                      <FieldGroup
+                        label=""
+                        hint="Incluí el código de país. Ejemplo: +5491123456789"
+                      >
+                        <input
+                          type="text"
+                          value={whatsappConfig.phoneDisplay}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setWhatsappConfig((prev) => ({ ...prev, phoneDisplay: value }));
+                            setContact((prev) => ({ ...prev, whatsapp: value }));
+                          }}
+                          className="input w-full text-base font-medium tracking-wide"
+                          placeholder="+5491123456789"
+                        />
+                      </FieldGroup>
+
+                      {/* Phone Number ID - Solo mostrar si es necesario */}
+                      {(whatsappConfig.needsPhoneNumberId || whatsappConfig.hasOAuthToken) && (
+                        <div className="mt-4 pt-4 border-t border-border/40">
+                          <FieldGroup
+                            label="Phone Number ID (avanzado)"
+                            hint={
+                              <span className="text-xs">
+                                {String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? (
+                                  "⚠️ Modificá el número arriba y guardalo para habilitar este campo"
+                                ) : (
+                                  <>
+                                    Guardá tu número primero, luego usá "Obtener automáticamente" o ingresalo manualmente desde{" "}
+                                    <a
+                                      href="https://business.facebook.com/settings/whatsapp-business-accounts"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary-400 hover:text-primary-300 underline"
+                                    >
+                                      Meta Business Manager
+                                    </a>
+                                  </>
+                                )}
+                              </span>
+                            }
+                          >
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={whatsappConfig.phoneNumberId || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
+                                }}
+                                disabled={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim()}
+                                className="input flex-1 text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder="123456789012345"
+                              />
+                              {whatsappConfig.hasOAuthToken && (
+                                <Button
+                                  type="button"
+                                  onClick={async () => {
+                                    const currentPhoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
+                                    if (!currentPhoneDisplay) {
+                                      toast.error("Primero debés guardar tu número de WhatsApp");
+                                      return;
+                                    }
+                                    setSavingWhatsApp(true);
+                                    try {
+                                      const data = await apiClient.refreshWhatsAppPhoneId();
+                                      if (data.ok && data.data?.phoneNumberId) {
+                                        toast.success(`Phone Number ID actualizado: ${data.data.phoneNumberId}`);
+                                        await loadData();
+                                      } else {
+                                        toast.error(data.error || "No se pudo obtener el phone_number_id");
+                                      }
+                                    } catch (error) {
+                                      toast.error(error?.response?.data?.error || error?.message || "Error al obtener el phone_number_id");
+                                    } finally {
+                                      setSavingWhatsApp(false);
+                                    }
+                                  }}
+                                  disabled={savingWhatsApp || !String(whatsappConfig.phoneDisplay || "").trim()}
+                                  variant="secondary"
+                                  size="sm"
+                                >
+                                  {savingWhatsApp ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-4 h-4" />
+                                      Auto
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </FieldGroup>
+                        </div>
+                      )}
+
+                      {/* Botones de Acción */}
+                      <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-border/40">
+                        <Button 
+                          onClick={handleSaveWhatsApp} 
+                          disabled={savingWhatsApp}
+                          className="flex items-center gap-2"
+                        >
+                          {savingWhatsApp ? (
                             <>
-                              <strong className="text-foreground">⚠️ Modificá el número de WhatsApp arriba</strong> para habilitar este campo.{" "}
-                              Una vez que cambies el número y lo guardes, podrás obtener el Phone Number ID automáticamente o ingresarlo manualmente.
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Guardando…
                             </>
                           ) : (
                             <>
-                              <strong className="text-foreground">Paso 1:</strong> Guardá tu número arriba.{" "}
-                              <strong className="text-foreground">Paso 2:</strong> Usá "Obtener automáticamente" para buscar el ID del número guardado.{" "}
-                              Si no funciona, podés ingresarlo manualmente desde{" "}
-                              <a
-                                href="https://business.facebook.com/settings/whatsapp-business-accounts"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary-400 hover:text-primary-300 underline"
-                              >
-                                Meta Business Manager
-                              </a>
-                              .
+                              <Save className="w-4 h-4" />
+                              Guardar configuración
                             </>
                           )}
-                        </span>
-                      }
-                    >
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={whatsappConfig.phoneNumberId || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
-                          }}
-                          disabled={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim()}
-                          className="input flex-1 text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="Ej: 123456789012345"
-                          title={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? "Modificá el número de WhatsApp arriba para habilitar este campo" : ""}
-                        />
-                        {whatsappConfig.hasOAuthToken && (
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              type="button"
-                              onClick={async () => {
-                                // Validar que haya un número guardado antes de obtener el ID
-                                const currentPhoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
-                                if (!currentPhoneDisplay) {
-                                  toast.error(
-                                    "Primero debés guardar tu número de WhatsApp",
-                                    {
-                                      description: "Ingresá el número en el campo 'Número de WhatsApp' y hacé clic en 'Guardar número' antes de obtener el ID automáticamente."
-                                    }
-                                  );
-                                  return;
-                                }
+                        </Button>
+                        <Button 
+                          onClick={handleDisconnectWhatsApp} 
+                          disabled={connectingWhatsApp || savingWhatsApp} 
+                          variant="secondary"
+                          className="flex items-center gap-2 border-red-500/30 hover:border-red-500/50 text-red-400 hover:text-red-300"
+                        >
+                          {connectingWhatsApp ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Desconectando…
+                            </>
+                          ) : (
+                            <>
+                              <LogOut className="w-4 h-4" />
+                              Desconectar
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
 
-                                setSavingWhatsApp(true);
-                                try {
-                                  const data = await apiClient.refreshWhatsAppPhoneId();
-                                  if (data.ok && data.data?.phoneNumberId) {
-                                    toast.success(
-                                      `Phone_number_id actualizado automáticamente: ${data.data.phoneNumberId}`
-                                    );
-                                    // Recargar la configuración
-                                    await loadData();
-                                  } else {
-                                    toast.error(
-                                      data.error || "No se pudo obtener el phone_number_id automáticamente"
-                                    );
-                                  }
-                                } catch (error) {
-                                  toast.error(
-                                    error?.response?.data?.error ||
-                                      error?.message ||
-                                      "Error al obtener el phone_number_id"
-                                  );
-                                } finally {
-                                  setSavingWhatsApp(false);
-                                }
-                              }}
-                              disabled={savingWhatsApp || !String(whatsappConfig.phoneDisplay || "").trim()}
-                              variant="secondary"
-                              className="shrink-0"
-                              title={!String(whatsappConfig.phoneDisplay || "").trim() ? "Primero debés guardar tu número de WhatsApp" : "Obtener el Phone Number ID del número guardado"}
-                            >
-                              {savingWhatsApp ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <RefreshCw className="w-4 h-4" />
-                                  Obtener automáticamente
-                                </>
-                              )}
-                            </Button>
-                            {!String(whatsappConfig.phoneDisplay || "").trim() && (
-                              <p className="text-xs text-foreground-muted/70 italic">
-                                Primero guardá el número arriba
-                              </p>
-                            )}
+                    {/* Agente de Soporte */}
+                    <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                          <MessageCircle className="w-5 h-5 text-primary-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-foreground mb-1">Botón de Ayuda</h3>
+                          <p className="text-sm text-foreground-secondary">
+                            Permití que tus clientes se conecten con un agente humano cuando presionen "Ayuda"
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-background-secondary/60 border border-border/40">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-foreground mb-1">Habilitar botón de ayuda</p>
+                            <p className="text-xs text-foreground-muted">
+                              Los clientes podrán solicitar hablar con un agente humano
+                            </p>
                           </div>
+                          <SwitchField
+                            label=""
+                            checked={whatsappConfig.supportAgentEnabled}
+                            onChange={(event) => {
+                              setWhatsappConfig((prev) => ({
+                                ...prev,
+                                supportAgentEnabled: event.target.checked,
+                              }));
+                            }}
+                          />
+                        </div>
+                        {whatsappConfig.supportAgentEnabled && (
+                          <FieldGroup
+                            label="Número del agente de soporte"
+                            hint="Número de WhatsApp del agente que recibirá las solicitudes (formato E.164, ej: 5491170590570)"
+                          >
+                            <input
+                              type="text"
+                              value={whatsappConfig.supportAgentPhone}
+                              onChange={(e) => {
+                                setWhatsappConfig((prev) => ({
+                                  ...prev,
+                                  supportAgentPhone: e.target.value,
+                                }));
+                              }}
+                              className="input w-full text-base font-medium tracking-wide"
+                              placeholder="5491170590570"
+                            />
+                          </FieldGroup>
                         )}
                       </div>
-                    </FieldGroup>
-                  )}
+                    </div>
+                  </div>
                 </div>
+              </>
+            )}
 
-              {/* Configuración del Agente de Soporte */}
-              <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
-                <div className="flex items-start gap-4 mb-4">
+            {/* Sección de Prueba */}
+            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
+              <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
+                <div className="flex items-start gap-4 mb-6">
                   <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                    <MessageCircle className="w-5 h-5 text-primary-400" />
+                    <TestTube className="w-5 h-5 text-primary-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                      Botón de Ayuda
-                    </h4>
-                    <p className="text-xs text-foreground-secondary leading-relaxed">
-                      Permití que tus clientes se conecten con un agente humano cuando presionen el botón "Ayuda" en el bot.
+                    <h3 className="text-lg font-bold text-foreground mb-1">Enviar mensaje de prueba</h3>
+                    <p className="text-sm text-foreground-secondary">
+                      Probá la integración enviándote un mensaje desde tu número configurado
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-2 border-t border-border/40">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground mb-1">Habilitar botón de ayuda</p>
-                      <p className="text-xs text-foreground-muted">
-                        Los clientes podrán solicitar hablar con un agente humano
-                      </p>
-                    </div>
-                    <SwitchField
-                      label=""
-                      checked={whatsappConfig.supportAgentEnabled}
-                      onChange={(event) => {
-                        setWhatsappConfig((prev) => ({
-                          ...prev,
-                          supportAgentEnabled: event.target.checked,
-                        }));
-                      }}
-                    />
-                  </div>
-
-                  {whatsappConfig.supportAgentEnabled && (
-                    <FieldGroup
-                      label="Número del agente de soporte"
-                      hint="Número de WhatsApp del agente que recibirá las solicitudes (formato E.164, ej: 5491170590570)"
-                    >
-                      <input
-                        type="text"
-                        value={whatsappConfig.supportAgentPhone}
-                        onChange={(e) => {
-                          setWhatsappConfig((prev) => ({
-                            ...prev,
-                            supportAgentPhone: e.target.value,
-                          }));
-                        }}
-                        className="input w-full text-base font-medium tracking-wide"
-                        placeholder="5491170590570"
-                      />
-                    </FieldGroup>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground mb-1.5">Estado del asistente</p>
-                    <p className="text-xs text-foreground-muted leading-relaxed">
-                      {whatsappStatusMeta.description}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-full shrink-0 ${whatsappStatusMeta.className} shadow-sm`}
-                  >
-                    <span className={`inline-flex w-2 h-2 rounded-full ${whatsappStatusMeta.bulletClass} animate-pulse`} />
-                    {whatsappStatusMeta.label}
-                  </span>
-                </div>
-                <div className="pt-2 border-t border-border/40">
-                  <ul className="space-y-2.5">
-                    {highlightedTips.map((tip, index) => (
-                      <li
-                        key={`${whatsappConfig.status}-${index}`}
-                        className="flex items-start gap-2.5 text-xs text-foreground-secondary leading-relaxed"
-                      >
-                        <CheckCircle className="mt-0.5 h-3.5 w-3.5 text-primary/90 flex-shrink-0" />
-                        <span className="flex-1">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              </div>
-            )}
-
-            {/* Mostrar botones solo si hay OAuth token o está configurado */}
-            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/40">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button 
-                  onClick={handleSaveWhatsApp} 
-                  disabled={savingWhatsApp} 
-                  className="flex items-center gap-2 shadow-sm hover:shadow transition-shadow"
-                >
-                  {savingWhatsApp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Guardando…
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Guardar número
-                    </>
-                  )}
-                </Button>
-
-                {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-                  <Button 
-                    onClick={handleDisconnectWhatsApp} 
-                    disabled={connectingWhatsApp || savingWhatsApp} 
-                    variant="secondary"
-                    className="flex items-center gap-2 shadow-sm hover:shadow transition-shadow border-red-500/30 hover:border-red-500/50 text-red-400 hover:text-red-300"
-                  >
-                    {connectingWhatsApp ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Desconectando…
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="w-4 h-4" />
-                        Desconectar
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                <div className="w-full sm:w-auto rounded-lg border border-border/60 bg-background-secondary/50 p-3.5">
-                  <SwitchField
-                    label="Asistente activo"
-                    description="Enviá confirmaciones y recordatorios automáticos"
-                    checked={whatsappConfig.hubActive}
-                    disabled={(!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) || savingWhatsApp}
-                    onChange={(event) => handleToggleWhatsAppActive(event.target.checked)}
-                  />
-                </div>
-              </div>
-
-              <p className="text-xs text-foreground-muted/80 italic">
-                {whatsappConfig.updatedAt
-                  ? `Última actualización: ${new Date(whatsappConfig.updatedAt).toLocaleString("es-AR")}`
-                  : "Guardá el número para mantener la base de WhatsApp sincronizada."}
-              </p>
-            </div>
-            )}
-
-            {/* Sección de prueba - Solo mostrar si hay OAuth token o está configurado */}
-            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-              <div className="border-t border-border pt-6 mt-6">
-                <div className="mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                      <TestTube className="w-5 h-5 text-primary-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                        Enviar mensaje de prueba
-                      </h4>
-                      <p className="text-xs text-foreground-secondary leading-relaxed">
-                        Probá la integración enviándote un mensaje desde tu número configurado.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
                   <FieldGroup label="Enviar a">
                     <input
                       type="text"
@@ -2273,7 +2230,7 @@ export default function ConfigPage() {
                         setWhatsappTest((prev) => ({ ...prev, to: e.target.value }))
                       }
                       className="input w-full"
-                      placeholder="Número con código de país"
+                      placeholder="+5491123456789"
                     />
                   </FieldGroup>
 
@@ -2285,12 +2242,13 @@ export default function ConfigPage() {
                         setWhatsappTest((prev) => ({ ...prev, message: e.target.value }))
                       }
                       className="input w-full min-h-[80px]"
+                      placeholder="Escribí tu mensaje de prueba aquí..."
                     />
                   </FieldGroup>
                 </div>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <Button
+                <div className="flex items-center justify-between pt-4 border-t border-border/40">
+                  <Button
                     type="button"
                     variant="secondary"
                     onClick={handleSendWhatsAppTest}
@@ -2309,25 +2267,25 @@ export default function ConfigPage() {
                       </>
                     )}
                   </Button>
-                  <p className="text-xs text-foreground-muted/80 italic">
+                  <p className="text-xs text-foreground-muted/80">
                     {!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken
-                      ? "Activá el asistente para habilitar los envíos de prueba."
+                      ? "Activá el asistente para habilitar los envíos de prueba"
                       : whatsappConfig.hubActive
-                      ? "El mensaje se enviará desde tu número de WhatsApp Business configurado."
-                      : "Conectá tu cuenta de WhatsApp Business para enviar mensajes de prueba."}
+                      ? "El mensaje se enviará desde tu número de WhatsApp Business"
+                      : "Conectá tu cuenta de WhatsApp Business para enviar mensajes"}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Configuración del Bot de WhatsApp */}
-            <div className="border-t border-border pt-6 mt-6">
+            {/* Personalización del Bot */}
+            <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
               <div className="mb-6">
-                <h4 className="text-base font-semibold text-foreground mb-2">
+                <h3 className="text-lg font-bold text-foreground mb-2">
                   Personalización del Bot
-                </h4>
+                </h3>
                 <p className="text-sm text-foreground-secondary">
-                  Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1 rounded text-xs">{"{name}"}</code> para reemplazar el nombre del cliente.
+                  Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1.5 py-0.5 rounded text-xs font-mono">{"{name}"}</code> para reemplazar el nombre del cliente.
                 </p>
               </div>
 
@@ -2434,8 +2392,8 @@ export default function ConfigPage() {
                   />
                 </FieldGroup>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <p className="text-xs text-foreground-muted">
+                <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-border/60">
+                  <p className="text-sm text-foreground-muted">
                     Los cambios se aplicarán inmediatamente al guardar
                   </p>
                   <Button
