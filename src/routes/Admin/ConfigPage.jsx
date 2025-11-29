@@ -354,6 +354,7 @@ export default function ConfigPage() {
   const [showArcaTutorial, setShowArcaTutorial] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialConfig, setInitialConfig] = useState(null);
+  const [initialWhatsappConfig, setInitialWhatsappConfig] = useState(null);
 
   // ============================================
   // 🔄 CARGAR CONFIGURACIÓN INICIAL
@@ -468,14 +469,26 @@ export default function ConfigPage() {
         }));
 
         // Cargar configuración del bot con valores por defecto
-        setBotConfig({
+        const loadedBotConfig = {
           greeting: bot.greeting || "¡Hola! 👋",
           greetingWithName: bot.greetingWithName || "¡Hola {name}! 👋",
           welcomeMessage: bot.welcomeMessage || "¿Qué querés hacer?",
+          welcomeFullMessage: bot.welcomeFullMessage || "",
           nameRequest: bot.nameRequest || "Para personalizar tu experiencia, decime tu *nombre*.\nEjemplo: *Soy Ariel*",
           branchSelectionMessage: bot.branchSelectionMessage || "Elegí la sucursal donde querés atendete:",
           serviceSelectionHeader: bot.serviceSelectionHeader || "Elegí un servicio",
           instructorSelectionBody: bot.instructorSelectionBody || "¿Con quién preferís?",
+        };
+        setBotConfig(loadedBotConfig);
+
+        // Guardar configuración inicial de WhatsApp para comparar cambios
+        // Normalizar supportAgentPhone: null o undefined se convierte a ""
+        const normalizedSupportPhone = (w.supportAgentPhone ?? null) || "";
+        setInitialWhatsappConfig({
+          phoneDisplay: resolvedPhone,
+          phoneNumberId: w.phoneNumberId ?? null,
+          supportAgentEnabled: w.supportAgentEnabled ?? false,
+          supportAgentPhone: normalizedSupportPhone,
         });
 
         // Cargar sucursales primero
@@ -771,7 +784,7 @@ export default function ConfigPage() {
     }
   };
 
-  const handleSaveWhatsApp = async () => {
+  const handleSaveWhatsApp = async (showToast = true) => {
     // Actualizar el número original cuando se guarda
     const currentPhoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
     if (currentPhoneDisplay) {
@@ -790,11 +803,9 @@ export default function ConfigPage() {
       if (whatsappConfig.phoneNumberId) {
         payload.phoneNumberId = whatsappConfig.phoneNumberId.trim();
       }
-      // Incluir configuración del agente de soporte
+      // Incluir configuración del agente de soporte (siempre enviar, incluso si está vacío para poder limpiarlo)
       payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled;
-      if (whatsappConfig.supportAgentPhone) {
-        payload.supportAgentPhone = whatsappConfig.supportAgentPhone.trim();
-      }
+      payload.supportAgentPhone = whatsappConfig.supportAgentPhone ? whatsappConfig.supportAgentPhone.trim() : "";
       
       logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
       logger.log("[WhatsApp Config] Payload:", payload);
@@ -823,7 +834,7 @@ export default function ConfigPage() {
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
         supportAgentEnabled: data.supportAgentEnabled ?? whatsappConfig.supportAgentEnabled ?? false,
-        supportAgentPhone: data.supportAgentPhone ?? whatsappConfig.supportAgentPhone ?? "",
+        supportAgentPhone: (data.supportAgentPhone ?? whatsappConfig.supportAgentPhone ?? null) || "",
       };
 
       logger.log("[WhatsApp Config] Datos normalizados:", normalized);
@@ -841,17 +852,22 @@ export default function ConfigPage() {
       // Recargar datos para asegurar consistencia
       await loadData();
 
-      toast.success(
-        normalized.hubConfigured && normalized.hubActive
-          ? "Número guardado. El asistente está activo y listo para usar."
-          : "Número guardado correctamente."
-      );
+      if (showToast) {
+        toast.success(
+          normalized.hubConfigured && normalized.hubActive
+            ? "Número guardado. El asistente está activo y listo para usar."
+            : "Número guardado correctamente."
+        );
+      }
     } catch (error) {
       logger.error("[WhatsApp Config] Error al guardar:", error);
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
-      toast.error("No se pudo guardar el número de WhatsApp", {
-        description: errorMessage,
-      });
+      if (showToast) {
+        toast.error("No se pudo guardar el número de WhatsApp", {
+          description: errorMessage,
+        });
+      }
+      throw error; // Re-lanzar para que handleSaveAll pueda manejarlo
     } finally {
       setSavingWhatsApp(false);
     }
@@ -1077,12 +1093,15 @@ export default function ConfigPage() {
 
   const handleSaveAll = async () => {
     setSaving(true);
+    setSavingWhatsApp(true);
+    setSavingBotConfig(true);
     try {
       // Log para debug
       logger.log("[handleSaveAll] Contact data a guardar:", contact);
       logger.log("[handleSaveAll] arca_cuit:", contact.arca_cuit);
 
-      await Promise.all([
+      // Preparar promesas de guardado
+      const savePromises = [
         apiClient.saveConfigSection("general", general),
         apiClient.saveConfigSection("contact", contact),
         apiClient.saveConfigSection("commissions", commissions),
@@ -1090,9 +1109,21 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("working-hours", workingHours),
         apiClient.saveAppointmentsConfig(bookingConfig),
         apiClient.put("/api/reminders/config", remindersConfig),
-        // Guardar payments (seña) siempre - permite desactivar incluso sin MP conectado
+        apiClient.saveConfigSection("bot", botConfig), // Guardar configuración del bot
         savePayments(),
-      ]);
+      ];
+
+      // Guardar WhatsApp si hay cambios
+      if (initialWhatsappConfig && (
+        whatsappConfig.phoneDisplay !== initialWhatsappConfig.phoneDisplay ||
+        whatsappConfig.phoneNumberId !== initialWhatsappConfig.phoneNumberId ||
+        whatsappConfig.supportAgentEnabled !== initialWhatsappConfig.supportAgentEnabled ||
+        whatsappConfig.supportAgentPhone !== initialWhatsappConfig.supportAgentPhone
+      )) {
+        savePromises.push(handleSaveWhatsApp(false)); // false = no mostrar toast individual
+      }
+
+      await Promise.all(savePromises);
       toast.success("Configuración guardada correctamente");
       setHasUnsavedChanges(false);
 
@@ -1107,6 +1138,30 @@ export default function ConfigPage() {
         botConfig,
         workingHours,
       });
+
+      // Actualizar configuración inicial de WhatsApp después de guardar
+      if (initialWhatsappConfig) {
+        try {
+          // Recargar datos de WhatsApp para obtener los valores guardados del servidor
+          const whatsappData = await apiClient.getWhatsAppConfig();
+          const w = whatsappData?.data || {};
+          const normalizedSupportPhone = (w.supportAgentPhone ?? null) || "";
+          setInitialWhatsappConfig({
+            phoneDisplay: w.phoneDisplay ?? whatsappConfig.phoneDisplay,
+            phoneNumberId: w.phoneNumberId ?? whatsappConfig.phoneNumberId,
+            supportAgentEnabled: w.supportAgentEnabled ?? whatsappConfig.supportAgentEnabled,
+            supportAgentPhone: normalizedSupportPhone,
+          });
+        } catch (e) {
+          // Si falla, usar los valores actuales
+          setInitialWhatsappConfig({
+            phoneDisplay: whatsappConfig.phoneDisplay,
+            phoneNumberId: whatsappConfig.phoneNumberId,
+            supportAgentEnabled: whatsappConfig.supportAgentEnabled,
+            supportAgentPhone: whatsappConfig.supportAgentPhone || "",
+          });
+        }
+      }
 
       // Recargar configuración de contacto para asegurar que el estado esté actualizado
       try {
@@ -1134,6 +1189,8 @@ export default function ConfigPage() {
       toast.error(`❌ Error al guardar la configuración: ${errorMessage}`);
     } finally {
       setSaving(false);
+      setSavingWhatsApp(false);
+      setSavingBotConfig(false);
     }
   };
 
@@ -1390,7 +1447,8 @@ export default function ConfigPage() {
       return;
     }
 
-    const hasChanges = 
+    // Verificar cambios en configuraciones generales
+    const hasGeneralChanges = initialConfig && (
       JSON.stringify(general) !== JSON.stringify(initialConfig.general) ||
       JSON.stringify(contact) !== JSON.stringify(initialConfig.contact) ||
       JSON.stringify(commissions) !== JSON.stringify(initialConfig.commissions) ||
@@ -1398,10 +1456,19 @@ export default function ConfigPage() {
       JSON.stringify(bookingConfig) !== JSON.stringify(initialConfig.bookingConfig) ||
       JSON.stringify(remindersConfig) !== JSON.stringify(initialConfig.remindersConfig) ||
       JSON.stringify(botConfig) !== JSON.stringify(initialConfig.botConfig) ||
-      JSON.stringify(workingHours) !== JSON.stringify(initialConfig.workingHours);
+      JSON.stringify(workingHours) !== JSON.stringify(initialConfig.workingHours)
+    );
 
-    setHasUnsavedChanges(hasChanges);
-  }, [general, contact, commissions, notifications, bookingConfig, remindersConfig, botConfig, workingHours, initialConfig]);
+    // Verificar cambios en WhatsApp
+    const hasWhatsAppChanges = initialWhatsappConfig && (
+      whatsappConfig.phoneDisplay !== initialWhatsappConfig.phoneDisplay ||
+      whatsappConfig.phoneNumberId !== initialWhatsappConfig.phoneNumberId ||
+      whatsappConfig.supportAgentEnabled !== initialWhatsappConfig.supportAgentEnabled ||
+      whatsappConfig.supportAgentPhone !== initialWhatsappConfig.supportAgentPhone
+    );
+
+    setHasUnsavedChanges(hasGeneralChanges || hasWhatsAppChanges);
+  }, [general, contact, commissions, notifications, bookingConfig, remindersConfig, botConfig, workingHours, whatsappConfig, initialConfig, initialWhatsappConfig]);
 
   return (
     <div className="space-y-6">
@@ -2107,28 +2174,11 @@ export default function ConfigPage() {
                         </div>
                       )}
 
-                      {/* Botones de Acción */}
-                      <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-border/40">
-                        <Button 
-                          onClick={handleSaveWhatsApp} 
-                          disabled={savingWhatsApp}
-                          className="flex items-center gap-2"
-                        >
-                          {savingWhatsApp ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Guardando…
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4" />
-                              Guardar configuración
-                            </>
-                          )}
-                        </Button>
+                      {/* Botón de Desconectar */}
+                      <div className="mt-6 pt-4 border-t border-border/40">
                         <Button 
                           onClick={handleDisconnectWhatsApp} 
-                          disabled={connectingWhatsApp || savingWhatsApp} 
+                          disabled={connectingWhatsApp || savingWhatsApp || saving} 
                           variant="secondary"
                           className="flex items-center gap-2 border-red-500/30 hover:border-red-500/50 text-red-400 hover:text-red-300"
                         >
@@ -2140,7 +2190,7 @@ export default function ConfigPage() {
                           ) : (
                             <>
                               <LogOut className="w-4 h-4" />
-                              Desconectar
+                              Desconectar WhatsApp
                             </>
                           )}
                         </Button>
@@ -2392,27 +2442,13 @@ export default function ConfigPage() {
                   />
                 </FieldGroup>
 
-                <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-border/60">
-                  <p className="text-sm text-foreground-muted">
-                    Los cambios se aplicarán inmediatamente al guardar
-                  </p>
-                  <Button
-                    onClick={handleSaveBotConfig}
-                    disabled={savingBotConfig}
-                    className="flex items-center gap-2"
-                  >
-                    {savingBotConfig ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Guardar configuración del bot
-                      </>
-                    )}
-                  </Button>
+                <div className="pt-6 mt-6 border-t-2 border-border/60">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <Info className="w-4 h-4 text-primary-400" />
+                    <p className="text-sm text-foreground-muted">
+                      Los cambios se guardarán junto con el resto de la configuración usando el botón "Guardar Cambios" arriba
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
