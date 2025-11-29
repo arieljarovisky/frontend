@@ -209,6 +209,8 @@ export default function ConfigPage() {
     phoneNumberId: null,
     createdAt: null,
     updatedAt: null,
+    supportAgentEnabled: false,
+    supportAgentPhone: "",
   });
 
   const [botConfig, setBotConfig] = useState({
@@ -453,6 +455,8 @@ export default function ConfigPage() {
           phoneNumberId: w.phoneNumberId ?? null,
           createdAt: w.createdAt ?? null,
           updatedAt: w.updatedAt ?? null,
+          supportAgentEnabled: w.supportAgentEnabled ?? false,
+          supportAgentPhone: w.supportAgentPhone ?? "",
         });
         
         // Guardar el número original para comparar si fue modificado
@@ -786,6 +790,11 @@ export default function ConfigPage() {
       if (whatsappConfig.phoneNumberId) {
         payload.phoneNumberId = whatsappConfig.phoneNumberId.trim();
       }
+      // Incluir configuración del agente de soporte
+      payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled;
+      if (whatsappConfig.supportAgentPhone) {
+        payload.supportAgentPhone = whatsappConfig.supportAgentPhone.trim();
+      }
       
       logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
       logger.log("[WhatsApp Config] Payload:", payload);
@@ -813,6 +822,8 @@ export default function ConfigPage() {
         phoneNumberId: data.phoneNumberId ?? (payload.phoneNumberId || whatsappConfig.phoneNumberId) ?? null, // ✅ Mantener el phoneNumberId enviado si no viene en la respuesta
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
+        supportAgentEnabled: data.supportAgentEnabled ?? whatsappConfig.supportAgentEnabled ?? false,
+        supportAgentPhone: data.supportAgentPhone ?? whatsappConfig.supportAgentPhone ?? "",
       };
 
       logger.log("[WhatsApp Config] Datos normalizados:", normalized);
@@ -867,6 +878,8 @@ export default function ConfigPage() {
         phoneNumberId: data.phoneNumberId ?? whatsappConfig.phoneNumberId ?? null,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
+        supportAgentEnabled: data.supportAgentEnabled ?? whatsappConfig.supportAgentEnabled ?? false,
+        supportAgentPhone: data.supportAgentPhone ?? whatsappConfig.supportAgentPhone ?? "",
       };
       setWhatsappConfig(normalized);
       toast.success(nextActive ? "Asistente de WhatsApp activado." : "Asistente de WhatsApp desactivado.");
@@ -2078,6 +2091,64 @@ export default function ConfigPage() {
                     </FieldGroup>
                   )}
                 </div>
+
+              {/* Configuración del Agente de Soporte */}
+              <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <MessageCircle className="w-5 h-5 text-primary-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-foreground mb-1.5">
+                      Botón de Ayuda
+                    </h4>
+                    <p className="text-xs text-foreground-secondary leading-relaxed">
+                      Permití que tus clientes se conecten con un agente humano cuando presionen el botón "Ayuda" en el bot.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground mb-1">Habilitar botón de ayuda</p>
+                      <p className="text-xs text-foreground-muted">
+                        Los clientes podrán solicitar hablar con un agente humano
+                      </p>
+                    </div>
+                    <SwitchField
+                      label=""
+                      checked={whatsappConfig.supportAgentEnabled}
+                      onChange={(event) => {
+                        setWhatsappConfig((prev) => ({
+                          ...prev,
+                          supportAgentEnabled: event.target.checked,
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  {whatsappConfig.supportAgentEnabled && (
+                    <FieldGroup
+                      label="Número del agente de soporte"
+                      hint="Número de WhatsApp del agente que recibirá las solicitudes (formato E.164, ej: 5491170590570)"
+                    >
+                      <input
+                        type="text"
+                        value={whatsappConfig.supportAgentPhone}
+                        onChange={(e) => {
+                          setWhatsappConfig((prev) => ({
+                            ...prev,
+                            supportAgentPhone: e.target.value,
+                          }));
+                        }}
+                        className="input w-full text-base font-medium tracking-wide"
+                        placeholder="5491170590570"
+                      />
+                    </FieldGroup>
+                  )}
+                </div>
+              </div>
 
               <div className="rounded-xl border border-border/60 bg-background-secondary/80 backdrop-blur-sm p-5 space-y-4 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
