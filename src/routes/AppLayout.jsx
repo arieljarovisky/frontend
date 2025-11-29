@@ -180,7 +180,7 @@ export default function AppLayout() {
       }
     };
     loadUnreadCount();
-    const interval = setInterval(loadUnreadCount, 30000); // Actualizar cada 30 segundos
+    const interval = setInterval(loadUnreadCount, 60000); // Actualizar cada 60 segundos (reducido para evitar rate limiting)
     return () => clearInterval(interval);
   }, [authLoaded, authContext]);
 

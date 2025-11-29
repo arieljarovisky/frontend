@@ -365,13 +365,8 @@ export default function NotificationsPage() {
     loadUnreadCount();
   }, [filter, refreshKey]);
 
-  // Actualizar contador periódicamente (cada 30 segundos)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadUnreadCount();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Nota: El polling del contador se maneja globalmente en AppLayout
+  // para evitar llamadas duplicadas y problemas de rate limiting
 
   const handleRefresh = () => {
     setRefreshKey((k) => k + 1);

@@ -22,7 +22,7 @@ const BUSINESS_TYPE_DEFAULT_FEATURES = {
 
 export const AppContext = createContext(null);
 
-export function AppProvider({ children, pollMs = 15000 }) {
+export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 segundos para reducir carga
   // --- Meta ---
   const [services, setServices] = useState([]);
   const [instructors, setInstructors] = useState([]);
