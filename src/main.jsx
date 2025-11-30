@@ -71,12 +71,14 @@ import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
 import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
 import FeatureRequestPage from "./routes/FeatureRequestPage.jsx";
 import TwoFactorAuthPage from "./routes/TwoFactorAuthPage.jsx";
+import GoogleOAuthCallback from "./routes/GoogleOAuthCallback.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
   { path: "/", element: <LandingPage /> },
   { path: "/docs", element: <DocsPage /> },
   { path: "/login", element: <LoginPage /> },
+  { path: "/auth/google/success", element: <GoogleOAuthCallback /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/activate", element: <ActivatePage /> },

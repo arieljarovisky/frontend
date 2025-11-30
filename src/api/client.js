@@ -438,6 +438,21 @@ const authApi = {
   },
 
   /**
+   * Obtener URL de Google OAuth
+   */
+  async getGoogleAuthUrl(next = "/") {
+    try {
+      const { data } = await apiClient.get("/auth/google", {
+        params: { next }
+      });
+      return data?.authUrl || null;
+    } catch (error) {
+      logger.error("Error obteniendo URL de Google OAuth:", error);
+      return null;
+    }
+  },
+
+  /**
    * Get current user
    */
   async me() {
