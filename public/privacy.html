@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>Política de Privacidad | Pelu Turnos</title>
+    <title>Política de Privacidad | ARJA ERP</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -57,15 +57,15 @@
       <header>
         <h1>Política de Privacidad</h1>
         <p>
-          Última actualización: <strong>15 de noviembre de 2025</strong>
+          Última actualización: <strong id="update-date"></strong>
         </p>
       </header>
 
       <section>
         <h2>1. ¿Quiénes somos?</h2>
         <p>
-          <strong>Pelu Turnos</strong> (en adelante, “la Plataforma”) es una
-          solución de gestión de turnos y sucursales desarrollada por
+          <strong>ARJA ERP</strong> (en adelante, "la Plataforma" o "el Servicio") es una
+          solución de gestión empresarial desarrollada por
           <strong>Arja Apps</strong>. Esta política describe cómo recopilamos,
           usamos y protegemos tus datos personales.
         </p>
@@ -81,7 +81,7 @@
           </li>
           <li>
             Datos de cuenta: credenciales de acceso, roles, sucursales
-            asignadas, permisos.
+            asignadas, permisos, información de autenticación con Google OAuth (si utilizas "Iniciar sesión con Google").
           </li>
           <li>
             Datos operativos: registros de turnos, clientes finales, servicios,
@@ -168,7 +168,24 @@
       </section>
 
       <section>
-        <h2>9. Cambios a esta política</h2>
+        <h2>9. Autenticación con Google OAuth</h2>
+        <p>
+          Si elegís iniciar sesión con Google, utilizamos el servicio de autenticación OAuth de Google. 
+          En este proceso:
+        </p>
+        <ul>
+          <li>Google nos proporciona tu dirección de correo electrónico, nombre y foto de perfil (si está disponible)</li>
+          <li>No almacenamos tu contraseña de Google</li>
+          <li>Podés revocar el acceso en cualquier momento desde tu cuenta de Google</li>
+          <li>El uso de Google OAuth está sujeto a la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad de Google</a></li>
+        </ul>
+        <p>
+          La información recibida de Google se utiliza únicamente para autenticarte y crear tu cuenta en ARJA ERP.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Cambios a esta política</h2>
         <p>
           Podremos actualizar esta política para reflejar cambios en la
           Plataforma o en la normativa aplicable. Publicaremos la versión
@@ -178,12 +195,17 @@
 
       <footer>
         © <span id="year"></span> Arja Apps ·
-        <a href="mailto:privacidad@arja.app">privacidad@arja.app</a>
+        <a href="mailto:administracion@arjaerp.com.ar">administracion@arjaerp.com.ar</a>
       </footer>
     </div>
     <script>
       document.getElementById("year").textContent =
         new Date().getFullYear().toString();
+      document.getElementById("update-date").textContent = new Date().toLocaleDateString('es-AR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
     </script>
   </body>
 </html>
