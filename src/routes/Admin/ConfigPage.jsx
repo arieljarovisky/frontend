@@ -129,22 +129,6 @@ export default function ConfigPage() {
     );
   }
 
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && visibleTabs.some(t => t.id === tab)) {
-      setActive(tab);
-      // Scroll automático a la sección
-      setTimeout(() => {
-        const el = document.getElementById(tab);
-        if (el) {
-          const adjustedOffset = Math.max(0, navOffset - SCROLL_MARGIN);
-          const targetY = window.scrollY + el.getBoundingClientRect().top - adjustedOffset;
-          window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-        }
-      }, 100);
-    }
-  }, [searchParams, visibleTabs, navOffset]);
-
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
     { id: "business-type", label: "Tipo de Negocio", Icon: Building2, adminOnly: true },
@@ -155,6 +139,26 @@ export default function ConfigPage() {
     { id: "commissions", label: "Comisiones", Icon: Percent },
     { id: "security", label: "Seguridad", Icon: Shield },
   ];
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      // Verificar si la pestaña existe en TABS
+      const tabIds = TABS.map(t => t.id);
+      if (tabIds.includes(tab)) {
+        setActive(tab);
+        // Scroll automático a la sección
+        setTimeout(() => {
+          const el = document.getElementById(tab);
+          if (el) {
+            const adjustedOffset = Math.max(0, navOffset - SCROLL_MARGIN);
+            const targetY = window.scrollY + el.getBoundingClientRect().top - adjustedOffset;
+            window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    }
+  }, [searchParams, navOffset]);
 
   // Estados
   const [general, setGeneral] = useState({
