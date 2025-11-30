@@ -313,6 +313,11 @@ const authApi = {
         rememberDevice
       });
 
+      // Si requiere 2FA, devolver directamente sin procesar
+      if (data?.requiresTwoFactor) {
+        return data;
+      }
+
       if (data?.ok) {
         // Caso 1: Multi-tenant (necesita elegir tenant)
         if (data.multiTenant) {
@@ -357,6 +362,11 @@ const authApi = {
         twoFactorCode,
         rememberDevice
       });
+
+      // Si requiere 2FA, devolver directamente sin procesar
+      if (data?.requiresTwoFactor) {
+        return data;
+      }
 
       if (data?.ok && data?.access) {
         setAccessToken(data.access);

@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, QrCode, CheckCircle2, XCircle, AlertCircle, Copy, Eye, EyeOff, Lock } from "lucide-react";
+import { Shield, QrCode, CheckCircle2, XCircle, AlertCircle, Copy, Lock } from "lucide-react";
 import { authApi } from "../api/client";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { logger } from "../utils/logger.js";
 
 export default function TwoFactorAuthPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [setupLoading, setSetupLoading] = useState(false);
@@ -163,7 +163,13 @@ export default function TwoFactorAuthPage() {
               </div>
             </div>
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (tenantSlug) {
+                  navigate(`/${tenantSlug}/admin/config?tab=security`);
+                } else {
+                  navigate(-1);
+                }
+              }}
               className="text-foreground-muted hover:text-foreground transition-colors"
             >
               <XCircle className="w-5 h-5" />

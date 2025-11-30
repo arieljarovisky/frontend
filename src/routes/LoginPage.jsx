@@ -146,15 +146,15 @@ export default function LoginPage() {
     try {
       const resp = await authApi.login(email, password, twoFactorCode || null, rememberDevice);
 
-      if (!resp?.ok) {
-        // Verificar si requiere 2FA
-        if (resp?.requiresTwoFactor) {
-          setRequiresTwoFactor(true);
-          setError("");
-          setLoading(false);
-          return;
-        }
+      // Verificar si requiere 2FA (puede venir con ok: false o status 200)
+      if (resp?.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError("");
+        setLoading(false);
+        return;
+      }
 
+      if (!resp?.ok) {
         // Verificar si es error de activación pendiente
         if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
           setError({
@@ -240,15 +240,15 @@ export default function LoginPage() {
     try {
       const resp = await authApi.loginTenant(email, password, slug, twoFactorCode || null, rememberDevice);
 
-      if (!resp?.ok) {
-        // Verificar si requiere 2FA
-        if (resp?.requiresTwoFactor) {
-          setRequiresTwoFactor(true);
-          setError("");
-          setLoading(false);
-          return;
-        }
+      // Verificar si requiere 2FA (puede venir con ok: false o status 200)
+      if (resp?.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError("");
+        setLoading(false);
+        return;
+      }
 
+      if (!resp?.ok) {
         // Verificar si es error de activación pendiente
         if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
           setError({
