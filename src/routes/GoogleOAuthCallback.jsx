@@ -57,20 +57,64 @@ export default function GoogleOAuthCallback() {
                 setTenantId(userData.tenant.id);
               }
             }
-            // Redirigir a la página solicitada o dashboard
-            const destination = next.startsWith("/") ? next : `/${next}`;
+            
+            // Determinar destino: si next es "/" o no es válido, ir al dashboard
+            let destination = next;
+            if (!destination || destination === "/" || destination === "") {
+              // Si es super admin, ir a super-admin
+              if (payload.is_super_admin) {
+                destination = "/super-admin/tenants";
+              } else if (payload.tenant_id) {
+                // Intentar obtener el slug del tenant desde el token o userData
+                const tenantSlug = userData?.tenant?.slug || userData?.user?.tenant?.slug;
+                if (tenantSlug) {
+                  destination = `/${tenantSlug}/dashboard`;
+                } else {
+                  // Si no hay slug, usar el tenant_id del payload (fallback)
+                  destination = `/dashboard`;
+                }
+              } else {
+                destination = "/dashboard";
+              }
+            } else if (!destination.startsWith("/")) {
+              destination = `/${destination}`;
+            }
+            
             window.location.replace(destination);
           })
           .catch((meError) => {
             logger.warn("[Google OAuth] No se pudo obtener información completa del usuario:", meError);
             // Continuar de todas formas, el token ya está guardado
-            const destination = next.startsWith("/") ? next : `/${next}`;
+            // Usar información del token para redirigir
+            let destination = next;
+            if (!destination || destination === "/" || destination === "") {
+              if (payload.is_super_admin) {
+                destination = "/super-admin/tenants";
+              } else if (payload.tenant_id) {
+                destination = "/dashboard";
+              } else {
+                destination = "/dashboard";
+              }
+            } else if (!destination.startsWith("/")) {
+              destination = `/${destination}`;
+            }
             window.location.replace(destination);
           });
       }).catch((importError) => {
         logger.error("[Google OAuth] Error importando authApi:", importError);
         // Continuar de todas formas, el token ya está guardado
-        const destination = next.startsWith("/") ? next : `/${next}`;
+        let destination = next;
+        if (!destination || destination === "/" || destination === "") {
+          if (payload.is_super_admin) {
+            destination = "/super-admin/tenants";
+          } else if (payload.tenant_id) {
+            destination = "/dashboard";
+          } else {
+            destination = "/dashboard";
+          }
+        } else if (!destination.startsWith("/")) {
+          destination = `/${destination}`;
+        }
         window.location.replace(destination);
       });
     } catch (err) {
