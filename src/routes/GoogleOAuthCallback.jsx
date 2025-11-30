@@ -48,23 +48,31 @@ export default function GoogleOAuthCallback() {
       toast.success("Sesión iniciada con Google");
 
       // Obtener información completa del usuario desde el backend
-      try {
-        const { authApi } = await import("../api/client");
-        const userData = await authApi.me();
-        if (userData?.ok && userData?.user) {
-          setUserData(userData.user);
-          if (userData.tenant?.id) {
-            setTenantId(userData.tenant.id);
-          }
-        }
-      } catch (meError) {
-        logger.warn("[Google OAuth] No se pudo obtener información completa del usuario:", meError);
+      import("../api/client").then(({ authApi }) => {
+        authApi.me()
+          .then((userData) => {
+            if (userData?.ok && userData?.user) {
+              setUserData(userData.user);
+              if (userData.tenant?.id) {
+                setTenantId(userData.tenant.id);
+              }
+            }
+            // Redirigir a la página solicitada o dashboard
+            const destination = next.startsWith("/") ? next : `/${next}`;
+            window.location.replace(destination);
+          })
+          .catch((meError) => {
+            logger.warn("[Google OAuth] No se pudo obtener información completa del usuario:", meError);
+            // Continuar de todas formas, el token ya está guardado
+            const destination = next.startsWith("/") ? next : `/${next}`;
+            window.location.replace(destination);
+          });
+      }).catch((importError) => {
+        logger.error("[Google OAuth] Error importando authApi:", importError);
         // Continuar de todas formas, el token ya está guardado
-      }
-
-      // Redirigir a la página solicitada o dashboard
-      const destination = next.startsWith("/") ? next : `/${next}`;
-      window.location.replace(destination);
+        const destination = next.startsWith("/") ? next : `/${next}`;
+        window.location.replace(destination);
+      });
     } catch (err) {
       logger.error("[Google OAuth] Error procesando callback:", err);
       toast.error("Error al procesar la sesión");
