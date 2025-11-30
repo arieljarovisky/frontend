@@ -433,7 +433,7 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className="arja-main__content">
-          <div className="arja-main__content-inner">
+          <div className="arja-main__content-inner px-2 sm:px-0">
             <TrialExpiredBlock>
             <div className="animate-fade-in">
               <Outlet />

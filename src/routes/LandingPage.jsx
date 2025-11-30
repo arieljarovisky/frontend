@@ -341,7 +341,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="pt-24 pb-16 px-4 sm:pt-32 sm:pb-20 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial="initial"
@@ -354,7 +354,7 @@ export default function LandingPage() {
           >
             <motion.h1
               variants={fadeInUp}
-              className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground mb-4 sm:mb-6"
             >
               Gestiona tu Negocio
               <br />
@@ -364,34 +364,34 @@ export default function LandingPage() {
             </motion.h1>
             <motion.p
               variants={fadeInUp}
-              className="text-xl md:text-2xl text-foreground-secondary mb-8 max-w-3xl mx-auto"
+              className="text-base sm:text-lg md:text-xl lg:text-2xl text-foreground-secondary mb-6 sm:mb-8 max-w-3xl mx-auto px-4"
             >
               Sistema ERP completo para gestionar turnos, stock, facturación y más. 
               Con pagos online, notificaciones automáticas y bot de WhatsApp integrado.
             </motion.p>
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4"
             >
               <button
                 onClick={() => navigate("/onboarding")}
-                className="px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-lg"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
               >
                 Comenzar Gratis
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={() => {
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="px-8 py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border text-sm sm:text-base"
               >
                 Ver Características
               </button>
             </motion.div>
             <motion.p
               variants={fadeInUp}
-              className="text-sm text-foreground-muted mt-6"
+              className="text-xs sm:text-sm text-foreground-muted mt-4 sm:mt-6 px-4"
             >
               ✓ Prueba gratuita de 14 días • ✓ Sin tarjeta de crédito • ✓ Cancela cuando quieras
             </motion.p>
@@ -400,24 +400,24 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
               Todo lo que necesitas en un solo lugar
             </h2>
-            <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
               Herramientas poderosas diseñadas para hacer crecer tu negocio
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
@@ -446,24 +446,24 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-background-secondary">
+      <section id="pricing" className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-background-secondary">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
               Planes que se adaptan a tu negocio
             </h2>
-            <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
               Elige el plan perfecto para tu negocio. Todos incluyen prueba gratuita.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {pricingPlans.map((plan, index) => (
               <motion.div
                 key={index}
@@ -471,9 +471,9 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`card p-8 relative ${
+                className={`card p-6 sm:p-8 relative ${
                   plan.popular
-                    ? "ring-2 ring-primary scale-105"
+                    ? "ring-2 ring-primary sm:scale-105"
                     : ""
                 }`}
               >
@@ -534,24 +534,24 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background-secondary">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-background-secondary">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
               Sistema confiable y robusto
             </h2>
-            <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
               Tecnología de nivel empresarial al alcance de tu negocio
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {stats.map((stat, index) => (
               <motion.div
                 key={index}
@@ -559,15 +559,15 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="text-center"
+                className="text-center px-2"
               >
-                <div className="text-5xl md:text-6xl font-bold text-primary mb-2">
+                <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-1 sm:mb-2">
                   {stat.value}
                 </div>
-                <div className="text-xl font-semibold text-foreground mb-1">
+                <div className="text-base sm:text-lg lg:text-xl font-semibold text-foreground mb-1">
                   {stat.label}
                 </div>
-                <div className="text-sm text-foreground-secondary">
+                <div className="text-xs sm:text-sm text-foreground-secondary">
                   {stat.description}
                 </div>
               </motion.div>
@@ -577,24 +577,24 @@ export default function LandingPage() {
       </section>
 
       {/* Use Cases Section */}
-      <section id="use-cases" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="use-cases" className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
               Ideal para cualquier negocio de servicios
             </h2>
-            <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
               Desde pequeños emprendimientos hasta empresas con múltiples sucursales
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {useCases.map((useCase, index) => {
               const Icon = useCase.icon;
               return (
@@ -623,34 +623,34 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="card card--space-xl card--no-hover text-center"
+            className="card card--space-lg sm:card--space-xl card--no-hover text-center"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
               ¿Listo para transformar tu negocio?
             </h2>
-            <p className="text-xl text-foreground-secondary mb-8 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
               Comienza tu prueba gratuita hoy mismo. Sin tarjeta de crédito, sin compromiso.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <button
                 onClick={() => navigate("/login")}
-                className="px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
               >
                 Comenzar Gratis
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={() => {
                   document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="px-8 py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border text-sm sm:text-base"
               >
                 Ver Planes
               </button>
@@ -660,9 +660,9 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-12 px-4 sm:px-6 lg:px-8 bg-background-secondary">
+      <footer className="border-t border-border py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-background-secondary">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div>
               <div className="mb-4">
                 <Logo size="default" showText={true} />
