@@ -131,16 +131,19 @@ export default function ConfigPage() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'mercadopago') {
-      setActive('mercadopago');
-      // opcional: scroll automático a la sección
-      const el = document.getElementById('mercadopago');
-      if (el) {
-        const y = window.scrollY + el.getBoundingClientRect().top - 120;
-        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-      }
+    if (tab && visibleTabs.some(t => t.id === tab)) {
+      setActive(tab);
+      // Scroll automático a la sección
+      setTimeout(() => {
+        const el = document.getElementById(tab);
+        if (el) {
+          const adjustedOffset = Math.max(0, navOffset - SCROLL_MARGIN);
+          const targetY = window.scrollY + el.getBoundingClientRect().top - adjustedOffset;
+          window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+        }
+      }, 100);
     }
-  }, [searchParams]);
+  }, [searchParams, visibleTabs, navOffset]);
 
   const TABS = [
     { id: "general", label: "General", Icon: Settings },
@@ -3371,37 +3374,35 @@ export default function ConfigPage() {
       {/* NOTIFICATIONS — sección temporalmente deshabilitada a pedido */}
 
       {/* SECURITY */}
-      {active === "security" && (
-        <div id="security">
-          <ConfigSection
-            title="Seguridad"
-            description="Configuración de seguridad de tu cuenta"
-            icon={Shield}
-          >
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg border border-border bg-background-secondary">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground mb-1">
-                      Autenticación de doble factor (2FA)
-                    </h4>
-                    <p className="text-xs text-foreground-muted">
-                      Agregá una capa adicional de seguridad a tu cuenta con códigos de autenticación
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => navigate(`/${tenantSlug}/admin/2fa`)}
-                    className="btn-primary flex items-center gap-2"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Configurar 2FA
-                  </button>
+      <div id="security">
+        <ConfigSection
+          title="Seguridad"
+          description="Configuración de seguridad de tu cuenta"
+          icon={Shield}
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg border border-border bg-background-secondary">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">
+                    Autenticación de doble factor (2FA)
+                  </h4>
+                  <p className="text-xs text-foreground-muted">
+                    Agregá una capa adicional de seguridad a tu cuenta con códigos de autenticación
+                  </p>
                 </div>
+                <button
+                  onClick={() => navigate(`/${tenantSlug}/admin/2fa`)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  Configurar 2FA
+                </button>
               </div>
             </div>
-          </ConfigSection>
-        </div>
-      )}
+          </div>
+        </ConfigSection>
+      </div>
 
       {/* Footer */}
       <div className="card p-6">
