@@ -304,9 +304,14 @@ const authApi = {
   /**
    * Login
    */
-  async login(email, password) {
+  async login(email, password, twoFactorCode = null, rememberDevice = false) {
     try {
-      const { data } = await apiClient.post("/auth/login", { email, password });
+      const { data } = await apiClient.post("/auth/login", { 
+        email, 
+        password,
+        twoFactorCode,
+        rememberDevice
+      });
 
       if (data?.ok) {
         // Caso 1: Multi-tenant (necesita elegir tenant)
@@ -343,12 +348,14 @@ const authApi = {
   /**
    * Login con tenant específico
    */
-  async loginTenant(email, password, slug) {
+  async loginTenant(email, password, slug, twoFactorCode = null, rememberDevice = false) {
     try {
       const { data } = await apiClient.post("/auth/login-tenant", {
         email,
         password,
         slug,
+        twoFactorCode,
+        rememberDevice
       });
 
       if (data?.ok && data?.access) {
@@ -469,6 +476,70 @@ const authApi = {
    */
   getUser() {
     return getUserData();
+  },
+
+  /**
+   * 2FA: Setup (generar QR code)
+   */
+  async setup2FA() {
+    try {
+      const { data } = await apiClient.post("/auth/2fa/setup");
+      return data;
+    } catch (error) {
+      logger.error("Error en setup2FA:", error);
+      if (error?.response?.data) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 2FA: Verificar código y activar
+   */
+  async verify2FA(code) {
+    try {
+      const { data } = await apiClient.post("/auth/2fa/verify", { code });
+      return data;
+    } catch (error) {
+      logger.error("Error en verify2FA:", error);
+      if (error?.response?.data) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 2FA: Desactivar
+   */
+  async disable2FA(password) {
+    try {
+      const { data } = await apiClient.post("/auth/2fa/disable", { password });
+      return data;
+    } catch (error) {
+      logger.error("Error en disable2FA:", error);
+      if (error?.response?.data) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 2FA: Obtener estado
+   */
+  async get2FAStatus() {
+    try {
+      const { data } = await apiClient.get("/auth/2fa/status");
+      return data;
+    } catch (error) {
+      logger.error("Error en get2FAStatus:", error);
+      if (error?.response?.data) {
+        return error.response.data;
+      }
+      throw error;
+    }
   },
 };
 

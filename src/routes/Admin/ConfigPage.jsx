@@ -150,6 +150,7 @@ export default function ConfigPage() {
     { id: "contact", label: "ARCA", Icon: Receipt },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
     { id: "commissions", label: "Comisiones", Icon: Percent },
+    { id: "security", label: "Seguridad", Icon: Shield },
   ];
 
   // Estados
@@ -3368,6 +3369,39 @@ export default function ConfigPage() {
       </div>
 
       {/* NOTIFICATIONS — sección temporalmente deshabilitada a pedido */}
+
+      {/* SECURITY */}
+      {active === "security" && (
+        <div id="security">
+          <ConfigSection
+            title="Seguridad"
+            description="Configuración de seguridad de tu cuenta"
+            icon={Shield}
+          >
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border border-border bg-background-secondary">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-1">
+                      Autenticación de doble factor (2FA)
+                    </h4>
+                    <p className="text-xs text-foreground-muted">
+                      Agregá una capa adicional de seguridad a tu cuenta con códigos de autenticación
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/${tenantSlug}/admin/2fa`)}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Configurar 2FA
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ConfigSection>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="card p-6">

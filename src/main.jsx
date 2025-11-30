@@ -70,6 +70,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
 import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
 import FeatureRequestPage from "./routes/FeatureRequestPage.jsx";
+import TwoFactorAuthPage from "./routes/TwoFactorAuthPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -162,6 +163,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin"]}>
             <ConfigPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/2fa",
+        element: (
+          <PrivateRoute>
+            <TwoFactorAuthPage />
           </PrivateRoute>
         ),
       },

@@ -38,6 +38,11 @@ export default function LoginPage() {
   const [showTenantSelector, setShowTenantSelector] = useState(false);
   const [availableTenants, setAvailableTenants] = useState([]);
 
+  // 2FA
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [rememberDevice, setRememberDevice] = useState(false);
+
   const goAfterLogin = (resp, fallbackSlug) => {
     const next = safeNextParam(location.search);
     const isSuperAdmin = resp?.user?.isSuperAdmin || resp?.user?.is_super_admin;
@@ -139,9 +144,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const resp = await authApi.login(email, password);
+      const resp = await authApi.login(email, password, twoFactorCode || null, rememberDevice);
 
       if (!resp?.ok) {
+        // Verificar si requiere 2FA
+        if (resp?.requiresTwoFactor) {
+          setRequiresTwoFactor(true);
+          setError("");
+          setLoading(false);
+          return;
+        }
+
         // Verificar si es error de activación pendiente
         if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
           setError({
@@ -225,9 +238,17 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const resp = await authApi.loginTenant(email, password, slug);
+      const resp = await authApi.loginTenant(email, password, slug, twoFactorCode || null, rememberDevice);
 
       if (!resp?.ok) {
+        // Verificar si requiere 2FA
+        if (resp?.requiresTwoFactor) {
+          setRequiresTwoFactor(true);
+          setError("");
+          setLoading(false);
+          return;
+        }
+
         // Verificar si es error de activación pendiente
         if (resp?.errorCode === "ACCOUNT_NOT_ACTIVATED") {
           setError({
@@ -518,64 +539,125 @@ export default function LoginPage() {
 
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Email
-                </label>
-                <div className="input-group">
-                  <span className="input-group__icon">
-                    <Mail />
-                  </span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input input--with-icon"
-                    placeholder="tu@email.com"
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
+              {!requiresTwoFactor ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Email
+                    </label>
+                    <div className="input-group">
+                      <span className="input-group__icon">
+                        <Mail />
+                      </span>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="input input--with-icon"
+                        placeholder="tu@email.com"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Contraseña
-                </label>
-                <div className="input-group">
-                  <span className="input-group__icon">
-                    <Lock />
-                  </span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input input--with-icon input--with-icon-right"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="input-group__action"
-                  >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m13.42 13.42l-3.29-3.29M3 3l18 18" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Contraseña
+                    </label>
+                    <div className="input-group">
+                      <span className="input-group__icon">
+                        <Lock />
+                      </span>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="input input--with-icon input--with-icon-right"
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="input-group__action"
+                      >
+                        {showPassword ? (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m13.42 13.42l-3.29-3.29M3 3l18 18" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div className="text-center space-y-2">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Código de autenticación
+                      </h3>
+                      <p className="text-sm text-foreground-muted">
+                        Ingresá el código de 6 dígitos de tu aplicación de autenticación
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-foreground">
+                        Código 2FA
+                      </label>
+                      <input
+                        type="text"
+                        value={twoFactorCode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          setTwoFactorCode(value);
+                        }}
+                        className="input text-center text-2xl tracking-widest font-mono"
+                        placeholder="000000"
+                        maxLength={6}
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="rememberDevice"
+                        checked={rememberDevice}
+                        onChange={(e) => setRememberDevice(e.target.checked)}
+                        className="w-4 h-4 rounded border-border"
+                      />
+                      <label htmlFor="rememberDevice" className="text-sm text-foreground-muted cursor-pointer">
+                        Recordar este dispositivo durante 30 días
+                      </label>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRequiresTwoFactor(false);
+                        setTwoFactorCode("");
+                        setRememberDevice(false);
+                      }}
+                      className="w-full text-sm text-foreground-secondary hover:text-foreground transition-colors"
+                    >
+                      ← Volver
+                    </button>
+                  </div>
+                </>
+              )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (requiresTwoFactor && twoFactorCode.length !== 6)}
                 className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -584,11 +666,11 @@ export default function LoginPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Iniciando sesión...
+                    {requiresTwoFactor ? "Verificando..." : "Iniciando sesión..."}
                   </>
                 ) : (
                   <>
-                    Ingresar
+                    {requiresTwoFactor ? "Verificar código" : "Ingresar"}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
