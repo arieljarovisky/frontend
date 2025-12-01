@@ -73,6 +73,10 @@ export default function BookingWidget() {
   } = useApp();
   const { appointmentsEnabled } = useApp();
 
+  const [paymentLink, setPaymentLink] = useState(null);
+  const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
+  const [sendingPaymentLink, setSendingPaymentLink] = useState(false);
+
   const selectedService = useMemo(
     () => (Array.isArray(services) ? services : []).find((s) => String(s.id) === String(booking.serviceId)),
     [services, booking.serviceId]
