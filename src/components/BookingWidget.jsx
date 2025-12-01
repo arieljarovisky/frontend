@@ -1,5 +1,5 @@
 // src/components/BookingWidget.jsx - Versión mejorada modo oscuro
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { useApp } from "../context/UseApp";
 import ServiceSelect from "./ServiceSelect";
 import InstructorSelect from "./InstructorSelect";
@@ -12,8 +12,9 @@ import { logger } from "../utils/logger.js";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2 } from "lucide-react";
+import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2, CreditCard, Send } from "lucide-react";
 import ClassEnrollForm from "./ClassEnrollForm";
+import { apiClient } from "../api";
 
 function Section({ title, children, right, icon: Icon }) {
   return (
@@ -144,8 +145,71 @@ export default function BookingWidget() {
         repeatCount: booking.repeatCount,
         repeatUntil: booking.repeatUntil || undefined,
       });
+      // Limpiar link de pago al crear nuevo turno
+      setPaymentLink(null);
     } catch (error) {
       logger.error("❌ Error:", error);
+    }
+  };
+
+  const handleCreatePaymentLink = async () => {
+    if (!selectedService) {
+      toast.error("Seleccioná un servicio primero");
+      return;
+    }
+
+    const servicePrice = selectedService.price_decimal || selectedService.price || selectedService.amount;
+    if (!servicePrice || servicePrice <= 0) {
+      toast.error("El servicio no tiene un precio configurado");
+      return;
+    }
+
+    if (!booking.customerPhone) {
+      toast.error("Necesitamos tu teléfono para enviar el link de pago");
+      return;
+    }
+
+    setCreatingPaymentLink(true);
+    try {
+      const result = await apiClient.createPaymentLink({
+        amount: Number(servicePrice),
+        title: `Pago completo - ${selectedService.name}`,
+        description: `Pago del servicio ${selectedService.name}${selectedInstructor ? ` con ${selectedInstructor.name}` : ""}`,
+        customerId: null, // No tenemos customerId en booking público
+        expiresInDays: 7,
+      });
+
+      setPaymentLink(result.link);
+      toast.success("Link de pago creado correctamente");
+    } catch (error) {
+      console.error("Error creando link de pago:", error);
+      toast.error(error?.response?.data?.error || "Error al crear el link de pago");
+    } finally {
+      setCreatingPaymentLink(false);
+    }
+  };
+
+  const handleSendPaymentLink = async () => {
+    if (!paymentLink || !booking.customerPhone) {
+      toast.error("Falta información para enviar el link");
+      return;
+    }
+
+    setSendingPaymentLink(true);
+    try {
+      // Enviar por WhatsApp usando el endpoint de envío
+      // Como no tenemos customerId, necesitamos crear un endpoint alternativo o usar el teléfono directamente
+      // Por ahora, mostraremos el link para que el usuario lo copie
+      const message = `💳 *Link de pago*\n\nHola${booking.customerName ? ` ${booking.customerName}` : ""}, te enviamos el link para realizar el pago completo de tu turno:\n\n${paymentLink}\n\nUna vez completado el pago, recibirás la confirmación automáticamente.`;
+      
+      // Copiar al portapapeles y mostrar mensaje
+      await navigator.clipboard.writeText(message);
+      toast.success("Mensaje copiado. Podés pegarlo en WhatsApp y enviarlo al cliente");
+    } catch (error) {
+      console.error("Error enviando link:", error);
+      toast.error("Error al preparar el mensaje");
+    } finally {
+      setSendingPaymentLink(false);
     }
   };
 
@@ -433,6 +497,82 @@ export default function BookingWidget() {
               )}
             </Button>
           </form>
+
+          {/* Botón de pago completo - solo mostrar si el turno fue confirmado exitosamente */}
+          {bookingSave.ok && selectedService && (selectedService.price_decimal || selectedService.price || selectedService.amount) && (
+            <div className="mt-4 space-y-3">
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Pago completo del servicio</h3>
+                    <p className="text-xs text-foreground-muted mt-1">
+                      Precio: ${(selectedService.price_decimal || selectedService.price || selectedService.amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+
+                {!paymentLink ? (
+                  <Button
+                    onClick={handleCreatePaymentLink}
+                    disabled={creatingPaymentLink || !booking.customerPhone}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:opacity-50 text-white font-semibold py-3"
+                  >
+                    {creatingPaymentLink ? (
+                      <>
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
+                        Creando link...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Generar link de pago completo
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="rounded-lg border border-border bg-background-secondary/30 p-3">
+                      <div className="text-xs font-medium text-foreground-muted mb-2">Link de pago generado:</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={paymentLink}
+                          readOnly
+                          className="flex-1 rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(paymentLink);
+                            toast.success("Link copiado al portapapeles");
+                          }}
+                          className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground hover:bg-background-secondary"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleSendPaymentLink}
+                      disabled={sendingPaymentLink || !booking.customerPhone}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:opacity-50 text-white font-semibold py-3"
+                    >
+                      {sendingPaymentLink ? (
+                        <>
+                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
+                          Preparando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Copiar mensaje para WhatsApp
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </Section>
 
         {/* Resumen */}

@@ -855,8 +855,8 @@ export default function CustomerDetailPage() {
                   </div>
 
                   {!customer?.phone && (
-                    <div className="text-xs text-amber-500">
-                      ⚠️ El cliente no tiene un número de teléfono registrado. No se puede enviar por WhatsApp.
+                    <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded p-2">
+                      ⚠️ El cliente no tiene un número de teléfono registrado. Por favor, edita el cliente y agrega un teléfono para poder enviar el link por WhatsApp.
                     </div>
                   )}
                 </>
