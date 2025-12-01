@@ -1171,6 +1171,28 @@ apiClient.updateSubscriptionStatus = async function (subscriptionId, status) {
   return data;
 };
 
+// Crear link de pago genérico
+apiClient.createPaymentLink = async function ({ amount, title, description, customerId, expiresInDays }) {
+  const { data } = await apiClient.post("/api/payments/create-link", {
+    amount,
+    title,
+    description,
+    customerId,
+    expiresInDays,
+  });
+  return data;
+};
+
+// Enviar link de pago por WhatsApp
+apiClient.sendPaymentLinkWhatsApp = async function ({ customerId, link, message }) {
+  const { data } = await apiClient.post("/api/payments/send-whatsapp", {
+    customerId,
+    link,
+    message,
+  });
+  return data;
+};
+
 /* =========================
    SUPER ADMIN API
 ========================= */
