@@ -12,7 +12,7 @@ import { logger } from "../utils/logger.js";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2, CreditCard, Send } from "lucide-react";
+import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2, CreditCard, Send, MessageSquare, X } from "lucide-react";
 import ClassEnrollForm from "./ClassEnrollForm";
 import { apiClient } from "../api";
 
@@ -76,6 +76,8 @@ export default function BookingWidget() {
   const [paymentLink, setPaymentLink] = useState(null);
   const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
   const [sendingPaymentLink, setSendingPaymentLink] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState(null);
 
   const selectedService = useMemo(
     () => (Array.isArray(services) ? services : []).find((s) => String(s.id) === String(booking.serviceId)),
@@ -141,18 +143,33 @@ export default function BookingWidget() {
       customerPhone: data.customerPhone,
     });
 
+    // Guardar los datos y mostrar el modal
+    setPendingBookingData({
+      customerName: data.customerName || "",
+      customerPhone: data.customerPhone,
+      repeatEnabled: booking.repeatEnabled,
+      repeatCount: booking.repeatCount,
+      repeatUntil: booking.repeatUntil || undefined,
+    });
+    setShowWhatsAppModal(true);
+  };
+
+  const handleConfirmBooking = async (sendWhatsAppOption) => {
+    if (!pendingBookingData) return;
+
     try {
       await createAppointment({
-        customerName: data.customerName || "",
-        customerPhone: data.customerPhone,
-        repeatEnabled: booking.repeatEnabled,
-        repeatCount: booking.repeatCount,
-        repeatUntil: booking.repeatUntil || undefined,
+        ...pendingBookingData,
+        sendWhatsApp: sendWhatsAppOption, // 'with_payment', 'reminder_only', o 'none'
       });
       // Limpiar link de pago al crear nuevo turno
       setPaymentLink(null);
+      setShowWhatsAppModal(false);
+      setPendingBookingData(null);
     } catch (error) {
       logger.error("❌ Error:", error);
+      setShowWhatsAppModal(false);
+      setPendingBookingData(null);
     }
   };
 
@@ -631,6 +648,88 @@ export default function BookingWidget() {
             defaultPhone={booking.customerPhone}
           />
         </Section>
+      )}
+
+      {/* Modal de confirmación de WhatsApp */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-background rounded-2xl shadow-2xl border border-border p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground">Enviar confirmación por WhatsApp</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWhatsAppModal(false);
+                  setPendingBookingData(null);
+                }}
+                className="text-foreground-muted hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-foreground-secondary mb-6">
+              ¿Cómo querés notificar al cliente sobre su turno?
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => handleConfirmBooking('with_payment')}
+                className="w-full p-4 rounded-xl border-2 border-primary bg-primary/10 hover:bg-primary/20 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/20 rounded-lg">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-foreground">Confirmación con link de pago</div>
+                    <div className="text-sm text-foreground-muted mt-1">
+                      Se enviará la confirmación del turno junto con el link para pagar la seña
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleConfirmBooking('reminder_only')}
+                className="w-full p-4 rounded-xl border-2 border-border bg-background-secondary hover:bg-background-secondary/80 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-background rounded-lg">
+                    <Clock className="w-5 h-5 text-foreground-secondary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-foreground">Solo recordatorio</div>
+                    <div className="text-sm text-foreground-muted mt-1">
+                      Se enviará solo la confirmación del turno sin link de pago
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleConfirmBooking('none')}
+                className="w-full p-4 rounded-xl border border-border bg-background hover:bg-background-secondary transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-background-secondary rounded-lg">
+                    <X className="w-5 h-5 text-foreground-secondary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-foreground">No enviar WhatsApp</div>
+                    <div className="text-sm text-foreground-muted mt-1">
+                      El turno se creará sin enviar ningún mensaje
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

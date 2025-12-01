@@ -483,6 +483,7 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
           durationMin,
           status: "scheduled",
           branchId: Number(branchId),
+          sendWhatsApp: overrideData.sendWhatsApp || 'none', // 'with_payment', 'reminder_only', o 'none'
         };
 
         if (repeatEnabled) {
