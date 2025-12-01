@@ -41,7 +41,8 @@ import {
   CalendarDays,
   CalendarRange,
   List,
-  Activity
+  Activity,
+  Trash2
 } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
 import { AppContext } from "../context/AppProvider";
@@ -50,6 +51,7 @@ import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import resourcePlugin from "@fullcalendar/resource";
 import apiClient from "../api/client";
 import { logger } from "../utils/logger.js";
+import { toast } from "sonner";
 
 /* =========================
    Helpers Responsive
@@ -264,7 +266,7 @@ export default function CalendarView() {
     );
   }
 
-  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors } = appCtx;
+  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors, deleteAppointment } = appCtx;
   const [instructorFilter, setInstructorFilter] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);

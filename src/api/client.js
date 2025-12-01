@@ -723,6 +723,11 @@ apiClient.createRecurringAppointments = async function (payload) {
   return data;
 };
 
+apiClient.deleteAppointment = async function (id) {
+  const { data } = await apiClient.delete(`/api/appointments/${id}`);
+  return data;
+};
+
 apiClient.cancelAppointmentSeries = async function (seriesId, { includePast = false, notify = true } = {}) {
   const params = {};
   if (includePast) params.includePast = "true";
