@@ -225,91 +225,94 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 xs:space-y-5 sm:space-y-6 animate-fade-in px-2 xs:px-4 sm:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Gestión de Stock</h1>
-          <p className="text-sm sm:text-base text-foreground-secondary">
-            Administra tu inventario de productos
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setShowCategoryModal(true)}
-            className="btn-secondary flex items-center justify-center gap-2"
-          >
-            <Folder className="w-4 h-4" />
-            Categorías
-          </button>
-          <button
-            onClick={() => {
-              setEditingProduct(null);
-              setShowModal(true);
-            }}
-            className="btn-primary flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="text-sm sm:text-base">Nuevo Producto</span>
-          </button>
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2 break-words">Gestión de Stock</h1>
+            <p className="text-xs xs:text-sm sm:text-base text-foreground-secondary">
+              Administra tu inventario de productos
+            </p>
+          </div>
+          <div className="flex flex-col xs:flex-row gap-2 w-full xs:w-auto">
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="btn-secondary flex items-center justify-center gap-2 text-xs xs:text-sm px-3 xs:px-4 py-2"
+            >
+              <Folder className="w-4 h-4" />
+              <span className="hidden xs:inline">Categorías</span>
+              <span className="xs:hidden">Categorías</span>
+            </button>
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                setShowModal(true);
+              }}
+              className="btn-primary flex items-center justify-center gap-2 text-xs xs:text-sm px-3 xs:px-4 py-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="whitespace-nowrap">Nuevo Producto</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Navegación rápida a otras secciones de stock */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 xs:gap-4">
         <Link
           to={`/${tenantSlug}/stock/reservations`}
-          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+          className="card p-3 xs:p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-2 xs:gap-3">
+            <div className="p-1.5 xs:p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors flex-shrink-0">
+              <Calendar className="w-4 h-4 xs:w-5 xs:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Reservas</p>
-              <p className="text-xs text-foreground-muted">Gestionar reservas</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs xs:text-sm font-semibold text-foreground truncate">Reservas</p>
+              <p className="text-[10px] xs:text-xs text-foreground-muted truncate">Gestionar reservas</p>
             </div>
           </div>
         </Link>
         <Link
           to={`/${tenantSlug}/stock/transfers`}
-          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+          className="card p-3 xs:p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-              <ArrowRightLeft className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="flex items-center gap-2 xs:gap-3">
+            <div className="p-1.5 xs:p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors flex-shrink-0">
+              <ArrowRightLeft className="w-4 h-4 xs:w-5 xs:h-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Transferencias</p>
-              <p className="text-xs text-foreground-muted">Entre sucursales</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs xs:text-sm font-semibold text-foreground truncate">Transferencias</p>
+              <p className="text-[10px] xs:text-xs text-foreground-muted truncate">Entre sucursales</p>
             </div>
           </div>
         </Link>
         <Link
           to={`/${tenantSlug}/stock/alerts`}
-          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+          className="card p-3 xs:p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
-              <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-center gap-2 xs:gap-3">
+            <div className="p-1.5 xs:p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors flex-shrink-0">
+              <Bell className="w-4 h-4 xs:w-5 xs:h-5 text-amber-600 dark:text-amber-400" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Alertas</p>
-              <p className="text-xs text-foreground-muted">Stock bajo</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs xs:text-sm font-semibold text-foreground truncate">Alertas</p>
+              <p className="text-[10px] xs:text-xs text-foreground-muted truncate">Stock bajo</p>
             </div>
           </div>
         </Link>
         <Link
           to={`/${tenantSlug}/stock/valuation`}
-          className="card p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
+          className="card p-3 xs:p-4 hover:shadow-lg transition-all cursor-pointer group border border-transparent hover:border-primary/30"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+          <div className="flex items-center gap-2 xs:gap-3">
+            <div className="p-1.5 xs:p-2 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors flex-shrink-0">
+              <DollarSign className="w-4 h-4 xs:w-5 xs:h-5 text-green-600 dark:text-green-400" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Valuación</p>
-              <p className="text-xs text-foreground-muted">Valor inventario</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs xs:text-sm font-semibold text-foreground truncate">Valuación</p>
+              <p className="text-[10px] xs:text-xs text-foreground-muted truncate">Valor inventario</p>
             </div>
           </div>
         </Link>
@@ -317,75 +320,43 @@ export default function ProductsPage() {
 
 
       {/* Filtros */}
-      <div className="card border border-primary/15 bg-gradient-to-br from-background-secondary/70 via-background-secondary/40 to-primary/5 p-5 shadow-[0_18px_40px_rgba(8,20,36,0.35)] backdrop-blur-sm">
-        <div className="flex flex-col lg:flex-row lg:items-end gap-5">
-          <div className="flex-1">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+      <div className="card border border-primary/15 bg-gradient-to-br from-background-secondary/70 via-background-secondary/40 to-primary/5 p-3 xs:p-4 sm:p-5 shadow-[0_18px_40px_rgba(8,20,36,0.35)] backdrop-blur-sm">
+        <div className="flex flex-col gap-4 sm:gap-5">
+          {/* Primera fila: Búsqueda */}
+          <div className="w-full">
+            <span className="block text-[10px] xs:text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
               Buscar producto
             </span>
             <div className="input-group">
               <span className="input-group__icon text-primary/70">
-                <Search className="w-5 h-5" />
+                <Search className="w-4 h-4 xs:w-5 xs:h-5" />
               </span>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por nombre, código o código de barras..."
-                className="input input--with-icon h-12 pr-4 rounded-xl border border-transparent bg-background/65 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 shadow-inner shadow-black/10"
+                className="input input--with-icon h-10 xs:h-11 sm:h-12 pr-3 xs:pr-4 rounded-xl border border-transparent bg-background/65 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 shadow-inner shadow-black/10 text-sm xs:text-base"
               />
             </div>
           </div>
 
-          <div className="w-full sm:w-60">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
-              Categoría
-            </span>
-            <div className="relative">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
-              >
-                <option value="">Todas las categorías</option>
-                {(categories || []).map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {branches.length > 1 && !showTotalStock && (
-            <div className="w-full sm:w-60">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
-                Sucursal
+          {/* Segunda fila: Filtros en grid */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4">
+            <div className="w-full">
+              <span className="block text-[10px] xs:text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                Categoría
               </span>
               <div className="relative">
                 <select
-                  value={branchFilter || (branches.length > 0 ? String(branches[0].id) : "")}
-                  onChange={(e) => setBranchFilter(e.target.value)}
-                  className="input h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40"
-                  required
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="input h-10 xs:h-11 sm:h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 text-sm xs:text-base"
                 >
-                  {(branches || []).map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
+                  <option value="">Todas las categorías</option>
+                  {(categories || []).map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>
@@ -394,7 +365,7 @@ export default function ProductsPage() {
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    className="h-5 w-5"
+                    className="h-4 w-4 xs:h-5 xs:w-5"
                   >
                     <path
                       fillRule="evenodd"
@@ -405,99 +376,135 @@ export default function ProductsPage() {
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="w-full sm:w-auto">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
-              Estado
-            </span>
-            <label
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer border transition-all duration-200 ${
-                showLowStock
-                  ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
-                  : "bg-background/65 border-transparent hover:border-primary/25"
-              }`}
-            >
-              <span className="relative inline-flex h-5 w-10 items-center">
-                <input
-                  type="checkbox"
-                  checked={showLowStock}
-                  onChange={(e) => setShowLowStock(e.target.checked)}
-                  className="peer absolute h-full w-full cursor-pointer opacity-0"
-                />
-                <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
-                <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
-              </span>
-              <span
-                className={`text-sm font-medium transition-colors ${
-                  showLowStock ? "text-primary/90" : "text-foreground-secondary"
-                }`}
-              >
-                Solo stock bajo
-              </span>
-            </label>
-          </div>
+            {branches.length > 1 && !showTotalStock && (
+              <div className="w-full">
+                <span className="block text-[10px] xs:text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                  Sucursal
+                </span>
+                <div className="relative">
+                  <select
+                    value={branchFilter || (branches.length > 0 ? String(branches[0].id) : "")}
+                    onChange={(e) => setBranchFilter(e.target.value)}
+                    className="input h-10 xs:h-11 sm:h-12 w-full rounded-xl border border-transparent bg-background/65 pr-10 transition-all focus:bg-background/90 focus:border-primary/60 focus:ring-2 focus:ring-primary/40 text-sm xs:text-base"
+                    required
+                  >
+                    {(branches || []).map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4 xs:h-5 xs:w-5"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.354a.75.75 0 011.02 1.1l-4.2 3.8a.75.75 0 01-1.02 0l-4.2-3.8a.75.75 0 01.02-1.1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
 
-          {branches.length > 1 && (
-            <div className="w-full sm:w-auto">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
-                Vista de Stock
+            <div className="w-full">
+              <span className="block text-[10px] xs:text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                Estado
               </span>
               <label
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer border transition-all duration-200 ${
-                  showTotalStock
+                className={`flex items-center gap-2 xs:gap-3 rounded-xl px-3 xs:px-4 py-2.5 xs:py-3 cursor-pointer border transition-all duration-200 ${
+                  showLowStock
                     ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
                     : "bg-background/65 border-transparent hover:border-primary/25"
                 }`}
-                title={showTotalStock ? "Mostrando stock total de todas las sucursales" : "Mostrando stock por sucursal"}
               >
-                <span className="relative inline-flex h-5 w-10 items-center">
+                <span className="relative inline-flex h-5 w-10 items-center flex-shrink-0">
                   <input
                     type="checkbox"
-                    checked={showTotalStock}
-                    onChange={(e) => setShowTotalStock(e.target.checked)}
+                    checked={showLowStock}
+                    onChange={(e) => setShowLowStock(e.target.checked)}
                     className="peer absolute h-full w-full cursor-pointer opacity-0"
                   />
                   <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
                   <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
                 </span>
-                <div className="flex flex-col">
-                  <span
-                    className={`text-sm font-medium transition-colors ${
-                      showTotalStock ? "text-primary/90" : "text-foreground-secondary"
-                    }`}
-                  >
-                    Stock total
-                  </span>
-                  {showTotalStock && (
-                    <span className="text-xs text-primary/70">
-                      Suma de todas las sucursales
-                    </span>
-                  )}
-                </div>
+                <span
+                  className={`text-xs xs:text-sm font-medium transition-colors whitespace-nowrap ${
+                    showLowStock ? "text-primary/90" : "text-foreground-secondary"
+                  }`}
+                >
+                  Solo stock bajo
+                </span>
               </label>
             </div>
-          )}
+
+            {branches.length > 1 && (
+              <div className="w-full">
+                <span className="block text-[10px] xs:text-xs font-semibold uppercase tracking-[0.18em] text-foreground-muted mb-2">
+                  Vista de Stock
+                </span>
+                <label
+                  className={`flex items-center gap-2 xs:gap-3 rounded-xl px-3 xs:px-4 py-2.5 xs:py-3 cursor-pointer border transition-all duration-200 ${
+                    showTotalStock
+                      ? "bg-primary/12 border-primary/40 shadow-[0_12px_25px_rgba(24,182,208,0.25)]"
+                      : "bg-background/65 border-transparent hover:border-primary/25"
+                  }`}
+                  title={showTotalStock ? "Mostrando stock total de todas las sucursales" : "Mostrando stock por sucursal"}
+                >
+                  <span className="relative inline-flex h-5 w-10 items-center flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={showTotalStock}
+                      onChange={(e) => setShowTotalStock(e.target.checked)}
+                      className="peer absolute h-full w-full cursor-pointer opacity-0"
+                    />
+                    <span className="block h-full w-full rounded-full bg-border/70 transition-colors duration-200 peer-checked:bg-primary/60" />
+                    <span className="pointer-events-none absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-md transition-all duration-200 peer-checked:translate-x-5" />
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className={`text-xs xs:text-sm font-medium transition-colors ${
+                        showTotalStock ? "text-primary/90" : "text-foreground-secondary"
+                      }`}
+                    >
+                      Stock total
+                    </span>
+                    {showTotalStock && (
+                      <span className="text-[10px] xs:text-xs text-primary/70 truncate">
+                        Suma de todas las sucursales
+                      </span>
+                    )}
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Tabla de productos */}
       {loading ? (
-        <div className="card p-12 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-foreground-secondary mt-4">Cargando productos...</p>
+        <div className="card p-6 xs:p-8 sm:p-12 text-center">
+          <div className="animate-spin rounded-full h-6 w-6 xs:h-8 xs:w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm xs:text-base text-foreground-secondary mt-3 xs:mt-4">Cargando productos...</p>
         </div>
       ) : error ? (
-        <div className="card p-6 text-center text-red-500">
+        <div className="card p-4 xs:p-5 sm:p-6 text-center text-red-500 text-sm xs:text-base">
           {error}
         </div>
       ) : products.length === 0 ? (
-        <div className="card p-12 text-center">
-          <Package className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
-          <p className="text-foreground-secondary">No hay productos</p>
+        <div className="card p-6 xs:p-8 sm:p-12 text-center">
+          <Package className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 text-foreground-muted" />
+          <p className="text-sm xs:text-base text-foreground-secondary mb-3 xs:mb-4">No hay productos</p>
           <button
             onClick={() => setShowModal(true)}
-            className="btn-primary mt-4"
+            className="btn-primary mt-3 xs:mt-4 text-xs xs:text-sm sm:text-base px-4 xs:px-5 py-2 xs:py-2.5"
           >
             Crear primer producto
           </button>
@@ -505,30 +512,30 @@ export default function ProductsPage() {
       ) : (
         <>
           {/* Vista de cards en mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 xs:gap-4">
             {(products || []).map((product) => {
               const status = getStockStatus(product);
               const StatusIcon = status.icon;
               return (
-                <div key={product.id} className="card p-4">
-                  <div className="flex items-start justify-between mb-3">
+                <div key={product.id} className="card p-3 xs:p-4">
+                  <div className="flex items-start justify-between mb-3 gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
+                      <h3 className="text-sm xs:text-base font-semibold text-foreground truncate">{product.name}</h3>
                       {product.description && (
-                        <p className="text-sm text-foreground-muted line-clamp-2 mt-1">{product.description}</p>
+                        <p className="text-xs xs:text-sm text-foreground-muted line-clamp-2 mt-1">{product.description}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 ml-2">
+                    <div className="flex items-center gap-1 xs:gap-2 ml-2 flex-shrink-0">
                       {branches.length > 1 && (
                         <button
                           onClick={() => {
                             setTransferProduct(product);
                             setShowTransferModal(true);
                           }}
-                          className="p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                          className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           title="Transferir entre sucursales"
                         >
-                          <ArrowRightLeft className="w-4 h-4" />
+                          <ArrowRightLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         </button>
                       )}
                       <button
@@ -536,40 +543,40 @@ export default function ProductsPage() {
                           setEditingProduct(product);
                           setShowModal(true);
                         }}
-                        className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
+                        className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
                         title="Editar"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(product.id)}
-                        className="p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         title="Eliminar"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground-secondary">Código:</span>
-                      <span className="text-foreground font-medium">{product.code || "-"}</span>
+                  <div className="space-y-1.5 xs:space-y-2 text-xs xs:text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Código:</span>
+                      <span className="text-foreground font-medium truncate text-left">{product.code || "-"}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground-secondary">Categoría:</span>
-                      <span className="text-foreground">{product.category_name || "-"}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Categoría:</span>
+                      <span className="text-foreground truncate text-left">{product.category_name || "-"}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground-secondary">Stock:</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Stock:</span>
                       <span className="text-foreground font-medium">{product.stock_quantity}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground-secondary">Precio:</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Precio:</span>
                       <span className="text-foreground font-semibold">${Number(product.price).toLocaleString('es-AR')}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground-secondary">Sucursal:</span>
-                      <span className="text-foreground text-xs font-medium">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Sucursal:</span>
+                      <span className="text-foreground text-[10px] xs:text-xs font-medium truncate text-left">
                         {showTotalStock 
                           ? (product.branch_name && product.branch_name.includes(',') 
                             ? "Múltiples sucursales" 
@@ -577,11 +584,11 @@ export default function ProductsPage() {
                           : (product.branch_name || "Sin asignar")}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <span className="text-foreground-secondary">Estado:</span>
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Estado:</span>
                       <div className={`inline-flex items-center gap-1 ${status.color}`}>
-                        <StatusIcon className="w-4 h-4" />
-                        <span className="text-xs">{status.label}</span>
+                        <StatusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
+                        <span className="text-[10px] xs:text-xs">{status.label}</span>
                       </div>
                     </div>
                   </div>
@@ -592,7 +599,7 @@ export default function ProductsPage() {
 
           {/* Vista de tabla en desktop */}
           <div className="hidden lg:block card overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-1 sm:mx-0">
               <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="border-b border-border bg-background-secondary">
@@ -752,7 +759,7 @@ export default function ProductsPage() {
           onClick={() => setShowAlertsModal(false)}
         >
           <div 
-            className="bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
+            className="bg-background rounded-xl xs:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in mx-2 xs:mx-0"
             style={{
               border: '1px solid rgb(var(--border))',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
@@ -761,16 +768,16 @@ export default function ProductsPage() {
           >
             {/* Header */}
             <div 
-              className="flex items-center justify-between px-6 py-5 border-b bg-amber-50 dark:bg-amber-900/20"
+              className="flex items-center justify-between px-4 xs:px-5 sm:px-6 py-4 xs:py-5 border-b bg-amber-50 dark:bg-amber-900/20"
               style={{ borderColor: 'rgb(var(--border))' }}
             >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+              <div className="flex items-center gap-2 xs:gap-3 min-w-0 flex-1 pr-2">
+                <AlertTriangle className="w-5 h-5 xs:w-6 xs:h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate">
                     Alertas de Stock Bajo
                   </h2>
-                  <p className="text-sm text-foreground-secondary">
+                  <p className="text-xs xs:text-sm text-foreground-secondary">
                     {lowStockProducts.length} producto{lowStockProducts.length > 1 ? 's' : ''} requiere atención
                   </p>
                 </div>
@@ -785,8 +792,8 @@ export default function ProductsPage() {
             </div>
 
             {/* Lista de productos */}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 xs:px-5 sm:px-6 py-4 xs:py-5">
+              <div className="space-y-2 xs:space-y-3">
                 {lowStockProducts.map((product) => {
                   const status = getStockStatus(product);
                   const StatusIcon = status.icon;
@@ -839,12 +846,12 @@ export default function ProductsPage() {
 
             {/* Footer */}
             <div 
-              className="flex justify-end gap-3 px-6 py-4 border-t"
+              className="flex justify-end gap-2 xs:gap-3 px-4 xs:px-5 sm:px-6 py-3 xs:py-4 border-t"
               style={{ borderColor: 'rgb(var(--border))' }}
             >
               <button
                 onClick={() => setShowAlertsModal(false)}
-                className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200"
+                className="px-4 xs:px-5 py-2 xs:py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 text-xs xs:text-sm sm:text-base"
               >
                 Entendido
               </button>
@@ -865,33 +872,33 @@ export default function ProductsPage() {
           onClick={() => setShowDeleteModal(false)}
         >
           <div 
-            className="bg-background rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
+            className="bg-background rounded-xl xs:rounded-2xl shadow-2xl max-w-md w-full animate-scale-in mx-2 xs:mx-0"
             style={{
               border: '1px solid rgb(var(--border))',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <div className="p-4 xs:p-5 sm:p-6">
+              <div className="flex items-center gap-2 xs:gap-3 mb-3 xs:mb-4">
+                <div className="p-1.5 xs:p-2 rounded-lg bg-red-100 dark:bg-red-900/30 flex-shrink-0">
+                  <Trash2 className="w-5 h-5 xs:w-6 xs:h-6 text-red-600 dark:text-red-400" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground">Eliminar Producto</h2>
+                <h2 className="text-lg xs:text-xl font-bold text-foreground">Eliminar Producto</h2>
               </div>
-              <p className="text-foreground-secondary mb-6">
+              <p className="text-sm xs:text-base text-foreground-secondary mb-4 xs:mb-6">
                 ¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.
               </p>
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col xs:flex-row justify-end gap-2 xs:gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all"
+                  className="px-4 py-2 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all text-xs xs:text-sm sm:text-base"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-all"
+                  className="px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-all text-xs xs:text-sm sm:text-base"
                 >
                   Eliminar
                 </button>
@@ -960,23 +967,23 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
       }}
       onClick={onClose}
     >
-      <div 
-        className="bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
-        style={{
-          border: '1px solid rgb(var(--border))',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        <div 
+          className="bg-background rounded-xl xs:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-scale-in mx-2 xs:mx-0"
+          style={{
+            border: '1px solid rgb(var(--border))',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header con gradiente sutil */}
         <div 
-          className="flex items-center justify-between px-6 py-5 border-b"
+          className="flex items-center justify-between px-4 xs:px-5 sm:px-6 py-4 xs:py-5 border-b"
           style={{
             borderColor: 'rgb(var(--border))',
             background: 'linear-gradient(to right, rgb(var(--background)), rgb(var(--background-secondary)))'
           }}
         >
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+          <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate pr-2">
             {product ? "Editar Producto" : "Nuevo Producto"}
           </h2>
           <button
@@ -991,11 +998,11 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
         </div>
 
         {/* Contenido con scroll */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+        <div className="flex-1 overflow-y-auto px-4 xs:px-5 sm:px-6 py-4 xs:py-5">
+          <form onSubmit={handleSubmit} className="space-y-4 xs:space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4 sm:gap-5">
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Sucursal
                 </label>
                 <select
@@ -1003,7 +1010,7 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, branch_id: e.target.value }))
                   }
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   disabled={branchesLoading || branches.length === 0}
                 >
                   {branches.length === 0 ? (
@@ -1024,14 +1031,14 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
               </div>
               {/* Nombre - Full width */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Nombre <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="Ej: Shampoo Profesional"
                   required
                 />
@@ -1039,27 +1046,27 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
               {/* Código */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Código
                 </label>
                 <input
                   type="text"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="Código interno"
                 />
               </div>
 
               {/* Categoría */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Categoría
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base appearance-none cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -1078,32 +1085,32 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
               {/* Marca */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Marca
                 </label>
                 <input
                   type="text"
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="Nombre de la marca"
                 />
               </div>
 
               {/* Precio de Venta */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Precio de Venta <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted">$</span>
+                  <span className="absolute left-3 xs:left-4 top-1/2 -translate-y-1/2 text-foreground-muted text-xs xs:text-sm">$</span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                    className="w-full pl-6 xs:pl-7 pr-3 xs:pr-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                     placeholder="0.00"
                     required
                   />
@@ -1112,18 +1119,18 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
               {/* Costo */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Costo
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted">$</span>
+                  <span className="absolute left-3 xs:left-4 top-1/2 -translate-y-1/2 text-foreground-muted text-xs xs:text-sm">$</span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                    className="w-full pl-6 xs:pl-7 pr-3 xs:pr-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                     placeholder="0.00"
                   />
                 </div>
@@ -1131,7 +1138,7 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
               {/* Stock Actual */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Stock Actual
                 </label>
                 <input
@@ -1139,14 +1146,14 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
                   min="0"
                   value={formData.stock_quantity}
                   onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="0"
                 />
               </div>
 
               {/* Stock Mínimo */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Stock Mínimo
                 </label>
                 <input
@@ -1154,25 +1161,25 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
                   min="0"
                   value={formData.min_stock}
                   onChange={(e) => setFormData({ ...formData, min_stock: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="0"
                 />
               </div>
 
               {/* Unidad */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Unidad
                 </label>
                 <select
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base appearance-none cursor-pointer"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base appearance-none cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1rem center',
-                    paddingRight: '2.5rem'
+                    backgroundPosition: 'right 0.75rem center',
+                    paddingRight: '2rem'
                   }}
                 >
                   <option value="unidad">Unidad</option>
@@ -1185,27 +1192,27 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
               {/* Código de Barras */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Código de Barras
                 </label>
                 <input
                   type="text"
                   value={formData.barcode}
                   onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   placeholder="Código de barras"
                 />
               </div>
 
               {/* Descripción - Full width */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-foreground mb-2">
+                <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                   Descripción
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm sm:text-base resize-none"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base resize-none"
                   rows={4}
                   placeholder="Descripción del producto..."
                 />
@@ -1216,13 +1223,13 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 
         {/* Footer con botones */}
         <div 
-          className="flex flex-col sm:flex-row justify-end gap-3 px-6 py-4 border-t"
+          className="flex flex-col sm:flex-row justify-end gap-2 xs:gap-3 px-4 xs:px-5 sm:px-6 py-3 xs:py-4 border-t"
           style={{ borderColor: 'rgb(var(--border))' }}
         >
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all duration-200 text-sm sm:text-base"
+            className="px-4 xs:px-5 py-2 xs:py-2.5 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all duration-200 text-xs xs:text-sm sm:text-base"
             disabled={loading}
           >
             Cancelar
@@ -1230,7 +1237,7 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="px-4 xs:px-5 py-2 xs:py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed text-xs xs:text-sm sm:text-base"
             disabled={loading}
           >
             {loading ? (
@@ -1313,67 +1320,69 @@ function CategoryModal({ categories = [], onClose, onUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm">
-      <div className="card w-full max-w-5xl relative shadow-2xl border border-border/60 bg-background/95 p-6 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 xs:p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+      <div className="card w-full max-w-5xl relative shadow-2xl border border-border/60 bg-background/95 p-4 xs:p-5 sm:p-6 lg:p-8 max-h-[95vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-foreground-secondary hover:text-foreground"
+          className="absolute top-3 xs:top-4 right-3 xs:right-4 text-foreground-secondary hover:text-foreground z-10"
           aria-label="Cerrar"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-2xl font-semibold text-foreground mb-6 px-1 sm:px-2">Categorías</h2>
+        <h2 className="text-xl xs:text-2xl font-semibold text-foreground mb-4 xs:mb-6 pr-8">Categorías</h2>
 
-        <div className="grid lg:grid-cols-[1.4fr,360px] gap-6 px-1 sm:px-2">
-          <div className="border border-border rounded-3xl overflow-hidden bg-background-secondary/70 p-3 sm:p-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-background-secondary/80 backdrop-blur">
-                  <th className="text-left px-4 py-3 font-semibold text-foreground">Nombre</th>
-                  <th className="text-left px-4 py-3 font-semibold text-foreground">Descripción</th>
-                  <th className="text-center px-4 py-3 font-semibold text-foreground">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-6 text-center text-foreground-muted">
-                      No hay categorías creadas
-                    </td>
+        <div className="grid lg:grid-cols-[1.4fr,360px] gap-4 xs:gap-5 sm:gap-6">
+          <div className="border border-border rounded-2xl xs:rounded-3xl overflow-hidden bg-background-secondary/70 p-2 xs:p-3 sm:p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs xs:text-sm min-w-[400px]">
+                <thead>
+                  <tr className="bg-background-secondary/80 backdrop-blur">
+                    <th className="text-left px-2 xs:px-3 sm:px-4 py-2 xs:py-3 font-semibold text-foreground">Nombre</th>
+                    <th className="text-left px-2 xs:px-3 sm:px-4 py-2 xs:py-3 font-semibold text-foreground hidden sm:table-cell">Descripción</th>
+                    <th className="text-center px-2 xs:px-3 sm:px-4 py-2 xs:py-3 font-semibold text-foreground">Acciones</th>
                   </tr>
-                ) : (
-                  categories.map((category) => (
-                    <tr key={category.id} className="border-t border-border">
-                      <td className="px-4 py-2">{category.name}</td>
-                      <td className="px-4 py-2 text-foreground-secondary">
-                        {category.description || "—"}
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => setEditing(category)}
-                            className="px-3 py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-xs transition-colors"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(category)}
-                            className="px-3 py-1.5 rounded-lg border border-red-400/40 text-red-400 hover:bg-red-400/10 text-xs transition-colors disabled:opacity-50"
-                            disabled={saving}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {categories.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-2 xs:px-4 py-4 xs:py-6 text-center text-foreground-muted">
+                        No hay categorías creadas
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    categories.map((category) => (
+                      <tr key={category.id} className="border-t border-border">
+                        <td className="px-2 xs:px-3 sm:px-4 py-2 truncate max-w-[150px] xs:max-w-none">{category.name}</td>
+                        <td className="px-2 xs:px-3 sm:px-4 py-2 text-foreground-secondary hidden sm:table-cell">
+                          {category.description || "—"}
+                        </td>
+                        <td className="px-2 xs:px-3 sm:px-4 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5 xs:gap-2 sm:gap-3">
+                            <button
+                              onClick={() => setEditing(category)}
+                              className="px-2 xs:px-3 py-1 xs:py-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 text-[10px] xs:text-xs transition-colors whitespace-nowrap"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(category)}
+                              className="px-2 xs:px-3 py-1 xs:py-1.5 rounded-lg border border-red-400/40 text-red-400 hover:bg-red-400/10 text-[10px] xs:text-xs transition-colors disabled:opacity-50 whitespace-nowrap"
+                              disabled={saving}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="border border-border rounded-3xl p-5 bg-background-secondary/80 backdrop-blur">
+          <div className="border border-border rounded-2xl xs:rounded-3xl p-4 xs:p-5 bg-background-secondary/80 backdrop-blur">
             <h3 className="font-semibold text-foreground mb-4">
               {editing ? "Editar categoría" : "Nueva categoría"}
             </h3>
@@ -1522,26 +1531,26 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
       }}
       onClick={onClose}
     >
-      <div 
-        className="bg-background rounded-2xl shadow-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
-        style={{
-          border: '1px solid rgb(var(--border))',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
         <div 
-          className="flex items-center justify-between px-6 py-5 border-b"
+          className="bg-background rounded-xl xs:rounded-2xl shadow-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-scale-in mx-2 xs:mx-0"
+          style={{
+            border: '1px solid rgb(var(--border))',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+        <div 
+          className="flex items-center justify-between px-4 xs:px-5 sm:px-6 py-4 xs:py-5 border-b"
           style={{
             borderColor: 'rgb(var(--border))',
             background: 'linear-gradient(to right, rgb(var(--background)), rgb(var(--background-secondary)))'
           }}
         >
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate">
               Transferir Stock
             </h2>
-            <p className="text-sm text-foreground-secondary mt-1">
+            <p className="text-xs xs:text-sm text-foreground-secondary mt-1 truncate">
               {product?.name}
             </p>
           </div>
@@ -1554,8 +1563,8 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="flex-1 overflow-y-auto px-4 xs:px-5 sm:px-6 py-4 xs:py-5">
+          <form onSubmit={handleSubmit} className="space-y-4 xs:space-y-5">
             {availableStock !== null && (
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
@@ -1565,13 +1574,13 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
+              <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                 Sucursal Origen <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.from_branch_id}
                 onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                 required
                 disabled={!!product?.branch_id}
               >
@@ -1590,13 +1599,13 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
+              <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                 Sucursal Destino <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.to_branch_id}
                 onChange={(e) => setFormData({ ...formData, to_branch_id: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                 required
               >
                 <option value="">Seleccionar sucursal</option>
@@ -1611,7 +1620,7 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
+              <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                 Cantidad <span className="text-red-500">*</span>
               </label>
               <input
@@ -1620,7 +1629,7 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
                 max={availableStock || undefined}
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-xs xs:text-sm sm:text-base"
                 placeholder="Cantidad a transferir"
                 required
               />
@@ -1632,13 +1641,13 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
+              <label className="block text-xs xs:text-sm font-semibold text-foreground mb-1.5 xs:mb-2">
                 Notas (opcional)
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 resize-none"
+                className="w-full px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg bg-background-secondary border border-border text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 resize-none text-xs xs:text-sm sm:text-base"
                 rows={3}
                 placeholder="Notas sobre la transferencia..."
               />
@@ -1664,13 +1673,13 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
         </div>
 
         <div 
-          className="flex flex-col sm:flex-row justify-end gap-3 px-6 py-4 border-t"
+          className="flex flex-col sm:flex-row justify-end gap-2 xs:gap-3 px-4 xs:px-5 sm:px-6 py-3 xs:py-4 border-t"
           style={{ borderColor: 'rgb(var(--border))' }}
         >
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all duration-200"
+            className="px-4 xs:px-5 py-2 xs:py-2.5 rounded-lg font-medium text-foreground-secondary bg-background-secondary hover:bg-border transition-all duration-200 text-xs xs:text-sm sm:text-base"
             disabled={loading}
           >
             Cancelar
@@ -1678,7 +1687,7 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-5 py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 xs:px-5 py-2 xs:py-2.5 rounded-lg font-medium text-white bg-primary hover:bg-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed text-xs xs:text-sm sm:text-base"
             disabled={loading}
           >
             {loading ? (

@@ -1,13 +1,10 @@
 // src/routes/BookingPage.jsx
-import { AppProvider } from "../context/AppProvider";
 import BookingWidget from "../components/BookingWidget";
 import CalendarView from "../components/CalendarView";
 
 export default function BookingPage() {
   return (
-    <AppProvider>
-      {/* Wrapper de página con fondo que cubre todo */}
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
 
         {/* Header */}
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
@@ -38,6 +35,5 @@ export default function BookingPage() {
         </div>
 
       </div>
-    </AppProvider>
   );
 }

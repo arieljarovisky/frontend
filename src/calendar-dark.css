@@ -91,6 +91,16 @@
     padding: 16px 20px;
     margin-bottom: 0;
     position: relative;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .calendar-dark .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
   
   .calendar-dark .fc .fc-toolbar:before {
@@ -124,11 +134,17 @@
     border: 1px solid var(--fc-border-medium);
     font-weight: 500;
     border-radius: var(--fc-radius-md);
-    padding: 8px 16px;
+    padding: 10px 16px;
     transition: var(--fc-transition);
     position: relative;
     overflow: hidden;
     box-shadow: var(--fc-shadow-sm);
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   
   .calendar-dark .fc .fc-button:before {
@@ -531,24 +547,32 @@
   @media (max-width: 768px) {
     .calendar-dark .fc-toolbar {
       flex-direction: column;
-      gap: 12px;
-      padding: 12px;
+      gap: 10px;
+      padding: 12px 16px;
     }
     
     .calendar-dark .fc-toolbar-title {
       font-size: 1.25rem;
       order: -1;
+      word-break: break-word;
     }
     
     .calendar-dark .fc-toolbar-chunk {
       display: flex;
       justify-content: center;
       width: 100%;
+      flex-wrap: wrap;
+      gap: 6px;
     }
     
     .calendar-dark .fc-button {
-      padding: 6px 12px;
-      font-size: 0.875rem;
+      padding: 8px 12px;
+      font-size: 0.8125rem;
+      min-height: 36px;
+    }
+    
+    .calendar-dark .fc .fc-toolbar-chunk {
+      gap: 6px;
     }
     
     .calendar-dark .fc-daygrid-day-frame {
@@ -740,16 +764,20 @@
     box-shadow: var(--fc-shadow-sm);
     border-radius: var(--fc-radius-md);
     overflow: hidden;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
   
   .calendar-dark .fc .fc-button-group .fc-button {
-    border-radius: 0;
+    border-radius: var(--fc-radius-md);
     margin: 0;
     border-right: 1px solid var(--fc-border-soft);
+    flex-shrink: 0;
   }
   
   .calendar-dark .fc .fc-button-group .fc-button:last-child {
-    border-right: none;
+    border-right: 1px solid var(--fc-border-soft);
   }
   
   /* Animación de carga */

@@ -302,6 +302,12 @@ export default function CalendarView() {
               allWorkingHours.push(...hours);
             }
           } catch (e) {
+            // Silenciar errores 403 (sin permisos) - es normal si el usuario no tiene acceso a horarios
+            if (e?.response?.status === 403) {
+              // No loguear errores 403, simplemente continuar con valores por defecto
+              continue;
+            }
+            // Solo loguear otros errores
             logger.warn(`[CalendarView] No se pudieron cargar horarios para instructor ${instructor.id}:`, e);
           }
         }
@@ -656,13 +662,13 @@ export default function CalendarView() {
   }, []);
 
   return (
-    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative min-h-screen overflow-hidden`}>
-      <div className="relative z-10">
-        <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-6 transition-all duration-500 shadow-2xl">
+    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative min-h-screen`}>
+      <div className="relative z-10 w-full">
+        <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-4 sm:p-6 transition-all duration-500 shadow-2xl w-full max-w-full">
           {/* Header mejorado */}
-          <div className="flex flex-col gap-6 mb-6">
+          <div className="flex flex-col gap-4 sm:gap-6 mb-4 sm:mb-6 w-full">
             {/* Título y controles principales */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 w-full min-w-0">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl">
                   <Calendar className="w-8 h-8 text-blue-400" />
@@ -677,26 +683,27 @@ export default function CalendarView() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <button
                   onClick={() => setShowStats(!showStats)}
-                  className="p-2.5 rounded-xl bg-background-secondary border border-border hover:border-primary/30 transition-all"
+                  className="p-2.5 sm:p-3 rounded-xl bg-background-secondary border border-border hover:border-primary/30 transition-all flex-shrink-0"
                   title={showStats ? "Ocultar estadísticas" : "Mostrar estadísticas"}
                 >
-                  <Activity className="w-4 h-4" />
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 
                 <button
                   onClick={loadEvents}
                   disabled={eventsLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl 
-                           bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium
+                  className="inline-flex items-center gap-2 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 rounded-xl 
+                           bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs sm:text-sm font-medium
                            hover:from-blue-700 hover:to-purple-700 
                            shadow-lg hover:shadow-xl transform hover:-translate-y-0.5
-                           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
                 >
-                  <RefreshCw className={`w-4 h-4 ${eventsLoading ? "animate-spin" : ""}`} />
-                  {eventsLoading ? "Actualizando..." : "Actualizar"}
+                  <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${eventsLoading ? "animate-spin" : ""}`} />
+                  <span className="hidden xs:inline">{eventsLoading ? "Actualizando..." : "Actualizar"}</span>
+                  <span className="xs:hidden">{eventsLoading ? "..." : "Actualizar"}</span>
                 </button>
               </div>
             </div>
@@ -705,20 +712,20 @@ export default function CalendarView() {
             {showStats && <QuickStats events={events} instructors={instructors} />}
 
             {/* Filtros y controles */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0">
               {/* Filtro estilista mejorado */}
-              <div className="relative flex-1 min-w-[200px] max-w-xs">
-                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/60 pointer-events-none" />
+              <div className="relative flex-1 min-w-[180px] xs:min-w-[200px] max-w-full sm:max-w-xs">
+                <Filter className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-foreground-muted/60 pointer-events-none" />
                 <select
                   value={instructorFilter}
                   onChange={(e) => setInstructorFilter(e.target.value)}
                   disabled={Array.isArray(instructors) && instructors.length === 0}
                   className="
-                    w-full pl-10 pr-10 py-2.5
+                    w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3
                     rounded-xl
                     bg-background-secondary/80 backdrop-blur-sm
                     border border-border
-                    text-foreground text-sm
+                    text-foreground text-xs sm:text-sm
                     placeholder:text-foreground-muted
                     focus:outline-none
                     focus:ring-2 focus:ring-primary/40
@@ -729,6 +736,7 @@ export default function CalendarView() {
                     disabled:opacity-50 disabled:cursor-not-allowed
                     appearance-none
                     cursor-pointer
+                    min-w-0
                   "
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -754,16 +762,17 @@ export default function CalendarView() {
               <button
                 onClick={() => setHideCancelled(v => !v)}
                 className={`
-                  inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
-                  border transition-all duration-200 transform hover:scale-[1.02]
+                  inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium
+                  border transition-all duration-200 transform hover:scale-[1.02] whitespace-nowrap flex-shrink-0
                   ${hideCancelled 
                     ? "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20" 
                     : "bg-background-secondary/80 border-border text-foreground hover:border-primary/30"}
                 `}
                 title={hideCancelled ? "Mostrar cancelados" : "Ocultar cancelados"}
               >
-                {hideCancelled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                {hideCancelled ? "Mostrar cancelados" : "Ocultar cancelados"}
+                {hideCancelled ? <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />}
+                <span className="hidden sm:inline">{hideCancelled ? "Mostrar cancelados" : "Ocultar cancelados"}</span>
+                <span className="sm:hidden">{hideCancelled ? "Mostrar" : "Ocultar"}</span>
               </button>
             </div>
           </div>
@@ -782,7 +791,7 @@ export default function CalendarView() {
           )}
 
           {/* Calendario con diseño premium */}
-          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-3 overflow-hidden
+          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-2 sm:p-3
                           shadow-inner" style={{ backgroundColor: 'var(--fc-surface-bg, #0f1825)' }}>
             {/* Loading overlay mejorado */}
             {eventsLoading && (
@@ -817,7 +826,7 @@ export default function CalendarView() {
               </div>
             )}
 
-            <div className="w-full min-w-0 overflow-hidden rounded-xl bg-background-secondary">
+            <div className="w-full min-w-0 rounded-xl bg-background-secondary">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}

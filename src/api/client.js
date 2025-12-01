@@ -199,9 +199,12 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url = originalRequest?.url || "";
 
+    // Silenciar errores 403 para working-hours (es normal si no hay permisos)
+    const isWorkingHours403 = status === 403 && url.includes('/api/working-hours');
+    
     // Medir tiempo incluso en errores
     const startTime = originalRequest?.metadata?.startTime;
-    if (startTime) {
+    if (startTime && !isWorkingHours403) {
       const duration = Date.now() - startTime;
       const method = (originalRequest?.method || 'get').toUpperCase();
       logger.error(`[API ERROR] ${method} ${url} - ${duration}ms - Status: ${status || 'NO RESPONSE'}`);
@@ -901,8 +904,18 @@ apiClient.getInstructorStatsRange = async function ({ from, to, instructorId }) 
 apiClient.getWorkingHours = async function ({ instructorId } = {}) {
   const params = {};
   if (instructorId) params.instructorId = instructorId;
-  const { data } = await apiClient.get("/api/working-hours", { params });
-  return toArray(data); // <-- siempre array
+  try {
+    const { data } = await apiClient.get("/api/working-hours", { params });
+    return toArray(data); // <-- siempre array
+  } catch (error) {
+    // Si es un error 403 (sin permisos), retornar array vacío silenciosamente
+    // Esto es normal si el usuario no tiene permisos para ver horarios de instructores
+    if (error?.response?.status === 403) {
+      return [];
+    }
+    // Re-lanzar otros errores
+    throw error;
+  }
 };
 
 apiClient.saveWorkingHours = async function ({ instructorId, hours }) {

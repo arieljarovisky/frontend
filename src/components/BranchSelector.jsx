@@ -100,27 +100,27 @@ export default function BranchSelector() {
   };
 
   return (
-    <div className="relative space-y-3">
+    <div className="relative space-y-2">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-border bg-background-secondary hover:bg-muted transition"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-border bg-background-secondary hover:bg-muted transition"
         disabled={loading}
       >
-        <div className="flex items-center gap-2 text-left">
-          <span className="p-1.5 rounded-lg bg-muted text-foreground/70">
-            <Building2 className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-left min-w-0 flex-1">
+          <span className="p-1 rounded-lg bg-muted text-foreground/70 flex-shrink-0">
+            <Building2 className="w-3.5 h-3.5" />
           </span>
-          <div>
-            <p className="text-xs text-foreground/70">Sucursal activa</p>
-            <p className="text-sm font-semibold text-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] xs:text-xs text-foreground/70">Sucursal activa</p>
+            <p className="text-xs xs:text-sm font-semibold text-foreground truncate">
               {viewMode === "all"
                 ? "Todas las sucursales"
                 : currentBranch?.name || "Seleccionar sucursal"}
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-foreground/70 transition ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-foreground/70 transition flex-shrink-0 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
