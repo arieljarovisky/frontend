@@ -279,24 +279,38 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
 
       const [appointmentsData, sessionsData] = await Promise.all([appointmentsPromise, classesPromise]);
 
-      const appointmentEvents = (appointmentsData?.appointments ?? appointmentsData ?? []).map((a) => ({
-        id: String(a.id),
-        title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,
-        start: a.starts_at,
-        end: a.ends_at,
-        backgroundColor: a.color_hex || undefined,
-        borderColor: a.color_hex || undefined,
-        extendedProps: {
-          ...a,
-          eventType: "appointment",
-        },
-      }));
+      const appointmentEvents = (appointmentsData?.appointments ?? appointmentsData ?? [])
+        .filter((a) => {
+          // Filtrar appointments sin fecha de inicio válida
+          if (!a.starts_at) return false;
+          const startDate = new Date(a.starts_at);
+          return !isNaN(startDate.getTime());
+        })
+        .map((a) => ({
+          id: String(a.id),
+          title: `${a.customer_name ?? "Cliente"} • ${a.service_name ?? "Servicio"}`,
+          start: a.starts_at,
+          end: a.ends_at,
+          backgroundColor: a.color_hex || undefined,
+          borderColor: a.color_hex || undefined,
+          extendedProps: {
+            ...a,
+            eventType: "appointment",
+          },
+        }));
 
-      const classEvents = (Array.isArray(sessionsData) ? sessionsData : []).map((session) => ({
-        id: `class-${session.id}`,
-        title: session.activity_type || "Clase",
-        start: session.starts_at,
-        end: session.ends_at,
+      const classEvents = (Array.isArray(sessionsData) ? sessionsData : [])
+        .filter((session) => {
+          // Filtrar sesiones sin fecha de inicio válida
+          if (!session.starts_at) return false;
+          const startDate = new Date(session.starts_at);
+          return !isNaN(startDate.getTime());
+        })
+        .map((session) => ({
+          id: `class-${session.id}`,
+          title: session.activity_type || "Clase",
+          start: session.starts_at,
+          end: session.ends_at,
         backgroundColor: "#7c3aed",
         borderColor: "#7c3aed",
         extendedProps: {

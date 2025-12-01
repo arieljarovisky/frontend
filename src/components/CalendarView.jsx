@@ -100,7 +100,9 @@ function QuickStats({ events, instructors }) {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const todayEvents = events.filter(e => {
+      if (!e.start) return false; // Validar que start existe
       const start = new Date(e.start);
+      if (isNaN(start.getTime())) return false; // Validar que la fecha es válida
       return start >= today && start < tomorrow && e.extendedProps?.status !== 'cancelled';
     });
 
@@ -110,7 +112,9 @@ function QuickStats({ events, instructors }) {
     weekEnd.setDate(weekStart.getDate() + 7);
 
     const weekEvents = events.filter(e => {
+      if (!e.start) return false; // Validar que start existe
       const start = new Date(e.start);
+      if (isNaN(start.getTime())) return false; // Validar que la fecha es válida
       return start >= weekStart && start < weekEnd && e.extendedProps?.status !== 'cancelled';
     });
 
@@ -402,7 +406,15 @@ export default function CalendarView() {
   const handleDatesSet = useCallback(
     (arg) => {
       const fromIso = arg.startStr;
+      if (!arg.end) {
+        setRange({ fromIso, toIso: fromIso });
+        return;
+      }
       const end = new Date(arg.end);
+      if (isNaN(end.getTime())) {
+        setRange({ fromIso, toIso: fromIso });
+        return;
+      }
       end.setSeconds(end.getSeconds() - 1);
       setRange({ fromIso, toIso: end.toISOString() });
       // Actualizar la vista actual y ajustar recursos
@@ -450,8 +462,14 @@ export default function CalendarView() {
     setSelectedEvent({
       id: e.id,
       title: e.title,
-      start: e.start ? new Date(e.start).toISOString() : null,
-      end: e.end ? new Date(e.end).toISOString() : null,
+      start: e.start ? (() => {
+        const d = new Date(e.start);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      })() : null,
+      end: e.end ? (() => {
+        const d = new Date(e.end);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      })() : null,
       extendedProps: ep,
     });
     setModalOpen(true);
