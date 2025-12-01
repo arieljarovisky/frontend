@@ -1165,6 +1165,12 @@ apiClient.cancelClassSeries = async function (seriesId) {
   return data;
 };
 
+// Actualizar estado de suscripción (paused, authorized, cancelled)
+apiClient.updateSubscriptionStatus = async function (subscriptionId, status) {
+  const { data } = await apiClient.patch(`/api/subscriptions/${subscriptionId}`, { status });
+  return data;
+};
+
 /* =========================
    SUPER ADMIN API
 ========================= */
@@ -1314,12 +1320,6 @@ apiClient.onboarding = {
     const { data } = await apiClient.get(
       `/public/onboarding/${encodeURIComponent(sessionId)}/subscription-status`
     );
-    return data;
-  },
-
-  // Actualizar estado de suscripción (paused, authorized, cancelled)
-  async updateSubscriptionStatus(subscriptionId, status) {
-    const { data } = await apiClient.patch(`/api/subscriptions/${subscriptionId}`, { status });
     return data;
   },
 
