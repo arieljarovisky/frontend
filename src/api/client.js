@@ -1317,6 +1317,12 @@ apiClient.onboarding = {
     return data;
   },
 
+  // Actualizar estado de suscripción (paused, authorized, cancelled)
+  async updateSubscriptionStatus(subscriptionId, status) {
+    const { data } = await apiClient.patch(`/api/subscriptions/${subscriptionId}`, { status });
+    return data;
+  },
+
   async resendActivation(email) {
     const { data } = await apiClient.post("/public/onboarding/resend-activation", { email });
     return data;

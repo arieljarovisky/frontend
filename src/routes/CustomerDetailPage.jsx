@@ -4,6 +4,8 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "../shared/useQuery.js";
 import { formatPhone, initials, formatDateTime, StatusPill } from "../shared/ui.jsx";
 import { useApp } from "../context/UseApp.js";
+import { toast } from "sonner";
+import { XCircle } from "lucide-react";
 
 const DOCUMENT_TYPE_OPTIONS = [
   { value: "", label: "Sin especificar" },
@@ -63,6 +65,7 @@ export default function CustomerDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState(null);
   const { classesEnabled } = useApp();
 
   useEffect(() => {
@@ -116,6 +119,28 @@ export default function CustomerDetailPage() {
       return `$${numeric.toFixed(2)} ${currency || ""}`.trim();
     }
   };
+
+  const handleCancelSubscription = async (subscriptionId) => {
+    if (!window.confirm("¿Estás seguro de que deseas cancelar esta suscripción? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    setCancellingSubscriptionId(subscriptionId);
+    try {
+      await apiClient.updateSubscriptionStatus(subscriptionId, "cancelled");
+      toast.success("Suscripción cancelada correctamente");
+      // Recargar los datos del cliente
+      await refetch();
+    } catch (error) {
+      console.error("Error cancelando suscripción:", error);
+      toast.error(error?.response?.data?.error || "Error al cancelar la suscripción");
+    } finally {
+      setCancellingSubscriptionId(null);
+    }
+  };
+
+  // Obtener la suscripción activa para mostrar el botón de cancelar
+  const activeSubscription = subscriptions.find((s) => s.status === "authorized" || s.status === "pending");
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -525,9 +550,22 @@ export default function CustomerDetailPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <div className="text-xs uppercase text-foreground-muted tracking-wide">Estado principal</div>
-                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${primaryMembershipTone.tone}`}>
-                  {subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${primaryMembershipTone.tone}`}>
+                    {subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción"}
+                  </span>
+                  {activeSubscription && (activeSubscription.status === "authorized" || activeSubscription.status === "pending") && (
+                    <button
+                      onClick={() => handleCancelSubscription(activeSubscription.id)}
+                      disabled={cancellingSubscriptionId === activeSubscription.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Cancelar suscripción"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      {cancellingSubscriptionId === activeSubscription.id ? "Cancelando..." : "Cancelar"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="space-y-1 text-sm text-foreground">
                 <div className="text-xs uppercase text-foreground-muted tracking-wide">Plan actual</div>
@@ -566,20 +604,22 @@ export default function CustomerDetailPage() {
                 <div className="rounded-lg border border-border/60 overflow-hidden">
                   <div className="grid grid-cols-12 px-4 py-2 text-xs font-medium bg-dark-200 text-white-500 border-b">
                     <div className="col-span-2">Creada</div>
-                    <div className="col-span-3">Plan / Motivo</div>
+                    <div className="col-span-2">Plan / Motivo</div>
                     <div className="col-span-2 text-right">Monto</div>
                     <div className="col-span-2 text-right">Último pago</div>
                     <div className="col-span-2 text-right">Próximo cobro</div>
                     <div className="col-span-1 text-right">Estado</div>
+                    <div className="col-span-1 text-right">Acciones</div>
                   </div>
                   <div className="divide-y divide-border/60">
                     {subscriptions.map((sub) => {
                       const tone = membershipStatusMap[sub.status]?.tone || membershipStatusMap.default.tone;
                       const label = membershipStatusMap[sub.status]?.label || sub.status || "—";
+                      const canCancel = (sub.status === "authorized" || sub.status === "pending") && cancellingSubscriptionId !== sub.id;
                       return (
-                        <div key={sub.id} className="grid grid-cols-12 px-4 py-2 text-sm">
+                        <div key={sub.id} className="grid grid-cols-12 px-4 py-2 text-sm items-center">
                           <div className="col-span-2">{formatDateTime(sub.created_at)}</div>
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <div className="font-medium text-foreground">{sub.plan_name || sub.reason || "Sin plan"}</div>
                             {sub.plan_name && sub.reason ? (
                               <div className="text-xs text-foreground-muted">{sub.reason}</div>
@@ -596,6 +636,21 @@ export default function CustomerDetailPage() {
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${tone}`}>
                               {label}
                             </span>
+                          </div>
+                          <div className="col-span-1 text-right">
+                            {canCancel ? (
+                              <button
+                                onClick={() => handleCancelSubscription(sub.id)}
+                                disabled={cancellingSubscriptionId === sub.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Cancelar suscripción"
+                              >
+                                <XCircle className="w-3 h-3" />
+                                {cancellingSubscriptionId === sub.id ? "..." : "Cancelar"}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-foreground-muted">—</span>
+                            )}
                           </div>
                         </div>
                       );
