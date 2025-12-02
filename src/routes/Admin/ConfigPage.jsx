@@ -22,7 +22,6 @@ import {
   Shield,
   MessageCircle,
   Play,
-  TestTube,
   Info,
   Plus,
   Edit3,
@@ -235,13 +234,8 @@ export default function ConfigPage() {
   const [savingBotConfig, setSavingBotConfig] = useState(false);
 
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
-  const [testingWhatsApp, setTestingWhatsApp] = useState(false);
   const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
   const [originalPhoneDisplay, setOriginalPhoneDisplay] = useState(""); // Para rastrear si el número fue modificado
-  const [whatsappTest, setWhatsappTest] = useState({
-    to: "",
-    message: "Hola 👋 Este es un mensaje de prueba desde tu asistente de turnos.",
-  });
 
   const [notifications, setNotifications] = useState({
     expiringSoon: true,
@@ -471,10 +465,6 @@ export default function ConfigPage() {
         // Guardar el número original para comparar si fue modificado
         setOriginalPhoneDisplay(resolvedPhone);
 
-        setWhatsappTest((prev) => ({
-          ...prev,
-          to: resolvedPhone,
-        }));
 
         // Cargar configuración del bot con valores por defecto
         const loadedBotConfig = {
@@ -872,10 +862,6 @@ export default function ConfigPage() {
         ...prev,
         whatsapp: normalized.phoneDisplay,
       }));
-      setWhatsappTest((prev) => ({
-        ...prev,
-        to: prev.to || normalized.phoneDisplay || "",
-      }));
 
       // Recargar datos para asegurar consistencia
       await loadData();
@@ -1028,41 +1014,6 @@ export default function ConfigPage() {
     }
   };
 
-  const handleSendWhatsAppTest = async () => {
-    if (!whatsappConfig.hubConfigured && !whatsappConfig.hasOAuthToken) {
-      toast.info("Conectá tu cuenta de WhatsApp Business antes de poder enviar mensajes de prueba.");
-      return;
-    }
-    if (!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) {
-      toast.error("Activá el asistente de WhatsApp antes de enviar un mensaje de prueba.");
-      return;
-    }
-
-    const to = String(whatsappTest.to || whatsappConfig.phoneDisplay || "").trim();
-    if (!to) {
-      toast.error("Ingresá un número de WhatsApp de prueba");
-      return;
-    }
-
-    const message = (whatsappTest.message || "").trim();
-    if (!message) {
-      toast.error("Ingresá un mensaje de prueba");
-      return;
-    }
-
-    setTestingWhatsApp(true);
-    try {
-      await apiClient.testWhatsAppConfig({ to, message });
-      toast.success("Mensaje de prueba enviado");
-    } catch (error) {
-      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
-      toast.error("No se pudo enviar el mensaje de prueba", {
-        description: errorMessage,
-      });
-    } finally {
-      setTestingWhatsApp(false);
-    }
-  };
 
   const handleSaveBotConfig = async () => {
     setSavingBotConfig(true);
@@ -2207,76 +2158,6 @@ export default function ConfigPage() {
 
             {/* Sección de Prueba */}
             {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-              <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                    <TestTube className="w-5 h-5 text-primary-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-foreground mb-1">Enviar mensaje de prueba</h3>
-                    <p className="text-sm text-foreground-secondary">
-                      Probá la integración enviándote un mensaje desde tu número configurado
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-4">
-                  <FieldGroup label="Enviar a">
-                    <input
-                      type="text"
-                      value={whatsappTest.to}
-                      disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
-                      onChange={(e) =>
-                        setWhatsappTest((prev) => ({ ...prev, to: e.target.value }))
-                      }
-                      className="input w-full"
-                      placeholder="+5491123456789"
-                    />
-                  </FieldGroup>
-
-                  <FieldGroup label="Mensaje">
-                    <textarea
-                      value={whatsappTest.message}
-                      disabled={!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken}
-                      onChange={(e) =>
-                        setWhatsappTest((prev) => ({ ...prev, message: e.target.value }))
-                      }
-                      className="input w-full min-h-[80px]"
-                      placeholder="Escribí tu mensaje de prueba aquí..."
-                    />
-                  </FieldGroup>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleSendWhatsAppTest}
-                    disabled={(!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken) || testingWhatsApp}
-                    className="flex items-center gap-2"
-                  >
-                    {testingWhatsApp ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        Enviar prueba
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-foreground-muted/80">
-                    {!whatsappConfig.hubActive && !whatsappConfig.hasOAuthToken
-                      ? "Activá el asistente para habilitar los envíos de prueba"
-                      : whatsappConfig.hubActive
-                      ? "El mensaje se enviará desde tu número de WhatsApp Business"
-                      : "Conectá tu cuenta de WhatsApp Business para enviar mensajes"}
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* Personalización del Bot */}
             <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
