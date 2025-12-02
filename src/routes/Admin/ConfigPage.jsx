@@ -132,6 +132,7 @@ export default function ConfigPage() {
     { id: "general", label: "General", Icon: Settings },
     { id: "business-type", label: "Tipo de Negocio", Icon: Building2, adminOnly: true },
     { id: "working-hours", label: "Horarios Laborales", Icon: Clock },
+    { id: "calendar", label: "Horarios del Calendario", Icon: Clock },
     { id: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { id: "contact", label: "ARCA", Icon: Receipt },
     { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
@@ -250,6 +251,7 @@ export default function ConfigPage() {
   });
 
   const [workingHours, setWorkingHours] = useState({});
+  const [calendarConfig, setCalendarConfig] = useState({ minTime: "06:00:00", maxTime: "23:00:00" });
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
@@ -363,7 +365,7 @@ export default function ConfigPage() {
   // ============================================
   const loadData = useCallback(async () => {
       try {
-        const [g, c, n, contactData, w, booking, reminders, bot, wh] = await Promise.all([
+        const [g, c, n, contactData, w, booking, reminders, bot, wh, calendarData] = await Promise.all([
           apiClient.getConfigSection("general"),
           apiClient.getConfigSection("commissions"),
           apiClient.getConfigSection("notifications"),
@@ -373,6 +375,7 @@ export default function ConfigPage() {
           apiClient.get("/api/reminders/config").then(r => r.data?.data || {}).catch(() => ({})),
           apiClient.getConfigSection("bot").catch(() => ({})), // Configuración del bot
           apiClient.getConfigSection("working-hours").catch(() => ({})), // Horarios laborales
+          apiClient.getConfigSection("calendar").catch(() => ({ minTime: "06:00:00", maxTime: "23:00:00" })), // Configuración del calendario
         ]);
 
         // Prefiere siempre el nombre real del tenant si está disponible
@@ -548,6 +551,7 @@ export default function ConfigPage() {
         }
         
         setWorkingHours(loadedWorkingHours);
+        setCalendarConfig(calendarData || { minTime: "06:00:00", maxTime: "23:00:00" });
       } catch (e) {
         logger.error("Load config failed", e);
       }
@@ -572,6 +576,7 @@ export default function ConfigPage() {
         remindersConfig: JSON.parse(JSON.stringify(remindersConfig)),
         botConfig: JSON.parse(JSON.stringify(botConfig)),
         workingHours: JSON.parse(JSON.stringify(workingHours)),
+        calendarConfig: JSON.parse(JSON.stringify(calendarConfig)),
       };
       setInitialConfig(configSnapshot);
       setHasUnsavedChanges(false); // Asegurar que no haya cambios al inicio
@@ -1086,6 +1091,7 @@ export default function ConfigPage() {
         apiClient.saveConfigSection("commissions", commissions),
         apiClient.saveConfigSection("notifications", notifications),
         apiClient.saveConfigSection("working-hours", workingHours),
+        apiClient.saveConfigSection("calendar", calendarConfig),
         apiClient.saveAppointmentsConfig(bookingConfig),
         apiClient.put("/api/reminders/config", remindersConfig),
         apiClient.saveConfigSection("bot", botConfig), // Guardar configuración del bot
@@ -1349,6 +1355,7 @@ export default function ConfigPage() {
     };
   }, [navOffset, visibleTabs]);
 
+
   const goTo = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1435,7 +1442,8 @@ export default function ConfigPage() {
       JSON.stringify(bookingConfig) !== JSON.stringify(initialConfig.bookingConfig) ||
       JSON.stringify(remindersConfig) !== JSON.stringify(initialConfig.remindersConfig) ||
       JSON.stringify(botConfig) !== JSON.stringify(initialConfig.botConfig) ||
-      JSON.stringify(workingHours) !== JSON.stringify(initialConfig.workingHours)
+      JSON.stringify(workingHours) !== JSON.stringify(initialConfig.workingHours) ||
+      JSON.stringify(calendarConfig) !== JSON.stringify(initialConfig.calendarConfig || {})
     );
 
     // Verificar cambios en WhatsApp
@@ -1447,7 +1455,7 @@ export default function ConfigPage() {
     );
 
     setHasUnsavedChanges(hasGeneralChanges || hasWhatsAppChanges);
-  }, [general, contact, commissions, notifications, bookingConfig, remindersConfig, botConfig, workingHours, whatsappConfig, initialConfig, initialWhatsappConfig]);
+  }, [general, contact, commissions, notifications, bookingConfig, remindersConfig, botConfig, workingHours, calendarConfig, whatsappConfig, initialConfig, initialWhatsappConfig]);
 
   return (
     <div className="space-y-6">
@@ -1492,18 +1500,30 @@ export default function ConfigPage() {
             : { position: "relative", zIndex: navZIndex }
         }
       >
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-primary/25 bg-[rgba(10,32,48,0.9)] shadow-md backdrop-blur-xl px-6 py-3 inline-block">
+        <div className="mx-auto max-w-7xl w-full">
+          <div className="rounded-2xl border border-primary/25 bg-[rgba(10,32,48,0.9)] shadow-md backdrop-blur-xl w-full">
             <nav
               ref={navScrollRef}
-              className="hidden md:flex items-center justify-start gap-2 flex-nowrap overflow-x-auto scrollbar-hide"
+              className="flex items-center justify-center gap-1.5 flex-wrap w-full px-3 py-2.5"
             >
               {visibleTabs.map(({ id, label, Icon, external }) => {
                 const isActive = active === id;
-                const base = "group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all min-w-max";
-                const on = "bg-gradient-to-r from-[#13b5cf] to-[#0d7fd4] text-white shadow-lg ring-2 ring-white/10";
-                const off = "text-slate-200/80 hover:text-white hover:bg-white/10 ring-1 ring-transparent";
-                return <button type="button" key={id} onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))} className={`${base} ${isActive ? on : off}`}><Icon className="w-4 h-4 opacity-80 group-hover:opacity-100 transition-opacity" /> <span className="whitespace-nowrap">{label}</span></button>;
+                const base = "group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] sm:text-xs font-medium transition-all flex-shrink-0";
+                const on = "bg-gradient-to-r from-[#13b5cf] to-[#0d7fd4] text-white shadow-md ring-1 ring-white/20";
+                const off = "text-slate-200/70 hover:text-white hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10";
+                return (
+                  <button 
+                    type="button" 
+                    key={id}
+                    data-tab-id={id}
+                    onClick={() => (external ? navigate(`/${tenantSlug}/admin/instructores`) : goTo(id))} 
+                    className={`${base} ${isActive ? on : off}`}
+                    title={label}
+                  >
+                    <Icon className="w-3.5 h-3.5 opacity-90 group-hover:opacity-100 transition-opacity flex-shrink-0" /> 
+                    <span className="whitespace-nowrap">{label}</span>
+                  </button>
+                );
               })}
             </nav>
             <div className="hidden">
@@ -1957,6 +1977,56 @@ export default function ConfigPage() {
           </div>
         </ConfigSection>
       </div>
+
+      {/* CALENDAR TIME RANGE */}
+      <div id="calendar">
+        <ConfigSection
+          title="Horarios del Calendario"
+          description="Configurá el rango de horarios que se mostrará en el calendario"
+          icon={Clock}
+        >
+          <div className="space-y-6">
+            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Para qué sirve esta configuración?</h4>
+                  <p className="text-xs text-foreground-secondary leading-relaxed">
+                    Define el rango de horarios que se mostrará en el calendario. Esto te permite personalizar qué horas del día son visibles en las vistas de Día, Semana y Agenda.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <FieldGroup label="Hora de inicio">
+                <input
+                  type="time"
+                  value={calendarConfig.minTime?.substring(0, 5) || "06:00"}
+                  onChange={(e) => setCalendarConfig({ ...calendarConfig, minTime: `${e.target.value}:00` })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-foreground-muted mt-1">
+                  Hora mínima que se mostrará en el calendario
+                </p>
+              </FieldGroup>
+
+              <FieldGroup label="Hora de fin">
+                <input
+                  type="time"
+                  value={calendarConfig.maxTime?.substring(0, 5) || "23:00"}
+                  onChange={(e) => setCalendarConfig({ ...calendarConfig, maxTime: `${e.target.value}:00` })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-foreground-muted mt-1">
+                  Hora máxima que se mostrará en el calendario
+                </p>
+              </FieldGroup>
+            </div>
+          </div>
+        </ConfigSection>
+      </div>
+
       {/* WHATSAPP */}
       <div id="whatsapp">
         <ConfigSection

@@ -18,15 +18,15 @@ import { apiClient } from "../api";
 
 function Section({ title, children, right, icon: Icon }) {
   return (
-    <section className="bg-background rounded-2xl shadow-xl border border-border p-6 mb-6">
+    <section className="bg-background rounded-2xl shadow-xl border border-border p-8 md:p-10 mb-8">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-center justify-between gap-4 mb-8">
 
         {/* Título + Ícono */}
-        <div className="flex items-center gap-2 min-w-0">
-          {Icon && <Icon className="w-5 h-5 text-primary shrink-0" />}
-          <h2 className="text-xl font-bold tracking-tight text-foreground truncate">
+        <div className="flex items-center gap-3 min-w-0">
+          {Icon && <Icon className="w-6 h-6 text-primary shrink-0" />}
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-foreground truncate">
             {title}
           </h2>
         </div>
@@ -78,6 +78,19 @@ export default function BookingWidget() {
   const [sendingPaymentLink, setSendingPaymentLink] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [pendingBookingData, setPendingBookingData] = useState(null);
+  
+  // Determinar el tab inicial basado en qué está habilitado
+  const initialTab = appointmentsEnabled ? "appointments" : classesEnabled ? "classes" : "appointments";
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Actualizar el tab si cambian las opciones disponibles
+  useEffect(() => {
+    if (activeTab === "appointments" && !appointmentsEnabled && classesEnabled) {
+      setActiveTab("classes");
+    } else if (activeTab === "classes" && !classesEnabled && appointmentsEnabled) {
+      setActiveTab("appointments");
+    }
+  }, [appointmentsEnabled, classesEnabled, activeTab]);
 
   const selectedService = useMemo(
     () => (Array.isArray(services) ? services : []).find((s) => String(s.id) === String(booking.serviceId)),
@@ -244,47 +257,106 @@ export default function BookingWidget() {
   }, [booking.serviceId, booking.date, booking.selectedSlot]);
 
   return (
-    <div className="bg-background rounded-2xl shadow-2xl border-2 border-primary/30 p-6 mb-6 relative overflow-hidden">
+    <div className="bg-background rounded-2xl shadow-2xl border-2 border-primary/30 p-6 md:p-8 mb-0 relative overflow-hidden">
       {/* Efecto de fondo destacado */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent pointer-events-none" />
       <div className="relative z-10">
-      {appointmentsEnabled && (<>
-        <header className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl ring-2 ring-indigo-500/30 shadow-lg">
-              <Scissors className="w-8 h-8 text-indigo-400" />
+        {/* Header y progreso solo para turnos */}
+        {activeTab === "appointments" && appointmentsEnabled && (
+          <header className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl ring-2 ring-indigo-500/30 shadow-lg">
+                <Scissors className="w-8 h-8 text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
+                  Reservá tu turno
+                </h1>
+                <p className="text-foreground-secondary text-base">
+                  Seguí los pasos para confirmar tu turno en minutos
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
-                Reservá tu turno
-              </h1>
-              <p className="text-foreground-secondary text-base">
-                Seguí los pasos para confirmar tu turno en minutos
-              </p>
-            </div>
-          </div>
 
-          {/* Barra de progreso */}
-          <div className="relative h-2 bg-border rounded-full overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+            {/* Barra de progreso */}
+            <div className="relative h-2 bg-border rounded-full overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
 
           {/* Indicadores de pasos */}
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <StepBadge completed={!!booking.serviceId} label="Servicio" number={1} />
-            <StepBadge completed={!!booking.date} label="Fecha" number={2} />
-            <StepBadge completed={!!booking.selectedSlot} label="Horario" number={3} />
-            <StepBadge completed={false} label="Confirmación" number={4} />
-          </div>
-        </header>
+          <div className="mt-6 flex items-center gap-3 flex-wrap">
+              <StepBadge completed={!!booking.serviceId} label="Servicio" number={1} />
+              <StepBadge completed={!!booking.date} label="Fecha" number={2} />
+              <StepBadge completed={!!booking.selectedSlot} label="Horario" number={3} />
+              <StepBadge completed={false} label="Confirmación" number={4} />
+            </div>
+          </header>
+        )}
 
+        {/* Header para clases */}
+        {activeTab === "classes" && classesEnabled && (
+          <header className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl ring-2 ring-indigo-500/30 shadow-lg">
+                <Users className="w-8 h-8 text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
+                  Inscribite en una clase
+                </h1>
+                <p className="text-foreground-secondary text-base">
+                  Elegí la clase y completá tus datos para inscribirte
+                </p>
+              </div>
+            </div>
+          </header>
+        )}
+
+        {/* Tabs para Turnos y Clases */}
+        {(appointmentsEnabled || classesEnabled) && (
+          <div className="flex border-b border-border mb-8">
+            {appointmentsEnabled && (
+              <button
+                onClick={() => setActiveTab("appointments")}
+                className={`px-6 py-3 text-sm font-semibold transition-all duration-200 border-b-2 ${
+                  activeTab === "appointments"
+                    ? "border-primary text-primary bg-primary/5"
+                    : "border-transparent text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Scissors className="w-4 h-4" />
+                  <span>Turnos</span>
+                </div>
+              </button>
+            )}
+            {classesEnabled && (
+              <button
+                onClick={() => setActiveTab("classes")}
+                className={`px-6 py-3 text-sm font-semibold transition-all duration-200 border-b-2 ${
+                  activeTab === "classes"
+                    ? "border-primary text-primary bg-primary/5"
+                    : "border-transparent text-foreground-secondary hover:text-foreground hover:bg-background-secondary/50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>Clases</span>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Contenido de Turnos */}
+        {activeTab === "appointments" && appointmentsEnabled && (<>
         {/* Errores */}
-        <div aria-live="polite">
+        <div aria-live="polite" className="mb-6">
           {(metaError || availability.error) && (
-            <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 p-4 text-sm flex items-start gap-3">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 p-5 text-sm flex items-start gap-3">
               <div className="text-lg">⚠️</div>
               <div>{metaError || availability.error}</div>
             </div>
@@ -297,11 +369,11 @@ export default function BookingWidget() {
           icon={Scissors}
           right={metaLoading ? <span className="text-xs text-foreground-muted">cargando...</span> : null}
         >
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-3 gap-6">
 
             {/* Servicio */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-wide text-foreground-muted">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground">
                 Servicio
               </label>
               {/* NO PONER ICONO ACÁ — el componente ya lo tiene */}
@@ -313,8 +385,8 @@ export default function BookingWidget() {
             </div>
 
             {/* Instructor */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-wide text-foreground-muted">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground">
                 Instructor/a
               </label>
               {/* NO PONER ICONO ACÁ — el componente ya lo tiene */}
@@ -326,8 +398,8 @@ export default function BookingWidget() {
             </div>
 
             {/* Sucursal */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-wide text-foreground-muted flex items-center gap-2">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-2">
 
                 <Building2 className="w-4 h-4" />
                 Sucursal
@@ -350,7 +422,7 @@ export default function BookingWidget() {
                   ))
                 )}
               </select>
-              <p className="mt-1 text-xs text-foreground-muted">
+              <p className="mt-3 text-xs text-foreground-muted leading-relaxed">
                 El turno se registrará en la sucursal seleccionada. Podés cambiarla manualmente.
               </p>
             </div>
@@ -360,7 +432,7 @@ export default function BookingWidget() {
 
         {/* 2) Fecha */}
         <Section title="Paso 2: Seleccioná la fecha" icon={Calendar}>
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <DatePicker
               value={booking.date}
               onChange={(v) => updateBooking({ date: v })}
@@ -383,7 +455,7 @@ export default function BookingWidget() {
               )}
             </Button>
           </div>
-          <div className="mt-3 px-4 py-2 rounded-lg bg-background-secondary border border-border text-sm text-foreground-muted">
+          <div className="mt-4 px-5 py-3 rounded-lg bg-background-secondary border border-border text-sm text-foreground-muted leading-relaxed">
             💡 La disponibilidad depende del servicio seleccionado y del estilista elegido
           </div>
         </Section>
@@ -410,7 +482,7 @@ export default function BookingWidget() {
 
         {/* 4) Datos + Confirmación */}
         <Section title="Paso 4: Confirmá tus datos" icon={User}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <Field label="Nombre" error={errors.customerName?.message}>
               <input
                 {...register("customerName")}
@@ -434,7 +506,7 @@ export default function BookingWidget() {
               </div>
             </Field>
 
-            <div className="rounded-xl border border-border bg-background-secondary px-4 py-4">
+            <div className="rounded-xl border border-border bg-background-secondary px-6 py-5">
               <label className="flex items-center justify-between text-sm font-medium text-foreground">
                 <span className="flex items-center gap-2">
                   <Repeat className="w-4 h-4 text-indigo-400" />
@@ -454,8 +526,8 @@ export default function BookingWidget() {
               </label>
 
               {booking.repeatEnabled && (
-                <div className="mt-4 space-y-3 text-sm text-foreground">
-                  <div className="grid md:grid-cols-2 gap-4">
+                <div className="mt-6 space-y-4 text-sm text-foreground">
+                  <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs uppercase tracking-wide text-foreground-muted mb-1">
                         Cantidad de turnos
@@ -506,7 +578,7 @@ export default function BookingWidget() {
             <Button
               type="submit"
               disabled={bookingSave.saving || !booking.selectedSlot || !booking.serviceId || !booking.instructorId}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-700 disabled:to-slate-700 disabled:opacity-50 text-white font-semibold py-4 text-base shadow-lg"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-700 disabled:to-slate-700 disabled:opacity-50 text-white font-semibold py-5 text-base md:text-lg shadow-lg mt-6"
             >
               {bookingSave.saving ? (
                 <>
@@ -524,7 +596,7 @@ export default function BookingWidget() {
 
           {/* Botón de pago completo - solo mostrar si el turno fue confirmado exitosamente */}
           {bookingSave.ok && selectedService && (selectedService.price_decimal || selectedService.price || selectedService.amount) && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-8 space-y-4">
               <div className="border-t border-border pt-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
@@ -642,16 +714,17 @@ export default function BookingWidget() {
         )}
 
         {/** Fin formulario de turnos */}
-      </>)}
+        </>)}
 
-      {classesEnabled && (
-        <Section title="Inscribir en clase" icon={Users}>
-          <ClassEnrollForm
-            defaultName={booking.customerName}
-            defaultPhone={booking.customerPhone}
-          />
-        </Section>
-      )}
+        {/* Contenido de Clases */}
+        {activeTab === "classes" && classesEnabled && (
+          <Section title="Inscribir en clase" icon={Users}>
+            <ClassEnrollForm
+              defaultName={booking.customerName}
+              defaultPhone={booking.customerPhone}
+            />
+          </Section>
+        )}
       </div>
 
       {/* Modal de confirmación de WhatsApp */}

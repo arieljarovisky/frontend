@@ -70,6 +70,164 @@ function useIsMobile(bp = 768) {
 }
 
 /* =========================
+   Vista de Slots de Tiempo (como Dashboard)
+========================= */
+function TimeSlotListView({ events, onEventClick, instructorColors, timeRange }) {
+  // Crear slots de 30 minutos basado en el rango configurado
+  const generateTimeSlots = () => {
+    const slots = [];
+    const minHour = parseInt(timeRange?.min?.split(':')[0] || 6);
+    const maxHour = parseInt(timeRange?.max?.split(':')[0] || 23);
+    
+    for (let hour = minHour; hour <= maxHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        // Si es la última hora, solo agregar hasta el minuto máximo configurado
+        if (hour === maxHour) {
+          const maxMinute = parseInt(timeRange?.max?.split(':')[1] || 0);
+          if (minute > maxMinute) break;
+        }
+        const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        slots.push({
+          time,
+          id: `slot-${time}`,
+          items: []
+        });
+      }
+    }
+    return slots;
+  };
+
+  const allSlots = useMemo(() => {
+    const slots = generateTimeSlots();
+    
+    // Asignar eventos a slots
+    events.forEach(event => {
+      const start = new Date(event.start);
+      const hour = start.getHours();
+      const minute = start.getMinutes();
+      
+      // Calcular el slot más cercano (redondeando a los 30 minutos más cercanos)
+      const totalMinutes = hour * 60 + minute;
+      const slotMinutes = Math.round(totalMinutes / 30) * 30;
+      const slotHour = Math.floor(slotMinutes / 60);
+      const slotMin = slotMinutes % 60;
+      
+      const slotTime = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
+      const slot = slots.find(s => s.time === slotTime);
+      
+      if (slot) {
+        slot.items.push(event);
+      }
+    });
+    
+    return slots;
+  }, [events, timeRange]);
+
+  return (
+    <div className="w-full space-y-0">
+      {allSlots.map((slot) => {
+        const hasAppointments = slot.items.length > 0;
+        const multipleAppointments = slot.items.length > 1;
+        
+        return (
+          <div
+            key={slot.id}
+            className="relative flex items-start gap-3 py-1.5 min-h-[60px] transition-all"
+          >
+            {/* Línea vertical del timeline */}
+            <div className="flex flex-col items-center flex-shrink-0 w-16 pointer-events-none">
+              <div className={`text-xs font-bold ${
+                hasAppointments ? 'text-foreground' : 'text-foreground-muted'
+              }`}>
+                {slot.time}
+              </div>
+              <div className={`w-0.5 flex-1 mt-0.5 ${
+                hasAppointments 
+                  ? 'bg-primary/40' 
+                  : 'bg-border/20'
+              }`} />
+            </div>
+            
+            {/* Contenido de los turnos */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              {hasAppointments ? (
+                <div className={`${multipleAppointments ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2' : ''}`}>
+                  {slot.items.map((item) => {
+                    const ep = item.extendedProps || {};
+                    const type = ep.eventType || "appointment";
+                    const status = ep.status;
+                    const instructorId = ep.instructor_id || ep.instructorId;
+                    const instructorColor = instructorColors[instructorId] || "#3b82f6";
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => onEventClick(item)}
+                        className="cursor-pointer rounded-lg border-2 p-3 transition-all hover:shadow-lg hover:scale-[1.02]"
+                        style={{
+                          borderColor: instructorColor,
+                          backgroundColor: `${instructorColor}15`
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-foreground truncate">
+                              {item.title}
+                            </div>
+                            {ep.customer_name && (
+                              <div className="text-xs text-foreground-muted mt-0.5">
+                                {ep.customer_name}
+                              </div>
+                            )}
+                          </div>
+                          {status === "confirmed" && (
+                            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0 mt-1" title="Confirmado" />
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {ep.instructor_name && (
+                            <span
+                              className="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-white"
+                              style={{ backgroundColor: instructorColor }}
+                            >
+                              {ep.instructor_name}
+                            </span>
+                          )}
+                          {type === "class_session" && ep.enrolled_count != null && ep.capacity_max != null && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-500/20 text-indigo-200 font-medium">
+                              👥 {ep.enrolled_count}/{ep.capacity_max}
+                            </span>
+                          )}
+                          {type !== "class_session" && status === "deposit_paid" && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-emerald-500/20 text-emerald-200 font-medium">
+                              💰 Seña
+                            </span>
+                          )}
+                          {status === "cancelled" && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-red-500/20 text-red-200 font-medium">
+                              ❌ Cancelado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-[10px] text-foreground-muted italic py-1">
+                  Libre
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* =========================
    Colores por estilista
 ========================= */
 const PALETTE = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#14b8a6", "#e11d48"];
@@ -285,81 +443,25 @@ export default function CalendarView() {
   const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
 
   // Calcular rango de horarios dinámicamente basado en los horarios de las sucursales
-  const [calendarTimeRange, setCalendarTimeRange] = useState({ min: "08:00:00", max: "19:00:00" });
+  const [calendarTimeRange, setCalendarTimeRange] = useState({ min: "06:00:00", max: "23:00:00" });
 
   useEffect(() => {
-    const calculateTimeRange = async () => {
+    // Cargar configuración personalizada de horarios del calendario
+    const loadCalendarTimeRange = async () => {
       try {
-        // Obtener horarios de los instructores relevantes
-        const relevantInstructors = instructorFilter 
-          ? instructors.filter(i => String(i.id) === String(instructorFilter))
-          : instructors;
-
-        if (relevantInstructors.length === 0) {
-          // Si no hay instructores, usar valores por defecto
-          setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
-          return;
-        }
-
-        // Obtener horarios de todos los instructores relevantes
-        const allWorkingHours = [];
-        for (const instructor of relevantInstructors) {
-          try {
-            const hours = await apiClient.getWorkingHours({ instructorId: instructor.id });
-            if (Array.isArray(hours) && hours.length > 0) {
-              allWorkingHours.push(...hours);
-            }
-          } catch (e) {
-            // Silenciar errores 403 (sin permisos) - es normal si el usuario no tiene acceso a horarios
-            if (e?.response?.status === 403) {
-              // No loguear errores 403, simplemente continuar con valores por defecto
-              continue;
-            }
-            // Solo loguear otros errores
-            logger.warn(`[CalendarView] No se pudieron cargar horarios para instructor ${instructor.id}:`, e);
-          }
-        }
-
-        if (allWorkingHours.length === 0) {
-          // Si no hay horarios, usar valores por defecto
-          setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
-          return;
-        }
-
-        // Calcular min y max de todos los horarios
-        let minHour = 24;
-        let maxHour = 0;
-
-        allWorkingHours.forEach(h => {
-          if (h.start_time && h.end_time) {
-            const startParts = h.start_time.split(':').map(Number);
-            const endParts = h.end_time.split(':').map(Number);
-            const startHour = startParts[0] + (startParts[1] || 0) / 60;
-            const endHour = endParts[0] + (endParts[1] || 0) / 60;
-
-            if (startHour < minHour) minHour = startHour;
-            if (endHour > maxHour) maxHour = endHour;
-          }
-        });
-
-        // Asegurar valores razonables (mínimo 6:00, máximo 23:00)
-        minHour = Math.max(6, Math.floor(minHour));
-        maxHour = Math.min(23, Math.ceil(maxHour));
-
-        // Agregar un margen de 1 hora antes y después
-        const minTime = `${String(Math.max(0, minHour - 1)).padStart(2, '0')}:00:00`;
-        const maxTime = `${String(Math.min(23, maxHour + 1)).padStart(2, '0')}:00:00`;
-
-        logger.log(`[CalendarView] Rango de horarios calculado: ${minTime} - ${maxTime} (basado en ${allWorkingHours.length} horarios)`);
+        const config = await apiClient.getConfigSection("calendar").catch(() => ({}));
+        const minTime = config.minTime || "06:00:00";
+        const maxTime = config.maxTime || "23:00:00";
         setCalendarTimeRange({ min: minTime, max: maxTime });
-      } catch (e) {
-        logger.error("[CalendarView] Error calculando rango de horarios:", e);
-        setCalendarTimeRange({ min: "08:00:00", max: "19:00:00" });
+      } catch (error) {
+        // Si hay error, usar valores por defecto
+        logger.warn("[CalendarView] Error cargando configuración de horarios, usando valores por defecto:", error);
+        setCalendarTimeRange({ min: "06:00:00", max: "23:00:00" });
       }
     };
-
-    calculateTimeRange();
-  }, [instructors, instructorFilter]);
+    
+    loadCalendarTimeRange();
+  }, []);
 
   const resources = useMemo(() => {
     const map = new Map();
@@ -592,7 +694,7 @@ export default function CalendarView() {
     // Para vista de lista, mostrar información completa
     if (isList) {
       return (
-        <div className="flex flex-col gap-1 p-2 w-full">
+        <div className="flex flex-col gap-0.5 p-1 w-full">
           <div className="text-sm font-semibold text-foreground">
             {arg.event.title}
           </div>
@@ -796,7 +898,7 @@ export default function CalendarView() {
   }, [isPageBeingTranslated]);
 
   return (
-    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative min-h-screen`}>
+    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative w-full`}>
       <div className="relative z-10 w-full">
         <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-4 sm:p-6 transition-all duration-500 shadow-2xl w-full max-w-full">
           {/* Header mejorado */}
@@ -960,7 +1062,7 @@ export default function CalendarView() {
               </div>
             )}
 
-            <div className="w-full min-w-0 rounded-xl bg-background-secondary">
+            <div className="w-full min-w-0 rounded-xl bg-background-secondary relative" style={{ minHeight: currentView === "listWeek" || currentView === "listDay" ? '800px' : 'auto' }}>
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
@@ -987,13 +1089,25 @@ export default function CalendarView() {
                   minute: "2-digit",
                   hour12: false
                 }}
-                expandRows={false}
+                expandRows={true}
                 stickyHeaderDates
                 nowIndicator={!isMobile}
                 navLinks={!isMobile}
                 height="auto"
-                contentHeight={isMobile ? 400 : 550}
-                aspectRatio={isMobile ? 0.95 : 2.0}
+                contentHeight={
+                  isMobile 
+                    ? 600 
+                    : currentView === "dayGridMonth" 
+                      ? "auto" 
+                      : currentView === "listWeek" || currentView === "listDay"
+                        ? 0
+                        : currentView === "resourceTimeGridDay" || currentView === "timeGridDay"
+                          ? 800
+                          : currentView === "timeGridWeek"
+                            ? 750
+                            : 700
+                }
+                aspectRatio={isMobile ? 0.95 : currentView === "dayGridMonth" ? 1.35 : undefined}
                 datesSet={handleDatesSet}
                 viewDidMount={(arg) => {
                   // Ajustar recursos cuando cambia la vista
@@ -1077,10 +1191,27 @@ export default function CalendarView() {
                   },
                   listWeek: {
                     listDayFormat: { weekday: 'long', month: 'long', day: 'numeric' },
-                    listDaySideFormat: false
+                    listDaySideFormat: false,
+                    height: 'auto',
+                    contentHeight: 0
                   }
                 }}
               />
+              {(currentView === "listWeek" || currentView === "listDay") && (
+                <div className="absolute top-[60px] left-0 right-0 bottom-0 overflow-hidden z-10 bg-background-secondary rounded-xl" style={{ height: '740px' }}>
+                  <div className="h-full overflow-y-auto px-2 pb-4">
+                    <TimeSlotListView 
+                      events={fullEvents}
+                      onEventClick={(event) => {
+                        setSelectedEvent(event);
+                        setModalOpen(true);
+                      }}
+                      instructorColors={instructorColors}
+                      timeRange={calendarTimeRange}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
