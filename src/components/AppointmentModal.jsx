@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { logger } from "../utils/logger.js";
 import {
   X,
+  XCircle,
   Save,
   Trash2,
   MessageSquare,
