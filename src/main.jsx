@@ -5,7 +5,6 @@ import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import "./index.css";
 import { logger } from "./utils/logger.js";
 import "./styles/arja-theme.css";
-import "./i18n/config.js"; // Inicializar i18n
 
 // Layout y páginas
 import LandingPage from "./routes/LandingPage.jsx";

@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "../components/ThemeToggle";
-import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
 import ChatWidget from "../components/ChatWidget";
 
@@ -253,7 +252,6 @@ export default function LandingPage() {
               Documentación
             </a>
             <div className="landing-nav__auth">
-              <LanguageSelector />
               <ThemeToggle />
               <button
                 onClick={() => navigate("/login")}
@@ -317,8 +315,7 @@ export default function LandingPage() {
             >
               Documentación
             </a>
-            <div className="landing-nav__mobile-theme flex items-center gap-2">
-              <LanguageSelector />
+            <div className="landing-nav__mobile-theme">
               <ThemeToggle />
             </div>
             <button

@@ -5,7 +5,6 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "reac
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
-import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
 import BranchSelector from "../components/BranchSelector";
 import TrialWarning from "../components/TrialWarning";
@@ -393,11 +392,6 @@ export default function AppLayout() {
           <div className="arja-sidebar__theme">
             <span>Tema</span>
             <ThemeToggle />
-          </div>
-          {/* Language Selector */}
-          <div className="arja-sidebar__theme">
-            <span>Idioma</span>
-            <LanguageSelector />
           </div>
 
           {user?.isSuperAdmin && (

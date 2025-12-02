@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
-import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
 import { logger } from "../utils/logger.js";
 
@@ -323,10 +322,7 @@ export default function LoginPage() {
               <h2 className="text-2xl font-semibold text-foreground">
                 Seleccioná tu negocio
               </h2>
-              <div className="flex items-center gap-2">
-                <LanguageSelector />
-                <ThemeToggle />
-              </div>
+              <ThemeToggle />
             </div>
 
             <div className="space-y-3">
@@ -378,8 +374,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
-        <LanguageSelector />
+      <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
