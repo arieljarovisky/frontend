@@ -12,6 +12,13 @@ import {
   Trash2,
   MessageCircle,
   PencilLine,
+  Search,
+  Calendar,
+  Clock,
+  Filter,
+  X,
+  ChevronDown,
+  Inbox,
 } from "lucide-react";
 import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery";
@@ -124,6 +131,80 @@ const currency = (value) =>
     Number(value || 0)
   );
 
+// Componente helper para badges de estado mejorados
+const StatusBadge = ({ status, className = "" }) => {
+  const statusConfig = {
+    scheduled: {
+      label: "Programada",
+      icon: Clock,
+      bg: "bg-blue-500/15",
+      border: "border-blue-500/30",
+      text: "text-blue-200",
+      iconColor: "text-blue-400",
+    },
+    completed: {
+      label: "Completada",
+      icon: CheckCircle2,
+      bg: "bg-green-500/15",
+      border: "border-green-500/30",
+      text: "text-green-200",
+      iconColor: "text-green-400",
+    },
+    cancelled: {
+      label: "Cancelada",
+      icon: XCircle,
+      bg: "bg-red-500/15",
+      border: "border-red-500/30",
+      text: "text-red-200",
+      iconColor: "text-red-400",
+    },
+    reserved: {
+      label: "Reservado",
+      icon: Users,
+      bg: "bg-indigo-500/15",
+      border: "border-indigo-500/30",
+      text: "text-indigo-200",
+      iconColor: "text-indigo-400",
+    },
+    attended: {
+      label: "Asistió",
+      icon: CheckCircle2,
+      bg: "bg-emerald-500/15",
+      border: "border-emerald-500/30",
+      text: "text-emerald-200",
+      iconColor: "text-emerald-400",
+    },
+    noshow: {
+      label: "No asistió",
+      icon: AlertCircle,
+      bg: "bg-amber-500/15",
+      border: "border-amber-500/30",
+      text: "text-amber-200",
+      iconColor: "text-amber-400",
+    },
+  };
+
+  const config = statusConfig[status] || {
+    label: status || "Desconocido",
+    icon: AlertCircle,
+    bg: "bg-gray-500/15",
+    border: "border-gray-500/30",
+    text: "text-gray-200",
+    iconColor: "text-gray-400",
+  };
+
+  const Icon = config.icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.border} ${config.text} ${className}`}
+    >
+      <Icon className={`w-3.5 h-3.5 ${config.iconColor}`} />
+      {config.label}
+    </span>
+  );
+};
+
 const findInstructorOverlap = (sessions) => {
   if (!Array.isArray(sessions) || !sessions.length) return null;
 
@@ -221,6 +302,8 @@ export default function ClassesPage() {
     instructorId: "",
     activityType: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -1134,8 +1217,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
   const groupedSessions = useMemo(() => {
     if (!groupBySeries) return [];
     const seriesMap = new Map();
+    const sourceSessions = searchQuery ? filteredSessions : sessions;
 
-    sessions.forEach((session) => {
+    sourceSessions.forEach((session) => {
       const key = session.series_id || "__sin-serie__";
       const entry = seriesMap.get(key);
       if (entry) {
@@ -1177,13 +1261,13 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
     result.sort((a, b) => a.firstStartsAt - b.firstStartsAt);
     return result;
-  }, [groupBySeries, sessions]);
+  }, [groupBySeries, sessions, searchQuery, filteredSessions]);
 
   const paginatedSessions = useMemo(() => {
-    const source = sessions;
+    const source = searchQuery ? filteredSessions : sessions;
     const start = (page - 1) * pageSize;
-    return groupBySeries ? sessions : source.slice(start, start + pageSize);
-  }, [sessions, page, pageSize, groupBySeries]);
+    return groupBySeries ? source : source.slice(start, start + pageSize);
+  }, [sessions, filteredSessions, searchQuery, page, pageSize, groupBySeries]);
 
   const paginatedSeries = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -1191,12 +1275,13 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
   }, [groupedSessions, page, pageSize, groupBySeries]);
 
   const paginationInfo = useMemo(() => {
-    const total = groupBySeries ? groupedSessions.length : sessions.length;
+    const sourceSessions = searchQuery ? filteredSessions : sessions;
+    const total = groupBySeries ? groupedSessions.length : sourceSessions.length;
     const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const end = Math.min(page * pageSize, total);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     return { start, end, total, totalPages };
-  }, [groupBySeries, groupedSessions.length, sessions.length, page, pageSize]);
+  }, [groupBySeries, groupedSessions.length, sessions.length, filteredSessions.length, searchQuery, page, pageSize]);
 
   const handleRepeatToggle = (enabled) => {
     setRepeatOptions((prev) => ({
@@ -1260,6 +1345,92 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     );
   }
 
+  // Funciones helper para estadísticas y presets de filtros
+  const getTodayStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const todaySessions = sessions.filter((s) => {
+      const sessionDate = new Date(s.starts_at);
+      sessionDate.setHours(0, 0, 0, 0);
+      return sessionDate.getTime() === today.getTime();
+    });
+    
+    return {
+      total: todaySessions.length,
+      scheduled: todaySessions.filter((s) => s.status === "scheduled").length,
+      completed: todaySessions.filter((s) => s.status === "completed").length,
+      cancelled: todaySessions.filter((s) => s.status === "cancelled").length,
+    };
+  }, [sessions]);
+
+  const applyFilterPreset = useCallback((preset) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let from, to;
+    
+    switch (preset) {
+      case "today":
+        from = toDateInputValue(today);
+        to = toDateInputValue(today);
+        break;
+      case "tomorrow":
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        from = toDateInputValue(tomorrow);
+        to = toDateInputValue(tomorrow);
+        break;
+      case "thisWeek":
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1); // Lunes
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // Domingo
+        from = toDateInputValue(weekStart);
+        to = toDateInputValue(weekEnd);
+        break;
+      case "nextWeek":
+        const nextWeekStart = new Date(today);
+        nextWeekStart.setDate(today.getDate() - today.getDay() + 8); // Próximo lunes
+        const nextWeekEnd = new Date(nextWeekStart);
+        nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+        from = toDateInputValue(nextWeekStart);
+        to = toDateInputValue(nextWeekEnd);
+        break;
+      case "thisMonth":
+        from = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        to = toDateInputValue(lastDay);
+        break;
+      case "next7Days":
+        from = toDateInputValue(today);
+        const in7Days = new Date(today);
+        in7Days.setDate(today.getDate() + 7);
+        to = toDateInputValue(in7Days);
+        break;
+      default:
+        return;
+    }
+    
+    setFilters((prev) => ({ ...prev, from, to }));
+  }, []);
+
+  // Filtrar sesiones por búsqueda
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const query = searchQuery.toLowerCase().trim();
+    return sessions.filter((session) => {
+      const activity = (session.activity_type || "").toLowerCase();
+      const instructor = (session.instructor_name || "").toLowerCase();
+      const seriesId = (session.series_id || "").toLowerCase();
+      return activity.includes(query) || instructor.includes(query) || seriesId.includes(query);
+    });
+  }, [sessions, searchQuery]);
+
+  // Usar sesiones filtradas en lugar de sesiones originales
+  const displaySessions = searchQuery ? filteredSessions : sessions;
+
   if (!classesEnabled) {
     return (
       <div className="max-w-3xl mx-auto py-16 text-center space-y-4">
@@ -1275,38 +1446,125 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Clases grupales</h1>
-          <p className="text-foreground-secondary">
-            Programá sesiones, gestioná plantillas y controlá inscripciones en un solo lugar.
-          </p>
+      {/* Header mejorado con contadores y búsqueda */}
+      <div className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-foreground">Clases grupales</h1>
+            <p className="text-foreground-secondary">
+              Programá sesiones, gestioná plantillas y controlá inscripciones en un solo lugar.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => fetchSessions()}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary-500 hover:text-primary-300 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refrescar
+            </button>
+            <button
+              onClick={() => setTemplateFormOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary-500/10 text-secondary-200 border border-secondary-500/40 hover:bg-secondary-500/20 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Nueva plantilla
+            </button>
+            <button
+              onClick={() => {
+                setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
+                setSessionFormOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Programar clase
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => fetchSessions()}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary-500 hover:text-primary-300 transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refrescar
-          </button>
-          <button
-            onClick={() => setTemplateFormOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary-500/10 text-secondary-200 border border-secondary-500/40 hover:bg-secondary-500/20 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva plantilla
-          </button>
-          <button
-            onClick={() => {
-              setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
-              setSessionFormOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Programar clase
-          </button>
+
+        {/* Contadores del día */}
+        {getTodayStats.total > 0 && (
+          <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-background-secondary/40 border border-border/60">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary-400" />
+              <span className="text-sm font-semibold text-foreground">Hoy:</span>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-500/15 border border-primary-500/30">
+              <span className="text-xs text-primary-200">Total</span>
+              <span className="text-sm font-bold text-primary-100">{getTodayStats.total}</span>
+            </div>
+            {getTodayStats.scheduled > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30">
+                <span className="text-xs text-blue-200">Programadas</span>
+                <span className="text-sm font-bold text-blue-100">{getTodayStats.scheduled}</span>
+              </div>
+            )}
+            {getTodayStats.completed > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/15 border border-green-500/30">
+                <span className="text-xs text-green-200">Completadas</span>
+                <span className="text-sm font-bold text-green-100">{getTodayStats.completed}</span>
+              </div>
+            )}
+            {getTodayStats.cancelled > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/15 border border-red-500/30">
+                <span className="text-xs text-red-200">Canceladas</span>
+                <span className="text-sm font-bold text-red-100">{getTodayStats.cancelled}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Búsqueda global */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por actividad, profesor o serie..."
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background-secondary/40 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded hover:bg-background-secondary transition"
+            >
+              <X className="w-4 h-4 text-foreground-muted" />
+            </button>
+          )}
+        </div>
+
+        {/* Presets de filtros rápidos */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-wide text-foreground-secondary">Filtros rápidos:</span>
+          {[
+            { key: "today", label: "Hoy" },
+            { key: "tomorrow", label: "Mañana" },
+            { key: "thisWeek", label: "Esta semana" },
+            { key: "nextWeek", label: "Próxima semana" },
+            { key: "thisMonth", label: "Este mes" },
+            { key: "next7Days", label: "Próximos 7 días" },
+          ].map((preset) => {
+            const isActive = 
+              preset.key === "today" && filters.from === toDateInputValue(new Date()) && filters.to === toDateInputValue(new Date()) ||
+              preset.key === "tomorrow" && filters.from === toDateInputValue(new Date(new Date().setDate(new Date().getDate() + 1))) ||
+              preset.key === "thisWeek" || preset.key === "nextWeek" || preset.key === "thisMonth" || preset.key === "next7Days";
+            
+            return (
+              <button
+                key={preset.key}
+                onClick={() => applyFilterPreset(preset.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                  isActive
+                    ? "bg-primary-500 text-white border border-primary-400"
+                    : "bg-background-secondary/40 text-foreground-secondary border border-border hover:border-primary-500/50 hover:text-primary-300"
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1402,7 +1660,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 ? paginationInfo.total === 0
                   ? "Sin series"
                   : `Mostrando ${paginationInfo.start}-${paginationInfo.end} de ${paginationInfo.total} series`
-                : sessions.length === 0
+                : displaySessions.length === 0
                   ? "Sin clases"
                   : `Mostrando ${paginationInfo.start}-${paginationInfo.end} de ${paginationInfo.total} clases`}
             </div>
@@ -1411,15 +1669,60 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
         <div className="overflow-x-auto border p-3 border-border rounded-xl">
           {sessionsLoading ? (
-            <div className="py-12 flex items-center justify-center gap-2 text-foreground-secondary">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Cargando clases…
+            <div className="py-16 flex flex-col items-center justify-center gap-3 text-foreground-secondary">
+              <RefreshCw className="w-6 h-6 animate-spin text-primary-400" />
+              <p className="text-sm">Cargando clases…</p>
             </div>
           ) : sessionsError ? (
-            <div className="py-12 text-center text-red-400">{sessionsError}</div>
-          ) : sessions.length === 0 ? (
-            <div className="py-12 text-center text-foreground-secondary">
-              No se encontraron clases en este rango de fechas.
+            <div className="py-16 flex flex-col items-center justify-center gap-3 text-center">
+              <AlertCircle className="w-12 h-12 text-red-400" />
+              <div>
+                <p className="text-red-400 font-semibold mb-1">Error al cargar clases</p>
+                <p className="text-sm text-foreground-secondary">{sessionsError}</p>
+              </div>
+              <button
+                onClick={() => fetchSessions()}
+                className="mt-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition text-sm"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : displaySessions.length === 0 ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-4 text-center">
+              <div className="p-4 rounded-full bg-background-secondary/40 border border-border/60">
+                <Inbox className="w-12 h-12 text-foreground-muted" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchQuery ? "No se encontraron resultados" : "No hay clases programadas"}
+                </h3>
+                <p className="text-sm text-foreground-secondary mb-4 max-w-md">
+                  {searchQuery
+                    ? `No se encontraron clases que coincidan con "${searchQuery}". Intentá con otros términos de búsqueda.`
+                    : "No se encontraron clases en este rango de fechas. Programá tu primera clase para comenzar."}
+                </p>
+                {!searchQuery && (
+                  <button
+                    onClick={() => {
+                      setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
+                      setSessionFormOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Programar primera clase
+                  </button>
+                )}
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:border-primary-500 hover:text-primary-300 transition"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpiar búsqueda
+                  </button>
+                )}
+              </div>
             </div>
           ) : groupBySeries ? (
             <>
@@ -1446,17 +1749,38 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                     times: Array.from(times),
                   }));
                 })();
+                // Calcular estadísticas de la serie
+                const seriesStats = {
+                  scheduled: group.sessions.filter((s) => s.status === "scheduled").length,
+                  completed: group.sessions.filter((s) => s.status === "completed").length,
+                  cancelled: group.sessions.filter((s) => s.status === "cancelled").length,
+                };
+                const nextUpcomingSession = group.sessions.find((s) => new Date(s.starts_at) >= new Date());
+                const isUpcoming = nextUpcomingSession && new Date(nextUpcomingSession.starts_at).getTime() - Date.now() < 2 * 60 * 60 * 1000; // Próximas 2 horas
+
                 return (
                   <article
                     key={group.key}
                     onClick={() => setSeriesModal(group)}
-                    className="rounded-2xl border border-border bg-background-secondary/40 shadow-lg shadow-black/40 hover:shadow-primary-500/20 transition cursor-pointer flex flex-col p-5 space-y-4"
+                    className={`rounded-2xl border bg-background-secondary/40 shadow-lg transition cursor-pointer flex flex-col p-5 space-y-4 ${
+                      isUpcoming
+                        ? "border-amber-500/50 shadow-amber-500/20 hover:shadow-amber-500/30"
+                        : "border-border shadow-black/40 hover:shadow-primary-500/20"
+                    }`}
                   >
-                    <header className="space-y-2">
+                    <header className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs uppercase tracking-wide text-primary-200/70 font-semibold">
-                          {group.key === "__sin-serie__" ? "Sin serie" : "Serie recurrente"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs uppercase tracking-wide text-primary-200/70 font-semibold">
+                            {group.key === "__sin-serie__" ? "Sin serie" : "Serie recurrente"}
+                          </span>
+                          {isUpcoming && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-medium text-amber-200">
+                              <Clock className="w-3 h-3" />
+                              Próxima
+                            </span>
+                          )}
+                        </div>
                         {group.hash && (
                           <span className="inline-flex items-center gap-1 rounded-full border border-primary-500/40 bg-primary-500/15 px-2 py-0.5 text-[10px] tracking-wider text-primary-100">
                             {group.hash}
@@ -1464,57 +1788,81 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                         )}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground">
+                        <h3 className="text-lg font-semibold text-foreground mb-1">
                           {groupActivityLabel({ key: group.key, activity: group.activity })}
                         </h3>
-                        <p className="text-xs text-foreground-secondary">
-                          Profesor principal:{" "}
-                          <span className="text-foreground font-medium">{group.instructor}</span>
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-xs text-foreground-secondary">
+                            <Users className="w-3 h-3 inline mr-1" />
+                            {group.instructor}
+                          </p>
+                          {seriesStats.scheduled > 0 && (
+                            <StatusBadge status="scheduled" className="text-[10px] px-1.5 py-0.5" />
+                          )}
+                        </div>
                       </div>
                     </header>
-                    <div className="grid grid-cols-2 gap-3 text-xs text-foreground-secondary">
-                      <div>
-                        <span className="text-foreground-muted uppercase block">Primera clase</span>
-                        <span className="text-foreground font-medium">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="bg-background/40 p-2 rounded-lg">
+                        <span className="text-foreground-muted uppercase block text-[10px] mb-1">Primera clase</span>
+                        <span className="text-foreground font-semibold text-sm">
                           {formatDateTime(group.sessions[0]?.starts_at)}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-foreground-muted uppercase block">Última clase</span>
-                        <span className="text-foreground font-medium">
+                      <div className="bg-background/40 p-2 rounded-lg">
+                        <span className="text-foreground-muted uppercase block text-[10px] mb-1">Última clase</span>
+                        <span className="text-foreground font-semibold text-sm">
                           {formatDateTime(group.sessions[group.sessions.length - 1]?.starts_at)}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-foreground-muted uppercase block">Total</span>
-                        <span className="text-foreground font-medium">{group.sessions.length} clases</span>
+                      <div className="bg-background/40 p-2 rounded-lg">
+                        <span className="text-foreground-muted uppercase block text-[10px] mb-1">Total</span>
+                        <span className="text-foreground font-semibold text-sm">{group.sessions.length} clases</span>
                       </div>
-                      <div>
-                        <span className="text-foreground-muted uppercase block">Próxima</span>
-                        <span className="text-foreground font-medium">
+                      <div className="bg-background/40 p-2 rounded-lg">
+                        <span className="text-foreground-muted uppercase block text-[10px] mb-1">Próxima</span>
+                        <span className="text-foreground font-semibold text-sm">
                           {nextClass ? formatDateTime(nextClass.starts_at) : "Sin fecha"}
                         </span>
                       </div>
-                      <div className="col-span-2 space-y-1">
-                        <span className="text-foreground-muted uppercase block">Días y horarios</span>
-                        {daySchedules.length ? (
-                          <ul className="space-y-1">
-                            {daySchedules.map(({ day, times }) => (
-                              <li key={`schedule-${group.key}-${day}`} className="flex items-start gap-2 text-foreground">
-                                <span className="font-semibold min-w-[80px]">{day}</span>
-                                <span className="text-foreground-secondary">{times.join(", ")}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-foreground-secondary">—</span>
-                        )}
+                      <div className="col-span-2 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {seriesStats.scheduled > 0 && (
+                            <span className="text-[10px] text-blue-200">
+                              {seriesStats.scheduled} programadas
+                            </span>
+                          )}
+                          {seriesStats.completed > 0 && (
+                            <span className="text-[10px] text-green-200">
+                              {seriesStats.completed} completadas
+                            </span>
+                          )}
+                          {seriesStats.cancelled > 0 && (
+                            <span className="text-[10px] text-red-200">
+                              {seriesStats.cancelled} canceladas
+                            </span>
+                          )}
+                        </div>
+                        <div className="pt-2 border-t border-border/40">
+                          <span className="text-foreground-muted uppercase block text-[10px] mb-1">Días y horarios</span>
+                          {daySchedules.length ? (
+                            <ul className="space-y-1">
+                              {daySchedules.map(({ day, times }) => (
+                                <li key={`schedule-${group.key}-${day}`} className="flex items-start gap-2 text-foreground text-xs">
+                                  <span className="font-semibold min-w-[80px]">{day}</span>
+                                  <span className="text-foreground-secondary">{times.join(", ")}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="text-foreground-secondary text-xs">—</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <footer className="flex items-center justify-between pt-2 border-t border-border/60 text-xs text-primary-200">
-                      <span>Click para ver detalle</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-primary-500/50 bg-primary-500/15 text-[11px]">
+                    <footer className="flex items-center justify-between pt-3 border-t border-border/60">
+                      <span className="text-xs text-foreground-muted">Click para ver detalle</span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-primary-500/50 bg-primary-500/15 text-[11px] font-medium text-primary-200 hover:bg-primary-500/25 transition">
                         Ver detalle →
                       </span>
                     </footer>
@@ -1602,17 +1950,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                       </td>
                       <td className="py-3 px-4 text-foreground-secondary">{currency(session.price_decimal)}</td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-                            session.status === "scheduled"
-                              ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
-                              : session.status === "completed"
-                                ? "bg-primary/10 text-primary border border-primary/20"
-                                : "bg-red-500/10 text-red-300 border border-red-500/40"
-                          }`}
-                        >
-                          {session.status}
-                        </span>
+                        <StatusBadge status={session.status} />
                       </td>
                     </tr>
                   );
