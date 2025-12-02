@@ -3,6 +3,8 @@ import React from "react";
 import { useQuery } from "../shared/useQuery.js";
 import { apiClient } from "../api";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { logger } from "../utils/logger.js";
 import {
   TrendingUp,
   Users,
@@ -28,6 +30,28 @@ import {
   Filler
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+
+// Drag and Drop
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  useDroppable
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import {
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Registrar componentes de Chart.js
 ChartJS.register(
@@ -94,6 +118,71 @@ const STATUS_CONFIG = {
   completed: { label: "Completado", color: "bg-primary-600/20 text-primary-400 border-primary-600/30" },
   cancelled: { label: "Cancelado", color: "bg-background-secondary text-foreground-secondary border-border" },
 };
+
+// Componente de turno arrastrable
+function SortableAppointmentItem({ item }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.scheduled;
+  const time = new Date(item.starts_at).toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="p-2 rounded-lg border border-border bg-background-secondary hover:bg-border cursor-move transition-colors mb-2"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-foreground truncate">{item.customer_name}</div>
+          <div className="text-xs text-foreground-secondary truncate">{item.service_name}</div>
+        </div>
+        <div className="ml-2 flex flex-col items-end">
+          <span className="text-xs font-medium text-foreground">{time}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${config.color} mt-1`}>
+            {config.label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente de slot droppable
+function DroppableSlot({ slot, children }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: slot.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`border border-border rounded-lg p-3 bg-background-secondary min-h-[80px] transition-colors ${
+        isOver ? 'bg-primary/10 border-primary/50' : ''
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
 
 const asArray = (v) => Array.isArray(v) ? v : Array.isArray(v?.data) ? v.data : [];
 
@@ -200,6 +289,125 @@ export default function DashboardPage() {
   const { data: agenda, loading: loadingAgenda } =
     useQuery(() => apiClient.getAgendaToday(), []);
   const agendaArr = asArray(agenda);
+  
+  // Drag and Drop para agenda
+  const [activeId, setActiveId] = React.useState(null);
+  const [agendaItems, setAgendaItems] = React.useState([]);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  React.useEffect(() => {
+    setAgendaItems(agendaArr);
+  }, [agendaArr]);
+
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const draggedItem = agendaItems.find(item => item.id === active.id);
+    if (!draggedItem) return;
+
+    // Si se soltó sobre otro turno, intercambiar posiciones
+    if (over.id !== active.id && agendaItems.find(item => item.id === over.id)) {
+      const oldIndex = agendaItems.findIndex(item => item.id === active.id);
+      const newIndex = agendaItems.findIndex(item => item.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newItems = arrayMove(agendaItems, oldIndex, newIndex);
+        setAgendaItems(newItems);
+        
+        // Intercambiar horas
+        const targetItem = agendaItems[newIndex];
+        const oldDate = new Date(draggedItem.starts_at);
+        const newDate = new Date(targetItem.starts_at);
+        
+        try {
+          await Promise.all([
+            apiClient.updateAppointment(draggedItem.id, {
+              startsAt: newDate.toISOString()
+            }),
+            apiClient.updateAppointment(targetItem.id, {
+              startsAt: oldDate.toISOString()
+            })
+          ]);
+          
+          toast.success("Turnos actualizados correctamente");
+        } catch (error) {
+          toast.error("Error al actualizar los turnos");
+          logger.error(error);
+          // Revertir cambios locales
+          setAgendaItems(agendaArr);
+        }
+      }
+      return;
+    }
+
+    // Si se soltó sobre un slot de hora (formato "slot-XX:XX")
+    if (String(over.id).startsWith('slot-')) {
+      const slotTime = String(over.id).replace('slot-', '');
+      const [hours, minutes] = slotTime.split(':');
+      
+      try {
+        const oldDate = new Date(draggedItem.starts_at);
+        const newDate = new Date(oldDate);
+        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        await apiClient.updateAppointment(draggedItem.id, {
+          startsAt: newDate.toISOString()
+        });
+        
+        // Actualizar localmente
+        const updatedItems = agendaItems.map(item => 
+          item.id === draggedItem.id 
+            ? { ...item, starts_at: newDate.toISOString() }
+            : item
+        );
+        setAgendaItems(updatedItems);
+        
+        toast.success("Turno actualizado correctamente");
+      } catch (error) {
+        toast.error("Error al actualizar el turno");
+        logger.error(error);
+      }
+    }
+  };
+
+  // Organizar turnos por slots de hora
+  const organizeByTimeSlots = () => {
+    const slots = Array.from({ length: 24 }, (_, i) => {
+      const hour = Math.floor(i / 2) + 8;
+      const minute = (i % 2) * 30;
+      const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      return { 
+        time, 
+        id: `slot-${time}`,
+        items: [] 
+      };
+    });
+
+    agendaItems.forEach(item => {
+      const date = new Date(item.starts_at);
+      const hour = date.getHours();
+      const minute = date.getMinutes();
+      const slotIndex = (hour - 8) * 2 + Math.floor(minute / 30);
+      
+      if (slotIndex >= 0 && slotIndex < 24) {
+        slots[slotIndex].items.push(item);
+      }
+    });
+
+    return slots;
+  };
 
   const todayTotal = dashboard?.today?.total ?? 0;
   const todayConfirmed = dashboard?.today?.confirmed ?? 0;
@@ -480,7 +688,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Today's Agenda */}
+      {/* Today's Agenda - Calendario */}
       <Section
         title="Agenda de Hoy"
         action={
@@ -489,56 +697,74 @@ export default function DashboardPage() {
           </span>
         }
       >
-        <div className="overflow-x-auto">
-          {loadingAgenda ? (
-            <div className="py-12 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-            </div>
-          ) : agendaArr.length === 0 ? (
-            <div className="py-12 text-center">
-              <Clock className="w-12 h-12 mx-auto mb-3 text-foreground-muted" />
-              <p className="text-foreground-secondary">No hay turnos programados para hoy</p>
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Hora</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Cliente</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Servicio</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Instructor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agendaArr.map((a) => {
-                  const config = STATUS_CONFIG[a.status] || STATUS_CONFIG.scheduled;
+        {loadingAgenda ? (
+          <div className="py-12 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+          </div>
+        ) : agendaArr.length === 0 ? (
+          <div className="py-12 text-center">
+            <Clock className="w-12 h-12 mx-auto mb-3 text-foreground-muted" />
+            <p className="text-foreground-secondary">No hay turnos programados para hoy</p>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={agendaItems.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto">
+                {organizeByTimeSlots().map((slot, slotIndex) => {
+                  const hasAppointments = slot.items.length > 0;
                   return (
-                    <tr
-                      key={a.id}
-                      className="border-b border-border hover:bg-background-secondary transition-colors"
-                      >
-                      <td className="py-3 px-4 text-sm font-medium text-foreground">
-                        {new Date(a.starts_at).toLocaleTimeString("es-AR", {
-                          hour: "2-digit",
-                          minute: "2-digit"
-                        })}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-foreground">{a.customer_name}</td>
-                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.service_name}</td>
-                      <td className="py-3 px-4 text-sm text-foreground-secondary">{a.instructor_name}</td>
-                      <td className="py-3 px-4">
-                        <span className={`badge ${config.color}`}>
-                          {config.label}
-                        </span>
-                      </td>
-                    </tr>
+                    <DroppableSlot key={slot.time} slot={slot}>
+                      <div className="text-xs font-semibold text-foreground-secondary mb-2 flex items-center gap-2">
+                        <Clock className="w-3 h-3" />
+                        {slot.time}
+                      </div>
+                      <div className="space-y-1">
+                        {slot.items.map((item) => (
+                          <SortableAppointmentItem key={item.id} item={item} />
+                        ))}
+                        {!hasAppointments && (
+                          <div className="text-xs text-foreground-muted italic py-2">
+                            Libre
+                          </div>
+                        )}
+                      </div>
+                    </DroppableSlot>
                   );
                 })}
-              </tbody>
-            </table>
-          )}
-        </div>
+              </div>
+            </SortableContext>
+            <DragOverlay>
+              {activeId ? (
+                <div className="p-2 rounded-lg border border-primary bg-background-secondary shadow-lg">
+                  {(() => {
+                    const item = agendaItems.find(i => i.id === activeId);
+                    if (!item) return null;
+                    const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.scheduled;
+                    const time = new Date(item.starts_at).toLocaleTimeString("es-AR", {
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    });
+                    return (
+                      <>
+                        <div className="text-xs font-medium text-foreground">{item.customer_name}</div>
+                        <div className="text-xs text-foreground-secondary">{item.service_name}</div>
+                        <div className="text-xs text-foreground-muted mt-1">{time}</div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </Section>
     </div>
   );
