@@ -13,7 +13,9 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Plus
+  Plus,
+  MessageSquare,
+  X
 } from "lucide-react";
 
 // Chart.js
@@ -119,7 +121,7 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", color: "bg-background-secondary text-foreground-secondary border-border" },
 };
 
-// Componente de turno arrastrable
+// Componente de turno arrastrable mejorado
 function SortableAppointmentItem({ item }) {
   const {
     attributes,
@@ -133,7 +135,8 @@ function SortableAppointmentItem({ item }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 50 : 1,
   };
 
   const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.scheduled;
@@ -145,38 +148,76 @@ function SortableAppointmentItem({ item }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="p-2 rounded-lg border border-border bg-background-secondary hover:bg-border cursor-move transition-colors mb-2"
+      className={`group relative p-3 rounded-lg border bg-background hover:bg-background-secondary cursor-grab active:cursor-grabbing transition-all mb-2 ${
+        isDragging 
+          ? 'shadow-lg border-primary scale-105' 
+          : 'border-border hover:border-primary/50 hover:shadow-md'
+      }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-foreground truncate">{item.customer_name}</div>
-          <div className="text-xs text-foreground-secondary truncate">{item.service_name}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="text-sm font-semibold text-foreground truncate">
+              {item.customer_name || 'Sin nombre'}
+            </div>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${config.color} flex-shrink-0`}>
+              {config.label}
+            </span>
+          </div>
+          <div className="text-xs text-foreground-secondary truncate mb-1">
+            {item.service_name}
+          </div>
+          {item.instructor_name && (
+            <div className="text-xs text-foreground-muted">
+              👤 {item.instructor_name}
+            </div>
+          )}
         </div>
-        <div className="ml-2 flex flex-col items-end">
-          <span className="text-xs font-medium text-foreground">{time}</span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${config.color} mt-1`}>
-            {config.label}
-          </span>
+        <div className="flex-shrink-0 text-right">
+          <div className="text-xs font-medium text-primary">{time}</div>
         </div>
+      </div>
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="w-1.5 h-1.5 rounded-full bg-foreground-muted" />
       </div>
     </div>
   );
 }
 
-// Componente de slot droppable
+// Componente de slot droppable mejorado
 function DroppableSlot({ slot, children }) {
   const { setNodeRef, isOver } = useDroppable({
     id: slot.id,
   });
 
+  const hasAppointments = slot.items.length > 0;
+
   return (
     <div
       ref={setNodeRef}
-      className={`border border-border rounded-lg p-3 bg-background-secondary min-h-[80px] transition-colors ${
-        isOver ? 'bg-primary/10 border-primary/50' : ''
+      className={`relative border-l-2 pl-4 py-2 min-h-[60px] transition-all ${
+        isOver 
+          ? 'bg-primary/10 border-primary border-l-4 pl-3' 
+          : hasAppointments 
+            ? 'border-primary/30' 
+            : 'border-border/30'
       }`}
     >
-      {children}
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-16">
+          <div className={`text-xs font-semibold ${
+            isOver ? 'text-primary' : 'text-foreground-secondary'
+          }`}>
+            {slot.time}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          {children}
+        </div>
+      </div>
+      {!hasAppointments && !isOver && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-border/30" />
+      )}
     </div>
   );
 }
@@ -350,8 +391,14 @@ export default function DashboardPage() {
   // Drag and Drop para agenda
   const [activeId, setActiveId] = React.useState(null);
   const [agendaItems, setAgendaItems] = React.useState([]);
+  const [showWhatsAppModal, setShowWhatsAppModal] = React.useState(false);
+  const [pendingUpdate, setPendingUpdate] = React.useState(null); // { itemId, newTime, oldTime }
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -374,94 +421,147 @@ export default function DashboardPage() {
     const draggedItem = agendaItems.find(item => item.id === active.id);
     if (!draggedItem) return;
 
-    // Si se soltó sobre otro turno, intercambiar posiciones
-    if (over.id !== active.id && agendaItems.find(item => item.id === over.id)) {
-      const oldIndex = agendaItems.findIndex(item => item.id === active.id);
-      const newIndex = agendaItems.findIndex(item => item.id === over.id);
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newItems = arrayMove(agendaItems, oldIndex, newIndex);
-        setAgendaItems(newItems);
-        
-        // Intercambiar horas (mantener la fecha de hoy en hora argentina)
-        const targetItem = agendaItems[newIndex];
-        const today = getArgentinaNow();
-        const oldTime = getArgentinaHoursMinutes(draggedItem.starts_at);
-        const newTime = getArgentinaHoursMinutes(targetItem.starts_at);
-        
-        // Crear nuevas fechas en hora argentina
-        const oldDateISO = createISOFromArgentinaTime(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          today.getDate(),
-          newTime.hour,
-          newTime.minute
-        );
-        const newDateISO = createISOFromArgentinaTime(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          today.getDate(),
-          oldTime.hour,
-          oldTime.minute
-        );
-        
-        try {
-          await Promise.all([
-            apiClient.updateAppointment(draggedItem.id, {
-              startsAt: oldDateISO
-            }),
-            apiClient.updateAppointment(targetItem.id, {
-              startsAt: newDateISO
-            })
-          ]);
-          
-          toast.success("Turnos actualizados correctamente");
-        } catch (error) {
-          toast.error("Error al actualizar los turnos");
-          logger.error(error);
-          // Revertir cambios locales
-          setAgendaItems(agendaArr);
-        }
-      }
-      return;
-    }
-
     // Si se soltó sobre un slot de hora (formato "slot-XX:XX")
     if (String(over.id).startsWith('slot-')) {
       const slotTime = String(over.id).replace('slot-', '');
       const [hours, minutes] = slotTime.split(':');
       
-      try {
-        // Obtener la fecha actual en hora argentina
-        const today = getArgentinaNow();
-        const oldDate = toArgentinaTime(draggedItem.starts_at);
-        
-        // Crear nueva fecha en hora argentina con la hora del slot
-        const newDateISO = createISOFromArgentinaTime(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          today.getDate(),
-          parseInt(hours),
-          parseInt(minutes)
-        );
-        
-        await apiClient.updateAppointment(draggedItem.id, {
-          startsAt: newDateISO
-        });
-        
-        // Actualizar localmente
-        const updatedItems = agendaItems.map(item => 
-          item.id === draggedItem.id 
-            ? { ...item, starts_at: newDateISO }
-            : item
-        );
-        setAgendaItems(updatedItems);
-        
-        toast.success("Turno actualizado correctamente");
-      } catch (error) {
-        toast.error("Error al actualizar el turno");
-        logger.error(error);
+      // Obtener la fecha actual en hora argentina
+      const today = getArgentinaNow();
+      const oldTime = getArgentinaHoursMinutes(draggedItem.starts_at);
+      
+      // Verificar si realmente cambió la hora
+      if (oldTime.hour === parseInt(hours) && oldTime.minute === parseInt(minutes)) {
+        return; // No hay cambio, no hacer nada
       }
+      
+      // Crear nueva fecha en hora argentina con la hora del slot
+      const newDateISO = createISOFromArgentinaTime(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        today.getDate(),
+        parseInt(hours),
+        parseInt(minutes)
+      );
+      
+      // Guardar información para el modal
+      setPendingUpdate({
+        itemId: draggedItem.id,
+        item: draggedItem,
+        oldTime: `${String(oldTime.hour).padStart(2, '0')}:${String(oldTime.minute).padStart(2, '0')}`,
+        newTime: slotTime,
+        newDateISO
+      });
+      setShowWhatsAppModal(true);
+      return;
+    }
+
+    // Si se soltó sobre otro turno, intercambiar posiciones
+    const targetItem = agendaItems.find(item => item.id === over.id);
+    if (targetItem && targetItem.id !== draggedItem.id) {
+      const today = getArgentinaNow();
+      const oldTime = getArgentinaHoursMinutes(draggedItem.starts_at);
+      const newTime = getArgentinaHoursMinutes(targetItem.starts_at);
+      
+      // Verificar si realmente cambió la hora
+      if (oldTime.hour === newTime.hour && oldTime.minute === newTime.minute) {
+        return; // No hay cambio
+      }
+      
+      // Crear nuevas fechas en hora argentina (intercambiar horas)
+      const draggedNewDateISO = createISOFromArgentinaTime(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        today.getDate(),
+        newTime.hour,
+        newTime.minute
+      );
+      const targetNewDateISO = createISOFromArgentinaTime(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        today.getDate(),
+        oldTime.hour,
+        oldTime.minute
+      );
+      
+      // Guardar información para el modal (solo para el primer turno)
+      setPendingUpdate({
+        itemId: draggedItem.id,
+        item: draggedItem,
+        oldTime: `${String(oldTime.hour).padStart(2, '0')}:${String(oldTime.minute).padStart(2, '0')}`,
+        newTime: `${String(newTime.hour).padStart(2, '0')}:${String(newTime.minute).padStart(2, '0')}`,
+        newDateISO: draggedNewDateISO,
+        targetItemId: targetItem.id,
+        targetItem: targetItem,
+        targetNewDateISO: targetNewDateISO
+      });
+      setShowWhatsAppModal(true);
+    }
+  };
+
+  const confirmUpdate = async (sendWhatsApp = false) => {
+    if (!pendingUpdate) return;
+    
+    setShowWhatsAppModal(false);
+    const updateData = { ...pendingUpdate };
+    setPendingUpdate(null);
+    
+    try {
+      // Actualizar el turno principal
+      await apiClient.updateAppointment(updateData.itemId, {
+        startsAt: updateData.newDateISO
+      });
+      
+      // Si hay un segundo turno (intercambio), actualizarlo también
+      if (updateData.targetItemId && updateData.targetNewDateISO) {
+        await apiClient.updateAppointment(updateData.targetItemId, {
+          startsAt: updateData.targetNewDateISO
+        });
+      }
+      
+      // Actualizar localmente
+      const updatedItems = agendaItems.map(item => {
+        if (item.id === updateData.itemId) {
+          return { ...item, starts_at: updateData.newDateISO };
+        }
+        if (updateData.targetItemId && item.id === updateData.targetItemId) {
+          return { ...item, starts_at: updateData.targetNewDateISO };
+        }
+        return item;
+      });
+      setAgendaItems(updatedItems);
+      
+      // Enviar WhatsApp si se solicitó
+      if (sendWhatsApp && updateData.item?.phone_e164) {
+        try {
+          const customerName = updateData.item.customer_name || 'Cliente';
+          const customText = `Hola ${customerName} 💈\nNecesitamos *reprogramar tu turno* de ${updateData.oldTime} a ${updateData.newTime}. ¿Te viene bien este nuevo horario? 🙏`;
+          
+          await apiClient.post("/api/whatsapp/reprogram", {
+            appointmentId: updateData.itemId,
+            phone: updateData.item.phone_e164 || updateData.item.customer_phone,
+            customText: customText,
+            autoCancel: false,
+          });
+          
+          toast.success("Turno actualizado y mensaje enviado por WhatsApp");
+        } catch (whatsappError) {
+          logger.error("Error enviando WhatsApp:", whatsappError);
+          toast.success("Turno actualizado", {
+            description: "No se pudo enviar el mensaje de WhatsApp"
+          });
+        }
+      } else {
+        toast.success("Turno actualizado correctamente");
+      }
+      
+      // Recargar agenda para reflejar cambios
+      window.location.reload();
+    } catch (error) {
+      toast.error("Error al actualizar el turno");
+      logger.error(error);
+      // Revertir cambios locales
+      setAgendaItems(agendaArr);
     }
   };
 
@@ -799,28 +899,20 @@ export default function DashboardPage() {
               items={agendaItems.map(item => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto">
-                {organizeByTimeSlots().map((slot, slotIndex) => {
-                  const hasAppointments = slot.items.length > 0;
-                  return (
-                    <DroppableSlot key={slot.time} slot={slot}>
-                      <div className="text-xs font-semibold text-foreground-secondary mb-2 flex items-center gap-2">
-                        <Clock className="w-3 h-3" />
-                        {slot.time}
-                      </div>
-                      <div className="space-y-1">
-                        {slot.items.map((item) => (
-                          <SortableAppointmentItem key={item.id} item={item} />
-                        ))}
-                        {!hasAppointments && (
-                          <div className="text-xs text-foreground-muted italic py-2">
-                            Libre
-                          </div>
-                        )}
-                      </div>
-                    </DroppableSlot>
-                  );
-                })}
+              <div className="relative max-h-[600px] overflow-y-auto">
+                <div className="space-y-0">
+                  {organizeByTimeSlots().map((slot, slotIndex) => {
+                    return (
+                      <DroppableSlot key={slot.time} slot={slot}>
+                        <div className="space-y-2">
+                          {slot.items.map((item) => (
+                            <SortableAppointmentItem key={item.id} item={item} />
+                          ))}
+                        </div>
+                      </DroppableSlot>
+                    );
+                  })}
+                </div>
               </div>
             </SortableContext>
             <DragOverlay>
@@ -845,6 +937,96 @@ export default function DashboardPage() {
           </DndContext>
         )}
       </Section>
+
+      {/* Modal de confirmación para WhatsApp */}
+      {showWhatsAppModal && pendingUpdate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)'
+          }}
+          onClick={() => {
+            setShowWhatsAppModal(false);
+            setPendingUpdate(null);
+          }}
+        >
+          <div
+            className="bg-background rounded-2xl shadow-2xl border border-border p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">
+                  Turno reprogramado
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWhatsAppModal(false);
+                  setPendingUpdate(null);
+                }}
+                className="p-1 rounded-lg hover:bg-background-secondary transition-colors"
+              >
+                <X className="w-4 h-4 text-foreground-secondary" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-foreground-secondary mb-3">
+                El turno de <strong className="text-foreground">{pendingUpdate.item?.customer_name || 'Cliente'}</strong> se actualizó:
+              </p>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-background-secondary border border-border">
+                <span className="text-sm text-foreground-muted line-through">{pendingUpdate.oldTime}</span>
+                <span className="text-foreground-secondary">→</span>
+                <span className="text-sm font-semibold text-primary">{pendingUpdate.newTime}</span>
+              </div>
+            </div>
+            
+            <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  defaultChecked={true}
+                  id="sendWhatsApp"
+                  className="mt-0.5 rounded"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-foreground mb-1">
+                    Enviar mensaje de WhatsApp al cliente
+                  </div>
+                  <p className="text-xs text-foreground-muted">
+                    Se enviará un mensaje automático informando sobre el cambio de horario
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowWhatsAppModal(false);
+                  setPendingUpdate(null);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg border border-border bg-background-secondary hover:bg-border text-sm font-medium text-foreground transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const sendWhatsApp = document.getElementById('sendWhatsApp')?.checked ?? true;
+                  confirmUpdate(sendWhatsApp);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
