@@ -103,7 +103,6 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [chartsReady, setChartsReady] = React.useState(false);
   
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
@@ -252,8 +251,8 @@ export default function DashboardPage() {
                   Los ingresos aparecerán cuando tengas turnos completados
                 </p>
               </div>
-            ) : chartsReady ? (
-              <div className="w-full" style={{ height: '280px', position: 'relative', overflow: 'visible' }}>
+            ) : (
+              <div className="w-full" style={{ height: '280px', position: 'relative' }}>
                 <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={incomeArr} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
@@ -294,10 +293,6 @@ export default function DashboardPage() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-            ) : (
-              <div className="w-full h-[280px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-              </div>
             )}
           </Section>
         </div>
@@ -329,8 +324,8 @@ export default function DashboardPage() {
                   Los servicios aparecerán cuando tengas turnos programados
                 </p>
               </div>
-            ) : chartsReady ? (
-              <div className="w-full" style={{ height: '280px', position: 'relative', overflow: 'visible' }}>
+            ) : (
+              <div className="w-full" style={{ height: '280px', position: 'relative' }}>
                 <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={topServicesArr} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
                       <defs>
@@ -377,10 +372,6 @@ export default function DashboardPage() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-            ) : (
-              <div className="w-full h-[280px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-              </div>
             )}
           </Section>
         </div>
