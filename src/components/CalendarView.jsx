@@ -6,9 +6,13 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 // Locale en español - definido manualmente para evitar problemas de importación
+// FullCalendar v6 usa un formato diferente para los locales
 const esLocale = {
   code: "es",
-  week: { dow: 1, doy: 4 },
+  week: { 
+    dow: 1, // Lunes como primer día de la semana
+    doy: 4  // La semana que contiene el 4 de enero es la primera semana del año
+  },
   buttonText: {
     prev: "Ant",
     next: "Sig",
@@ -22,11 +26,9 @@ const esLocale = {
   weekText: "Sm",
   allDayText: "Todo el día",
   moreLinkText: "más",
-  noEventsText: "No hay eventos para mostrar",
-  monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
-  monthNamesShort: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
-  dayNames: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
-  dayNamesShort: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+  noEventsText: "No hay eventos para mostrar"
+  // Nota: monthNames, monthNamesShort, dayNames, dayNamesShort ya no son opciones válidas en FullCalendar v6
+  // FullCalendar usa Intl.DateTimeFormat internamente para formatear fechas
 };
 import "../calendar-dark.css"; // Estilos dark del calendario
 import "../calendar-light.css"; // Estilos light del calendario
