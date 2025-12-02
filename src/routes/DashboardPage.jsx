@@ -387,25 +387,6 @@ export default function DashboardPage() {
   if (errorWeek) console.error("[Dashboard] Error cargando semana:", errorWeek);
   
   // Debug: Log datos recibidos
-  React.useEffect(() => {
-    if (!loadingInc && income) {
-      console.log("[Dashboard] Datos de ingresos recibidos:", income);
-      console.log("[Dashboard] Array procesado de ingresos:", incomeArr);
-      console.log("[Dashboard] ¿Tiene datos válidos?", incomeArr.length > 0);
-      console.log("[Dashboard] ¿Renderizará gráfico?", incomeArr.length > 0 && !errorInc);
-      console.log("[Dashboard] Estado de carga:", { loadingInc, errorInc, hasData: incomeArr.length > 0 });
-    }
-  }, [loadingInc, income, incomeArr, errorInc]);
-
-  React.useEffect(() => {
-    if (!loadingSvc && topServices) {
-      console.log("[Dashboard] Datos de servicios recibidos:", topServices);
-      console.log("[Dashboard] Array procesado de servicios:", topServicesArr);
-      console.log("[Dashboard] ¿Tiene datos válidos?", topServicesArr.length > 0);
-      console.log("[Dashboard] ¿Renderizará gráfico?", topServicesArr.length > 0 && !errorSvc);
-      console.log("[Dashboard] Estado de carga servicios:", { loadingSvc, errorSvc, hasData: topServicesArr.length > 0 });
-    }
-  }, [loadingSvc, topServices, topServicesArr, errorSvc]);
 
 
 

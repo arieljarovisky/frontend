@@ -426,8 +426,10 @@ export default function AppLayout() {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <Logo size="small" showText={true} />
-            <div className="w-10" /> {/* Spacer para centrar */}
+            <div className="flex-1 flex justify-center">
+              <Logo size="small" showText={true} />
+            </div>
+            <div className="w-[42px]" /> {/* Spacer para balancear el botón del menú */}
           </div>
         </header>
 
