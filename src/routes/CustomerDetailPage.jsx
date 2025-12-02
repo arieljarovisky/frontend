@@ -5,7 +5,7 @@ import { useQuery } from "../shared/useQuery.js";
 import { formatPhone, initials, formatDateTime, StatusPill } from "../shared/ui.jsx";
 import { useApp } from "../context/UseApp.js";
 import { toast } from "sonner";
-import { XCircle, CreditCard, Send, Copy, Check } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 const DOCUMENT_TYPE_OPTIONS = [
   { value: "", label: "Sin especificar" },
@@ -66,11 +66,6 @@ export default function CustomerDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState(null);
-  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
-  const [paymentLinkData, setPaymentLinkData] = useState({ amount: "", title: "", description: "" });
-  const [generatedLink, setGeneratedLink] = useState(null);
-  const [sendingLink, setSendingLink] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const { classesEnabled } = useApp();
 
   useEffect(() => {
@@ -146,68 +141,6 @@ export default function CustomerDetailPage() {
 
   // Obtener la suscripción activa para mostrar el botón de cancelar
   const activeSubscription = subscriptions.find((s) => s.status === "authorized" || s.status === "pending");
-
-  const handleCreatePaymentLink = async () => {
-    if (!paymentLinkData.amount || !paymentLinkData.title) {
-      toast.error("El monto y el título son requeridos");
-      return;
-    }
-
-    try {
-      const result = await apiClient.createPaymentLink({
-        amount: Number(paymentLinkData.amount),
-        title: paymentLinkData.title,
-        description: paymentLinkData.description || null,
-        customerId: Number(id),
-        expiresInDays: 7,
-      });
-
-      setGeneratedLink(result.link);
-      toast.success("Link de pago creado correctamente");
-    } catch (error) {
-      console.error("Error creando link de pago:", error);
-      toast.error(error?.response?.data?.error || "Error al crear el link de pago");
-    }
-  };
-
-  const handleSendPaymentLink = async () => {
-    if (!generatedLink) {
-      toast.error("Primero debes crear un link de pago");
-      return;
-    }
-
-    setSendingLink(true);
-    try {
-      await apiClient.sendPaymentLinkWhatsApp({
-        customerId: Number(id),
-        link: generatedLink,
-        message: null, // Usar mensaje por defecto
-      });
-
-      toast.success("Link de pago enviado por WhatsApp correctamente");
-      setShowPaymentLinkModal(false);
-      setGeneratedLink(null);
-      setPaymentLinkData({ amount: "", title: "", description: "" });
-    } catch (error) {
-      console.error("Error enviando link por WhatsApp:", error);
-      toast.error(error?.response?.data?.error || "Error al enviar el link por WhatsApp");
-    } finally {
-      setSendingLink(false);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!generatedLink) return;
-    
-    try {
-      await navigator.clipboard.writeText(generatedLink);
-      setLinkCopied(true);
-      toast.success("Link copiado al portapapeles");
-      setTimeout(() => setLinkCopied(false), 2000);
-    } catch (error) {
-      toast.error("Error al copiar el link");
-    }
-  };
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -320,23 +253,13 @@ export default function CustomerDetailPage() {
             ← Volver
           </Link>
           {!isEditing ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setShowPaymentLinkModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background-secondary/40 px-3 py-2 text-sm font-medium text-foreground hover:bg-background-secondary"
-              >
-                <CreditCard className="w-4 h-4" />
-                Crear link de pago
-              </button>
-              <button
-                type="button"
-                onClick={handleStartEditing}
-                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
-              >
-                Editar
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleStartEditing}
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+            >
+              Editar
+            </button>
           ) : null}
         </div>
       </div>
@@ -742,129 +665,6 @@ export default function CustomerDetailPage() {
         </section>
       ) : null}
 
-      {/* Modal para crear y enviar link de pago */}
-      {showPaymentLinkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-background shadow-xl">
-            <div className="border-b border-border p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Crear link de pago</h3>
-                <button
-                  onClick={() => {
-                    setShowPaymentLinkModal(false);
-                    setGeneratedLink(null);
-                    setPaymentLinkData({ amount: "", title: "", description: "" });
-                  }}
-                  className="text-foreground-muted hover:text-foreground"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-4 space-y-4">
-              {!generatedLink ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Monto (ARS) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1"
-                      value={paymentLinkData.amount}
-                      onChange={(e) => setPaymentLinkData({ ...paymentLinkData, amount: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="1000.00"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Título *
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentLinkData.title}
-                      onChange={(e) => setPaymentLinkData({ ...paymentLinkData, title: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="Pago de servicio"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Descripción (opcional)
-                    </label>
-                    <textarea
-                      value={paymentLinkData.description}
-                      onChange={(e) => setPaymentLinkData({ ...paymentLinkData, description: e.target.value })}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      rows="3"
-                      placeholder="Descripción del pago..."
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleCreatePaymentLink}
-                    disabled={!paymentLinkData.amount || !paymentLinkData.title}
-                    className="w-full rounded-lg bg-primary text-white px-4 py-2 text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Crear link
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="rounded-lg border border-border bg-background-secondary/30 p-3">
-                    <div className="text-xs font-medium text-foreground-muted mb-2">Link de pago generado:</div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={generatedLink}
-                        readOnly
-                        className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
-                      />
-                      <button
-                        onClick={handleCopyLink}
-                        className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground hover:bg-background-secondary"
-                      >
-                        {linkCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSendPaymentLink}
-                      disabled={sendingLink || !customer?.phone}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 text-white px-4 py-2 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send className="w-4 h-4" />
-                      {sendingLink ? "Enviando..." : "Enviar por WhatsApp"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setGeneratedLink(null);
-                        setPaymentLinkData({ amount: "", title: "", description: "" });
-                      }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
-                    >
-                      Crear otro
-                    </button>
-                  </div>
-
-                  {!customer?.phone && (
-                    <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded p-2">
-                      ⚠️ El cliente no tiene un número de teléfono registrado. Por favor, edita el cliente y agrega un teléfono para poder enviar el link por WhatsApp.
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
