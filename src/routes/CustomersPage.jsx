@@ -6,6 +6,7 @@ import { apiClient } from "../api";
 import { SearchInput, initials, formatPhone, formatDateTime } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { useApp } from "../context/UseApp.js";
+import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 const formatCurrency = (value, currency = "ARS") => {
     if (value == null) return "—";
@@ -24,11 +25,13 @@ const formatCurrency = (value, currency = "ARS") => {
 };
 
 export default function CustomersPage() {
-    // 1) Estado local de búsqueda
+    // 1) Estado local de búsqueda y paginación
     const [params, setParams] = useSearchParams();
     const { tenantSlug } = useParams();
     const initialQ = params.get("q") || "";
     const [q, setQ] = useState(initialQ);
+    const page = Number(params.get("page")) || 1;
+    const limit = 20; // Items por página
 
     // 2) Si cambia la URL (ej: atrás/adelante), actualizo el input
     useEffect(() => {
@@ -39,9 +42,24 @@ export default function CustomersPage() {
     // 3) Debounce
     const qDebounced = useDebouncedValue(q, 300);
 
-    // 4) Fetch dinámico (se cancela si el usuario sigue tecleando)
-    const { data: rows = [], loading, error } =
-        useQuery((signal) => apiClient.listCustomers(qDebounced, signal), [qDebounced]);
+    // 4) Resetear a página 1 cuando cambia la búsqueda
+    useEffect(() => {
+        if (qDebounced !== initialQ && page !== 1) {
+            const next = new URLSearchParams(params);
+            next.set("page", "1");
+            setParams(next, { replace: true });
+        }
+    }, [qDebounced]);
+
+    // 5) Fetch dinámico con paginación
+    const { data: response, loading, error } = useQuery(
+        (signal) => apiClient.listCustomers(qDebounced, signal, { page, limit }),
+        [qDebounced, page]
+    );
+
+    // Extraer datos y paginación
+    const rows = Array.isArray(response) ? response : (response?.data || []);
+    const pagination = response?.pagination || null;
 
     const { classesEnabled } = useApp();
 
@@ -118,7 +136,7 @@ export default function CustomersPage() {
                 : null;
 
         return (
-            <div className="flex flex-col items-end gap-1 text-right">
+            <div className="flex flex-col items-end gap-1.5 text-right">
                 <span className={`inline-flex items-center justify-end rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${style.className}`}>
                     {style.label}
                 </span>
@@ -142,16 +160,46 @@ export default function CustomersPage() {
         );
     };
 
-    // 5) Actualizo la URL cuando se envía el form (Enter o botón Buscar)
+    // 6) Actualizo la URL cuando se envía el form (Enter o botón Buscar)
     function submitSearch(v) {
         const next = new URLSearchParams(params);
         if (v) next.set("q", v);
         else next.delete("q");
-        setParams(next, { replace: true }); // no rompe el historial
+        next.set("page", "1"); // Resetear a página 1 al buscar
+        setParams(next, { replace: true });
     }
 
+    // 7) Navegación de páginas
+    function goToPage(newPage) {
+        const next = new URLSearchParams(params);
+        if (newPage > 1) {
+            next.set("page", String(newPage));
+        } else {
+            next.delete("page");
+        }
+        setParams(next, { replace: true });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Calcular información de paginación
+    const startItem = pagination ? (pagination.page - 1) * pagination.limit + 1 : 0;
+    const endItem = pagination ? Math.min(pagination.page * pagination.limit, pagination.total) : 0;
+
     return (
-        <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+        <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">Clientes</h1>
+                    {pagination && (
+                        <p className="text-sm text-foreground-secondary">
+                            {pagination.total === 0 ? "Sin clientes" : `${pagination.total} cliente${pagination.total !== 1 ? "s" : ""} en total`}
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            {/* Búsqueda */}
             <div className="flex items-center justify-between gap-3">
                 <div className="w-full flex flex-col gap-0">
                     <SearchInput
@@ -167,15 +215,19 @@ export default function CustomersPage() {
                 </div>
             </div>
 
+            {/* Tabla */}
             <div className="card overflow-hidden">
-                <div className="grid grid-cols-12 px-5 py-3 text-xs font-medium text-foreground-secondary border-b border-border bg-background-secondary">
+                {/* Header de la tabla */}
+                <div className="grid grid-cols-12 px-6 py-4 text-xs font-semibold text-foreground-secondary border-b border-border bg-background-secondary/50">
                     <div className={`col-span-${columnLayout.customer}`}>Cliente</div>
                     <div className={`col-span-${columnLayout.phone}`}>Teléfono</div>
                     <div className={`col-span-${columnLayout.appointments} text-right`}>Turnos</div>
                     {classesEnabled ? (
                         <div className={`col-span-${columnLayout.classes} text-right`}>
                             <div># Clases</div>
-                            <div className="text-[10px] text-foreground-muted uppercase tracking-wide">Anotadas / Realizadas</div>
+                            <div className="text-[10px] text-foreground-muted uppercase tracking-wide font-normal mt-0.5">
+                                Anotadas / Realizadas
+                            </div>
                         </div>
                     ) : null}
                     {showMembershipColumn ? (
@@ -183,38 +235,59 @@ export default function CustomersPage() {
                     ) : null}
                 </div>
 
+                {/* Contenido */}
                 {loading ? (
-                    <div className="px-5 py-6 text-sm text-foreground-muted">Cargando…</div>
+                    <div className="px-6 py-12 flex flex-col items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mb-3" />
+                        <div className="text-sm text-foreground-muted">Cargando clientes…</div>
+                    </div>
                 ) : error ? (
-                    <div className="px-5 py-6 text-sm text-red-600">{error}</div>
+                    <div className="px-6 py-12 text-center">
+                        <div className="text-sm text-red-400 mb-2">Error al cargar clientes</div>
+                        <div className="text-xs text-foreground-muted">{error}</div>
+                    </div>
                 ) : rows.length === 0 ? (
-                    <div className="px-5 py-6 text-sm text-foreground-muted">Sin resultados.</div>
+                    <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
+                        <Users className="w-12 h-12 text-foreground-muted mb-3 opacity-50" />
+                        <div className="text-sm text-foreground-secondary mb-1">
+                            {qDebounced ? "No se encontraron clientes" : "Sin clientes todavía"}
+                        </div>
+                        <div className="text-xs text-foreground-muted">
+                            {qDebounced
+                                ? "Intenta con otro término de búsqueda"
+                                : "Los clientes aparecerán aquí cuando crees turnos o se registren"}
+                        </div>
+                    </div>
                 ) : (
                     <div className="divide-y divide-border">
                         {rows.map((r) => (
                             <Link
                                 key={r.id}
                                 to={`/${tenantSlug}/customers/${r.id}`}
-                                className="w-full text-left px-5 py-3 hover:bg-background-secondary grid grid-cols-12 items-center transition-colors"
+                                className="w-full text-left px-6 py-4 hover:bg-background-secondary/50 grid grid-cols-12 items-center transition-colors group"
                             >
                                 <div className={`col-span-${columnLayout.customer} flex items-center gap-3`}>
-                                    <div className="size-9 rounded-full bg-background-secondary flex items-center justify-center text-foreground-secondary text-sm">
+                                    <div className="size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold flex-shrink-0 group-hover:bg-primary-500/20 transition-colors">
                                         {initials(r.name || "?")}
                                     </div>
-                                    <div>
-                                        <div className="text-sm font-medium text-foreground">{r.name || "(Sin nombre)"}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
+                                            {r.name || "(Sin nombre)"}
+                                        </div>
                                         <div className="text-xs text-foreground-muted">ID #{r.id}</div>
                                     </div>
                                 </div>
                                 <div className={`col-span-${columnLayout.phone} text-sm text-foreground-secondary`}>
-                                    {formatPhone(r.phone_e164 ?? r.phone)}
+                                    {formatPhone(r.phone_e164 ?? r.phone) || "—"}
                                 </div>
-                                <div className={`col-span-${columnLayout.appointments} text-right text-sm font-semibold`}>
-                                    {r.total_appointments ?? r.appointments_count ?? 0}
+                                <div className={`col-span-${columnLayout.appointments} text-right`}>
+                                    <div className="text-sm font-semibold text-foreground">
+                                        {r.total_appointments ?? r.appointments_count ?? 0}
+                                    </div>
                                 </div>
                                 {classesEnabled ? (
                                     <div className={`col-span-${columnLayout.classes} text-right`}>
-                                        <div className="text-sm font-semibold">
+                                        <div className="text-sm font-semibold text-foreground">
                                             {r.upcoming_classes ?? 0}{" "}
                                             <span className="text-xs text-foreground-muted font-normal uppercase tracking-wide">
                                                 anotadas
@@ -232,6 +305,63 @@ export default function CustomersPage() {
                                 ) : null}
                             </Link>
                         ))}
+                    </div>
+                )}
+
+                {/* Paginación */}
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="px-6 py-4 border-t border-border bg-background-secondary/30 flex items-center justify-between">
+                        <div className="text-sm text-foreground-secondary">
+                            Mostrando <span className="font-semibold text-foreground">{startItem}</span> a{" "}
+                            <span className="font-semibold text-foreground">{endItem}</span> de{" "}
+                            <span className="font-semibold text-foreground">{pagination.total}</span> clientes
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => goToPage(page - 1)}
+                                disabled={!pagination.hasPrev || loading}
+                                className="px-3 py-1.5 text-sm font-medium text-foreground-secondary bg-background border border-border rounded-lg hover:bg-background-secondary hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Anterior
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (pagination.totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (page <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (page >= pagination.totalPages - 2) {
+                                        pageNum = pagination.totalPages - 4 + i;
+                                    } else {
+                                        pageNum = page - 2 + i;
+                                    }
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => goToPage(pageNum)}
+                                            disabled={loading}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                                pageNum === page
+                                                    ? "bg-primary-500 text-white"
+                                                    : "text-foreground-secondary bg-background border border-border hover:bg-background-secondary hover:text-foreground"
+                                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={() => goToPage(page + 1)}
+                                disabled={!pagination.hasNext || loading}
+                                className="px-3 py-1.5 text-sm font-medium text-foreground-secondary bg-background border border-border rounded-lg hover:bg-background-secondary hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                            >
+                                Siguiente
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
