@@ -963,7 +963,7 @@ export default function ConfigPage() {
       // Si es business_error, mostrar un mensaje más útil
       if (error === "business_error") {
         toast.warning("OAuth conectado, pero falta configurar WhatsApp Business", {
-          description: "El token OAuth se guardó correctamente, pero tu Empresa aún no tiene una cuenta de WhatsApp Business. Podés configurarla en Meta Business Manager y luego usar el botón 'Obtener automáticamente' o ingresar el phone_number_id manualmente.",
+          description: "El token OAuth se guardó correctamente, pero tu Empresa aún no tiene una cuenta de WhatsApp Business. Podés configurarla en Meta Business Manager. El sistema intentará obtener el Phone Number ID automáticamente cuando guardes el número de WhatsApp.",
           duration: 10000,
         });
       } else {
