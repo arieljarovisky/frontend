@@ -119,14 +119,21 @@ export default function DashboardPage() {
   const year = new Date().getFullYear();
   const { data: income, loading: loadingInc, error: errorInc } =
     useQuery(() => apiClient.getIncomeByMonth(year), [year]);
-  const incomeArr = asArray(income).map(d => ({
-    month: String(d.month ?? d.mm ?? d.m ?? "").padStart(2, "0"),
-    income: Number(d.income ?? d.total ?? 0),
-  }));
-  const topServicesArr = asArray(topServices).map(d => ({
-    service_name: String(d.service_name ?? d.name ?? ""),
-    count: Number(d.count ?? d.qty ?? 0),
-  }));
+  const incomeArr = React.useMemo(() => {
+    const arr = asArray(income);
+    return arr.map(d => ({
+      month: String(d.month ?? d.mm ?? d.m ?? "").padStart(2, "0"),
+      income: Number(d.income ?? d.total ?? 0),
+    })).filter(d => d.month); // Filtrar elementos sin mes válido
+  }, [income]);
+
+  const topServicesArr = React.useMemo(() => {
+    const arr = asArray(topServices);
+    return arr.map(d => ({
+      service_name: String(d.service_name ?? d.name ?? "").trim(),
+      count: Number(d.count ?? d.qty ?? 0),
+    })).filter(d => d.service_name && d.count > 0); // Filtrar servicios vacíos o sin count
+  }, [topServices]);
 
   // Debug: Log errores si existen
   if (errorInc) console.error("[Dashboard] Error cargando ingresos:", errorInc);
@@ -135,8 +142,23 @@ export default function DashboardPage() {
   if (errorWeek) console.error("[Dashboard] Error cargando semana:", errorWeek);
   
   // Debug: Log datos recibidos
-  if (!loadingInc && income) console.log("[Dashboard] Datos de ingresos recibidos:", income, "Array procesado:", incomeArr);
-  if (!loadingSvc && topServices) console.log("[Dashboard] Datos de servicios recibidos:", topServices, "Array procesado:", topServicesArr);
+  React.useEffect(() => {
+    if (!loadingInc && income) {
+      console.log("[Dashboard] Datos de ingresos recibidos:", income);
+      console.log("[Dashboard] Array procesado de ingresos:", incomeArr);
+      console.log("[Dashboard] ¿Tiene datos válidos?", incomeArr.length > 0);
+      console.log("[Dashboard] ¿Renderizará gráfico?", incomeArr.length > 0 && !errorInc);
+    }
+  }, [loadingInc, income, incomeArr, errorInc]);
+
+  React.useEffect(() => {
+    if (!loadingSvc && topServices) {
+      console.log("[Dashboard] Datos de servicios recibidos:", topServices);
+      console.log("[Dashboard] Array procesado de servicios:", topServicesArr);
+      console.log("[Dashboard] ¿Tiene datos válidos?", topServicesArr.length > 0);
+      console.log("[Dashboard] ¿Renderizará gráfico?", topServicesArr.length > 0 && !errorSvc);
+    }
+  }, [loadingSvc, topServices, topServicesArr, errorSvc]);
 
 
 
@@ -202,7 +224,7 @@ export default function DashboardPage() {
         {/* Income Chart */}
         <div className="lg:col-span-3">
           <Section title={`Ingresos ${year}`}>
-            <div className="w-full h-[280px]">
+            <div className="w-full h-[280px] min-h-[280px]">
               {loadingInc ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
@@ -217,7 +239,7 @@ export default function DashboardPage() {
                     {typeof errorInc === 'string' ? errorInc : errorInc?.message || "Intenta recargar la página"}
                   </p>
                 </div>
-              ) : !incomeArr || incomeArr.length === 0 || incomeArr.every(d => d.income === 0) ? (
+              ) : !incomeArr || incomeArr.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6">
                   <DollarSign className="w-12 h-12 text-foreground-muted mb-3" />
                   <p className="text-foreground-secondary text-sm">
@@ -228,40 +250,47 @@ export default function DashboardPage() {
                   </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={incomeArr}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
-                    <XAxis
-                      dataKey="month"
-                      stroke="#a1a1aa"
-                      style={{ fontSize: '12px' }}
-                    />
-                    <YAxis
-                      stroke="#a1a1aa"
-                      style={{ fontSize: '12px' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#27272a',
-                        border: '1px solid #3f3f46',
-                        borderRadius: '12px',
-                        color: '#fafafa'
-                      }}
-                      formatter={(value) => money(value)}
-                    />
-                    <Legend
-                      wrapperStyle={{ color: '#a1a1aa' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="income"
-                      stroke="#0ea5e9"
-                      strokeWidth={3}
-                      dot={{ fill: '#0ea5e9', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: '280px', minHeight: '280px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={incomeArr} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
+                      <XAxis
+                        dataKey="month"
+                        stroke="#a1a1aa"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#a1a1aa' }}
+                      />
+                      <YAxis
+                        stroke="#a1a1aa"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#a1a1aa' }}
+                        tickFormatter={(value) => `$${value.toLocaleString('es-AR')}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#27272a',
+                          border: '1px solid #3f3f46',
+                          borderRadius: '12px',
+                          color: '#fafafa'
+                        }}
+                        formatter={(value) => money(value)}
+                        labelFormatter={(label) => `Mes ${label}`}
+                      />
+                      <Legend
+                        wrapperStyle={{ color: '#a1a1aa', fontSize: '12px' }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="income"
+                        name="Ingresos"
+                        stroke="#0ea5e9"
+                        strokeWidth={3}
+                        dot={{ fill: '#0ea5e9', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </Section>
@@ -270,7 +299,7 @@ export default function DashboardPage() {
         {/* Top Services Chart */}
         <div className="lg:col-span-2">
           <Section title="Servicios Top">
-            <div className="w-full h-[280px]">
+            <div className="w-full h-[280px] min-h-[280px]">
               {loadingSvc ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
@@ -296,47 +325,53 @@ export default function DashboardPage() {
                   </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={topServicesArr}>
-                    <defs>
-                      <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#60a5fa" />
-                        <stop offset="100%" stopColor="#a78bfa" />
-                      </linearGradient>
-                    </defs>
+                <div style={{ width: '100%', height: '280px', minHeight: '280px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topServicesArr} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                      <defs>
+                        <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#60a5fa" />
+                          <stop offset="100%" stopColor="#a78bfa" />
+                        </linearGradient>
+                      </defs>
 
-                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.25} />
-                    <XAxis
-                      dataKey="service_name"
-                      stroke="#a1a1aa"
-                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                      interval={0}
-                      angle={-12}
-                      dy={8}
-                    />
-                    <YAxis
-                      stroke="#a1a1aa"
-                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                      contentStyle={{
-                        backgroundColor: "#18181b",
-                        border: "1px solid #3f3f46",
-                        borderRadius: 12,
-                        color: "#fafafa",
-                      }}
-                      itemStyle={{ color: "#fafafa" }}
-                      labelStyle={{ color: "#fafafa" }}
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill="url(#barFill)"
-                      radius={[12, 12, 0, 0]}
-                      background={false}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.25} />
+                      <XAxis
+                        dataKey="service_name"
+                        stroke="#a1a1aa"
+                        tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                        interval={0}
+                        angle={-12}
+                        dy={8}
+                        height={60}
+                      />
+                      <YAxis
+                        stroke="#a1a1aa"
+                        tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                        width={50}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                        contentStyle={{
+                          backgroundColor: "#18181b",
+                          border: "1px solid #3f3f46",
+                          borderRadius: 12,
+                          color: "#fafafa",
+                        }}
+                        itemStyle={{ color: "#fafafa" }}
+                        labelStyle={{ color: "#fafafa" }}
+                        formatter={(value) => `${value} turno${value !== 1 ? 's' : ''}`}
+                      />
+                      <Bar
+                        dataKey="count"
+                        name="Turnos"
+                        fill="url(#barFill)"
+                        radius={[12, 12, 0, 0]}
+                        background={false}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </Section>
