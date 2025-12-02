@@ -2156,9 +2156,6 @@ export default function ConfigPage() {
               </>
             )}
 
-            {/* Sección de Prueba */}
-            {(whatsappConfig.hasOAuthToken || whatsappConfig.hubConfigured) && (
-
             {/* Personalización del Bot */}
             <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
               <div className="mb-6">
