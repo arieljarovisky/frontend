@@ -386,18 +386,31 @@ if (typeof window !== 'undefined') {
   }
   
   // Protección global contra errores de DOM durante traducciones automáticas
+  const isPageTranslated = () => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('translated-ltr') ||
+           document.documentElement.classList.contains('translated-rtl') ||
+           document.body.classList.contains('translated-ltr') ||
+           document.body.classList.contains('translated-rtl') ||
+           document.querySelector('[data-google-translate]') !== null ||
+           document.querySelector('script[src*="translate.googleapis.com"]') !== null;
+  };
+  
+  const isRemoveChildError = (message, error) => {
+    const msg = String(message || '');
+    const errMsg = error?.message ? String(error.message) : '';
+    return (msg.includes('removeChild') || errMsg.includes('removeChild')) &&
+           (error?.name === 'NotFoundError' || error?.name === 'DOMException');
+  };
+  
   const originalErrorHandler = window.onerror;
   window.onerror = (message, source, lineno, colno, error) => {
     // Verificar si es un error de removeChild durante traducción
-    if (error?.name === 'NotFoundError' && 
-        typeof message === 'string' && 
-        message.includes('removeChild') &&
-        (document.documentElement.classList.contains('translated-ltr') ||
-         document.documentElement.classList.contains('translated-rtl') ||
-         document.body.classList.contains('translated-ltr') ||
-         document.body.classList.contains('translated-rtl'))) {
+    if (isRemoveChildError(message, error) && isPageTranslated()) {
       // Silenciar el error durante traducciones
-      logger.warn('Error de DOM durante traducción automática (ignorado):', { message, error });
+      if (import.meta.env.DEV) {
+        logger.warn('Error de DOM durante traducción automática (ignorado):', { message, error });
+      }
       return true; // Prevenir que el error se propague
     }
     
@@ -410,18 +423,72 @@ if (typeof window !== 'undefined') {
   
   // También capturar errores no manejados en promesas
   window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason?.name === 'NotFoundError' && 
-        typeof event.reason?.message === 'string' && 
-        event.reason.message.includes('removeChild') &&
-        (document.documentElement.classList.contains('translated-ltr') ||
-         document.documentElement.classList.contains('translated-rtl') ||
-         document.body.classList.contains('translated-ltr') ||
-         document.body.classList.contains('translated-rtl'))) {
+    if (isRemoveChildError(event.reason?.message, event.reason) && isPageTranslated()) {
       // Silenciar el error durante traducciones
-      logger.warn('Error de DOM durante traducción automática (ignorado):', event.reason);
+      if (import.meta.env.DEV) {
+        logger.warn('Error de DOM durante traducción automática (ignorado):', event.reason);
+      }
       event.preventDefault(); // Prevenir que el error se propague
     }
   });
+  
+  // Interceptar removeChild a nivel de Node.prototype para prevenir errores
+  // Esto se hace aquí como respaldo, pero el script inline en HTML debería ejecutarse primero
+  if (typeof Node !== 'undefined' && Node.prototype.removeChild) {
+    // Solo interceptar si no fue ya interceptado por el script inline
+    if (!Node.prototype.removeChild._translationProtected) {
+      const originalRemoveChild = Node.prototype.removeChild;
+      Node.prototype.removeChild = function(child) {
+        try {
+          // Verificar si el nodo es realmente hijo antes de remover
+          // Usar múltiples métodos de verificación para mayor robustez
+          let isChild = false;
+          if (child && this) {
+            try {
+              // Método 1: contains
+              if (this.contains) {
+                isChild = this.contains(child);
+              }
+              // Método 2: comparar parentNode
+              if (!isChild && child.parentNode === this) {
+                isChild = true;
+              }
+              // Método 3: verificar en childNodes
+              if (!isChild && this.childNodes) {
+                isChild = Array.from(this.childNodes).includes(child);
+              }
+            } catch (e) {
+              // Si cualquier verificación falla, asumir que no es hijo
+              isChild = false;
+            }
+          }
+          
+          if (!isChild) {
+            // Si la página está siendo traducida, simplemente retornar sin error
+            if (isPageTranslated()) {
+              if (import.meta.env.DEV) {
+                logger.warn('Intento de remover nodo que no es hijo (ignorado durante traducción)');
+              }
+              return child;
+            }
+            // Si no está siendo traducida, lanzar el error normalmente
+            throw new DOMException('Failed to execute \'removeChild\' on \'Node\': The node to be removed is not a child of this node.', 'NotFoundError');
+          }
+          return originalRemoveChild.call(this, child);
+        } catch (error) {
+          // Si es un error de removeChild durante traducción, ignorarlo
+          if (isPageTranslated() && isRemoveChildError(error.message, error)) {
+            if (import.meta.env.DEV) {
+              logger.warn('Error de removeChild durante traducción (ignorado):', error);
+            }
+            return child;
+          }
+          throw error;
+        }
+      };
+      Node.prototype.removeChild._translationProtected = true;
+    }
+  }
 }
 
 createRoot(document.getElementById("root")).render(
