@@ -304,6 +304,18 @@ export default function ClassesPage() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setShowAdvancedFilters(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -573,6 +585,54 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       fetchSessionDetail(selectedSessionId);
     }
   }, [selectedSessionId, fetchSessionDetail]);
+
+  // Atajos de teclado para acciones rápidas
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorar si el usuario está escribiendo en un input, textarea o select
+      if (
+        e.target.tagName === "INPUT" ||
+        e.target.tagName === "TEXTAREA" ||
+        e.target.tagName === "SELECT" ||
+        e.target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Ctrl/Cmd + N: Nueva clase
+      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+        e.preventDefault();
+        setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
+        setSessionFormOpen(true);
+      }
+
+      // Ctrl/Cmd + R: Refrescar
+      if ((e.ctrlKey || e.metaKey) && e.key === "r") {
+        e.preventDefault();
+        fetchSessions();
+      }
+
+      // Ctrl/Cmd + F: Focus en búsqueda
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="text"][placeholder*="Buscar"]');
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+
+      // Escape: Cerrar modales
+      if (e.key === "Escape") {
+        if (sessionFormOpen) setSessionFormOpen(false);
+        if (templateFormOpen) setTemplateFormOpen(false);
+        if (seriesModal) setSeriesModal(null);
+        setSearchQuery("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fetchSessions, sessionFormOpen, templateFormOpen, seriesModal]);
 
   const handleTemplateApply = (templateId) => {
     setSessionForm((prev) => ({ ...prev, templateId }));
@@ -1366,6 +1426,27 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     };
   }, [sessions]);
 
+  // Indicadores de urgencia: sesiones próximas (próximas 2 horas)
+  const urgentSessions = useMemo(() => {
+    const now = Date.now();
+    const twoHoursFromNow = now + 2 * 60 * 60 * 1000;
+    
+    return sessions.filter((s) => {
+      if (s.status !== "scheduled") return false;
+      const sessionTime = new Date(s.starts_at).getTime();
+      return sessionTime >= now && sessionTime <= twoHoursFromNow;
+    });
+  }, [sessions]);
+
+  // Sesiones pendientes de confirmación (sin depósito si aplica)
+  const pendingSessions = useMemo(() => {
+    return sessions.filter((s) => {
+      if (s.status !== "scheduled") return false;
+      // Aquí podrías agregar lógica adicional para detectar sesiones que requieren confirmación
+      return false; // Por ahora retornamos vacío, pero se puede expandir
+    });
+  }, [sessions]);
+
   const applyFilterPreset = useCallback((preset) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1483,33 +1564,59 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
           </div>
         </div>
 
-        {/* Contadores del día */}
-        {getTodayStats.total > 0 && (
-          <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-background-secondary/40 border border-border/60">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary-400" />
-              <span className="text-sm font-semibold text-foreground">Hoy:</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-500/15 border border-primary-500/30">
-              <span className="text-xs text-primary-200">Total</span>
-              <span className="text-sm font-bold text-primary-100">{getTodayStats.total}</span>
-            </div>
-            {getTodayStats.scheduled > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30">
-                <span className="text-xs text-blue-200">Programadas</span>
-                <span className="text-sm font-bold text-blue-100">{getTodayStats.scheduled}</span>
+        {/* Contadores del día y alertas de urgencia */}
+        {(getTodayStats.total > 0 || urgentSessions.length > 0) && (
+          <div className="space-y-3">
+            {urgentSessions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/50 animate-pulse">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-amber-200">
+                    {urgentSessions.length} {urgentSessions.length === 1 ? "clase próxima" : "clases próximas"} en las próximas 2 horas
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      from: toDateInputValue(new Date()),
+                      to: toDateInputValue(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+                    }));
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-xs font-medium text-amber-200 hover:bg-amber-500/30 transition"
+                >
+                  Ver urgentes
+                </button>
               </div>
             )}
-            {getTodayStats.completed > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/15 border border-green-500/30">
-                <span className="text-xs text-green-200">Completadas</span>
-                <span className="text-sm font-bold text-green-100">{getTodayStats.completed}</span>
-              </div>
-            )}
-            {getTodayStats.cancelled > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/15 border border-red-500/30">
-                <span className="text-xs text-red-200">Canceladas</span>
-                <span className="text-sm font-bold text-red-100">{getTodayStats.cancelled}</span>
+            {getTodayStats.total > 0 && (
+              <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-background-secondary/40 border border-border/60">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary-400" />
+                  <span className="text-sm font-semibold text-foreground">Hoy:</span>
+                </div>
+                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-500/15 border border-primary-500/30">
+                  <span className="text-xs text-primary-200">Total</span>
+                  <span className="text-sm font-bold text-primary-100">{getTodayStats.total}</span>
+                </div>
+                {getTodayStats.scheduled > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30">
+                    <span className="text-xs text-blue-200">Programadas</span>
+                    <span className="text-sm font-bold text-blue-100">{getTodayStats.scheduled}</span>
+                  </div>
+                )}
+                {getTodayStats.completed > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/15 border border-green-500/30">
+                    <span className="text-xs text-green-200">Completadas</span>
+                    <span className="text-sm font-bold text-green-100">{getTodayStats.completed}</span>
+                  </div>
+                )}
+                {getTodayStats.cancelled > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/15 border border-red-500/30">
+                    <span className="text-xs text-red-200">Canceladas</span>
+                    <span className="text-sm font-bold text-red-100">{getTodayStats.cancelled}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1570,7 +1677,21 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
       <section className="card p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Botón para mostrar/ocultar filtros avanzados en móvil */}
+          <div className="lg:hidden">
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:border-primary-500 hover:text-primary-300 transition w-full justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filtros avanzados
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          
+          <div className={`grid grid-cols-1 md:grid-cols-5 gap-4 ${showAdvancedFilters || !isMobile ? '' : 'hidden'}`}>
             <div>
               <label className="text-xs uppercase tracking-wide text-foreground-secondary block mb-1">
                 Desde
@@ -1916,47 +2037,103 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
             </>
           ) : (
             <>
-              <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-background-secondary text-foreground-muted text-xs uppercase tracking-wide">
-                  <th className="py-3 px-4 text-left">Inicio</th>
-                  <th className="py-3 px-4 text-left">Actividad</th>
-                  <th className="py-3 px-4 text-left">Serie</th>
-                  <th className="py-3 px-4 text-left">Profesor</th>
-                  <th className="py-3 px-4 text-left">Cupo</th>
-                  <th className="py-3 px-4 text-left">Precio</th>
-                  <th className="py-3 px-4 text-left">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
+              {/* Vista de tabla en desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-background-secondary text-foreground-muted text-xs uppercase tracking-wide">
+                      <th className="py-3 px-4 text-left">Inicio</th>
+                      <th className="py-3 px-4 text-left">Actividad</th>
+                      <th className="py-3 px-4 text-left">Serie</th>
+                      <th className="py-3 px-4 text-left">Profesor</th>
+                      <th className="py-3 px-4 text-left">Cupo</th>
+                      <th className="py-3 px-4 text-left">Precio</th>
+                      <th className="py-3 px-4 text-left">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedSessions.map((session) => {
+                      const isSelected = String(session.id) === String(selectedSessionId);
+                      return (
+                        <tr
+                          key={session.id}
+                          onClick={() => setSelectedSessionId(session.id)}
+                          className={`border-b border-border cursor-pointer hover:bg-background-secondary transition ${
+                            isSelected ? "bg-primary-500/10" : ""
+                          }`}
+                        >
+                          <td className="py-3 px-4 font-medium text-foreground">{formatDateTime(session.starts_at)}</td>
+                          <td className="py-3 px-4 text-foreground-secondary">{session.activity_type}</td>
+                          <td className="py-3 px-4 text-foreground-secondary">
+                            {formatSeriesId(session.series_id)}
+                          </td>
+                          <td className="py-3 px-4 text-foreground-secondary">{session.instructor_name}</td>
+                          <td className="py-3 px-4 text-foreground-secondary">
+                            {session.capacity_max} lugares
+                          </td>
+                          <td className="py-3 px-4 text-foreground-secondary">{currency(session.price_decimal)}</td>
+                          <td className="py-3 px-4">
+                            <StatusBadge status={session.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Vista de cards en móvil */}
+              <div className="md:hidden space-y-4">
                 {paginatedSessions.map((session) => {
                   const isSelected = String(session.id) === String(selectedSessionId);
+                  const isUpcoming = new Date(session.starts_at).getTime() - Date.now() < 2 * 60 * 60 * 1000 && new Date(session.starts_at) >= new Date();
+                  
                   return (
-                    <tr
+                    <article
                       key={session.id}
                       onClick={() => setSelectedSessionId(session.id)}
-                      className={`border-b border-border cursor-pointer hover:bg-background-secondary transition ${
-                        isSelected ? "bg-primary-500/10" : ""
+                      className={`rounded-xl border p-4 cursor-pointer transition ${
+                        isSelected
+                          ? "bg-primary-500/10 border-primary-500/50"
+                          : isUpcoming
+                          ? "bg-background-secondary/40 border-amber-500/50 hover:border-amber-500/70"
+                          : "bg-background-secondary/40 border-border hover:border-primary-500/50"
                       }`}
                     >
-                      <td className="py-3 px-4 font-medium text-foreground">{formatDateTime(session.starts_at)}</td>
-                      <td className="py-3 px-4 text-foreground-secondary">{session.activity_type}</td>
-                      <td className="py-3 px-4 text-foreground-secondary">
-                        {formatSeriesId(session.series_id)}
-                      </td>
-                      <td className="py-3 px-4 text-foreground-secondary">{session.instructor_name}</td>
-                      <td className="py-3 px-4 text-foreground-secondary">
-                        {session.capacity_max} lugares
-                      </td>
-                      <td className="py-3 px-4 text-foreground-secondary">{currency(session.price_decimal)}</td>
-                      <td className="py-3 px-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="w-4 h-4 text-primary-400" />
+                            <span className="font-semibold text-foreground">{formatDateTime(session.starts_at)}</span>
+                            {isUpcoming && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-medium text-amber-200">
+                                Próxima
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-base font-semibold text-foreground mb-1">{session.activity_type}</h3>
+                          <p className="text-sm text-foreground-secondary">{session.instructor_name}</p>
+                        </div>
                         <StatusBadge status={session.status} />
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-xs pt-3 border-t border-border/40">
+                        <div>
+                          <span className="text-foreground-muted block mb-1">Serie</span>
+                          <span className="text-foreground font-medium">{formatSeriesId(session.series_id)}</span>
+                        </div>
+                        <div>
+                          <span className="text-foreground-muted block mb-1">Cupo</span>
+                          <span className="text-foreground font-medium">{session.capacity_max} lugares</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-foreground-muted block mb-1">Precio</span>
+                          <span className="text-foreground font-semibold">{currency(session.price_decimal)}</span>
+                        </div>
+                      </div>
+                    </article>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
               {!groupBySeries && paginationInfo.total > 0 && (
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-4 border-t border-border bg-background/40">
                   <div className="text-xs text-foreground-secondary">

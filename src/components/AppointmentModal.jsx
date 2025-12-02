@@ -124,6 +124,7 @@ export default function AppointmentModal({ open, onClose, event }) {
     onConfirm: null,
   });
   const [reprogUI, setReprogUI] = useState({ visible: false, customText: "", autoCancel: true });
+  const [activeTab, setActiveTab] = useState("details");
 
   const [classDetail, setClassDetail] = useState(null);
   const [classLoading, setClassLoading] = useState(false);
@@ -856,7 +857,34 @@ export default function AppointmentModal({ open, onClose, event }) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Tabs de navegación */}
+        <div className="flex gap-2 mb-4 border-b border-border">
+          {[
+            { id: "details", label: "Detalles", icon: Calendar },
+            { id: "actions", label: "Acciones", icon: MessageSquare },
+            { id: "invoice", label: "Facturación", icon: FileText },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? `${textColor} border-primary-500`
+                    : `${subtextColor} border-transparent hover:border-border`
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Contenido de tabs */}
+        {activeTab === "details" && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${textColor}`}>Cliente</label>
             <input
@@ -962,10 +990,125 @@ export default function AppointmentModal({ open, onClose, event }) {
               </p>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
-        {/* Facturación */}
-        <div className={`mb-4 p-4 rounded-xl border ${borderColor}`}>
+        {activeTab === "actions" && (
+          <div className="mb-4 space-y-4">
+            {/* Reprogramación */}
+            <div className={`p-4 rounded-xl border ${borderColor}`}>
+              <div className="flex justify-between items-center mb-3">
+                <div className={`font-semibold flex items-center gap-2 ${textColor}`}>
+                  <MessageSquare className="w-4 h-4" />
+                  Reprogramar por WhatsApp
+                </div>
+                <button onClick={onReprogramOpen} className={`px-3 py-1.5 rounded-lg text-xs ${buttonSecondary} border`}>
+                  {reprogUI.visible ? "Cerrar" : "Abrir"}
+                </button>
+              </div>
+              {reprogUI.visible && (
+                <div className={`p-3 rounded-lg ${darkMode ? "bg-slate-800/50" : "bg-gray-50"}`}>
+                  <textarea
+                    rows={4}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm ${inputBg}`}
+                    value={reprogUI.customText}
+                    onChange={(e) => setReprogUI((u) => ({ ...u, customText: e.target.value }))}
+                    placeholder="Mensaje personalizado..."
+                    disabled={saving}
+                  />
+                  <div className="flex items-center gap-2 mt-2 mb-3">
+                    <input
+                      id="autoCancel"
+                      type="checkbox"
+                      checked={reprogUI.autoCancel}
+                      onChange={(e) => setReprogUI((u) => ({ ...u, autoCancel: e.target.checked }))}
+                      disabled={saving}
+                      className="rounded"
+                    />
+                    <label htmlFor="autoCancel" className={`text-xs ${subtextColor}`}>
+                      Cancelar turno automáticamente
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={onReprogramCancel} className={`px-3 py-1.5 rounded-lg text-sm ${buttonSecondary} border flex-1`} disabled={saving}>
+                      Cerrar
+                    </button>
+                    <button
+                      onClick={onReprogramSend}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${buttonPrimary} text-white flex-1`}
+                      disabled={saving}
+                    >
+                      {saving ? "Enviando…" : "Enviar"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Acciones rápidas */}
+            <div className={`p-4 rounded-xl border ${borderColor}`}>
+              <div className={`font-semibold flex items-center gap-2 mb-3 ${textColor}`}>
+                <Bell className="w-4 h-4" />
+                Acciones rápidas
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {!isClassSession && a.id && ["scheduled", "confirmed", "deposit_paid", "pending_deposit"].includes(a.status) && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setSaving(true);
+                        const response = await apiClient.post(`/api/reminders/send/${a.id}`);
+                        if (response.data?.ok) {
+                          toast.success("Recordatorio enviado correctamente");
+                        } else {
+                          toast.error(response.data?.error || "Error al enviar recordatorio");
+                        }
+                      } catch (error) {
+                        toast.error(error?.response?.data?.error || "Error al enviar recordatorio");
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    disabled={saving}
+                    className={`px-3 py-2 rounded-lg text-sm ${buttonSecondary} border flex items-center justify-center gap-2`}
+                  >
+                    <Bell className="w-4 h-4" />
+                    Recordatorio
+                  </button>
+                )}
+                {isSeries && (
+                  <button
+                    onClick={askCancelSeries}
+                    disabled={saving}
+                    className="px-3 py-2 rounded-lg border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 text-sm flex items-center justify-center gap-2"
+                  >
+                    <ShieldAlert className="w-4 h-4" />
+                    Cancelar serie
+                  </button>
+                )}
+                <button
+                  onClick={askCancel}
+                  disabled={saving}
+                  className={`px-3 py-2 rounded-lg text-sm ${buttonSecondary} border flex items-center justify-center gap-2`}
+                >
+                  <XCircle className="w-4 h-4" />
+                  Cancelar turno
+                </button>
+                <button
+                  onClick={askDelete}
+                  disabled={saving}
+                  className="px-3 py-2 rounded-lg border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 text-sm flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "invoice" && (
+          <div className={`mb-4 p-4 rounded-xl border ${borderColor}`}>
           <div className="flex justify-between items-center mb-3">
             <div className={`font-semibold flex items-center gap-2 ${textColor}`}>
               <FileText className="w-4 h-4" />
@@ -1135,57 +1278,11 @@ export default function AppointmentModal({ open, onClose, event }) {
               )}
             </div>
           )}
-        </div>
-
-        {/* Reprogramación */}
-        <div className={`mb-4 p-4 rounded-xl border ${borderColor}`}>
-          <div className="flex justify-between items-center mb-3">
-            <div className={`font-semibold flex items-center gap-2 ${textColor}`}>
-              <MessageSquare className="w-4 h-4" />
-              Reprogramar por WhatsApp
-            </div>
-            <button onClick={onReprogramOpen} className={`px-3 py-1.5 rounded-lg text-xs ${buttonSecondary} border`}>
-              Abrir
-            </button>
           </div>
-          {reprogUI.visible && (
-            <div className={`p-3 rounded-lg ${darkMode ? "bg-slate-800/50" : "bg-gray-50"}`}>
-              <textarea
-                rows={4}
-                className={`w-full rounded-lg border px-3 py-2 text-sm ${inputBg}`}
-                value={reprogUI.customText}
-                onChange={(e) => setReprogUI((u) => ({ ...u, customText: e.target.value }))}
-                placeholder="Mensaje personalizado..."
-                disabled={saving}
-              />
-              <div className="flex items-center gap-2 mt-2 mb-3">
-                <input
-                  id="autoCancel"
-                  type="checkbox"
-                  checked={reprogUI.autoCancel}
-                  onChange={(e) => setReprogUI((u) => ({ ...u, autoCancel: e.target.checked }))}
-                  disabled={saving}
-                  className="rounded"
-                />
-                <label htmlFor="autoCancel" className={`text-xs ${subtextColor}`}>
-                  Cancelar turno automáticamente
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={onReprogramCancel} className={`px-3 py-1.5 rounded-lg text-sm ${buttonSecondary} border flex-1`} disabled={saving}>
-                  Cerrar
-                </button>
-                <button
-                  onClick={onReprogramSend}
-                  className={`px-3 py-1.5 rounded-lg text-sm ${buttonPrimary} text-white flex-1`}
-                  disabled={saving}
-                >
-                  {saving ? "Enviando…" : "Enviar"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
+
+        {/* Mensajes - siempre visibles */}
+
 
         {/* Mensajes */}
         {msg && (
@@ -1199,57 +1296,8 @@ export default function AppointmentModal({ open, onClose, event }) {
           </div>
         )}
 
-        {/* Footer */}
+        {/* Footer - siempre visible */}
         <div className="flex flex-wrap gap-2 pt-4 border-t" style={{ borderColor: darkMode ? "#165273" : "#e5e7eb" }}>
-          {isSeries && (
-            <button
-              onClick={askCancelSeries}
-              disabled={saving}
-              className="px-3 py-2 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 text-sm flex items-center gap-2"
-            >
-              <ShieldAlert className="w-4 h-4" />
-              Cancelar serie
-            </button>
-          )}
-          <button
-            onClick={askDelete}
-            disabled={saving}
-            className="px-3 py-2 rounded-xl border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 text-sm flex items-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Eliminar
-          </button>
-          <button
-            onClick={askCancel}
-            disabled={saving}
-            className={`px-3 py-2 rounded-xl text-sm ${buttonSecondary} border`}
-          >
-            Cancelar turno
-          </button>
-          {!isClassSession && a.id && ["scheduled", "confirmed", "deposit_paid", "pending_deposit"].includes(a.status) && (
-            <button
-              onClick={async () => {
-                try {
-                  setSaving(true);
-                  const response = await apiClient.post(`/api/reminders/send/${a.id}`);
-                  if (response.data?.ok) {
-                    toast.success("Recordatorio enviado correctamente");
-                  } else {
-                    toast.error(response.data?.error || "Error al enviar recordatorio");
-                  }
-                } catch (error) {
-                  toast.error(error?.response?.data?.error || "Error al enviar recordatorio");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              disabled={saving}
-              className={`px-3 py-2 rounded-xl text-sm ${buttonSecondary} border flex items-center gap-2`}
-            >
-              <Bell className="w-4 h-4" />
-              Enviar recordatorio
-            </button>
-          )}
           <div className="flex-1" />
           <button onClick={() => onClose?.()} disabled={saving} className={`px-4 py-2 rounded-xl text-sm ${buttonSecondary} border`}>
             Cerrar
