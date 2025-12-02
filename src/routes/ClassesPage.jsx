@@ -461,6 +461,18 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
   );
   const classesEnabled = Boolean(enabledFeatures.classes);
 
+  // Filtrar sesiones por búsqueda - DEBE estar antes de cualquier hook que lo use
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const query = searchQuery.toLowerCase().trim();
+    return sessions.filter((session) => {
+      const activity = (session.activity_type || "").toLowerCase();
+      const instructor = (session.instructor_name || "").toLowerCase();
+      const seriesId = (session.series_id || "").toLowerCase();
+      return activity.includes(query) || instructor.includes(query) || seriesId.includes(query);
+    });
+  }, [sessions, searchQuery]);
+
   const fetchInstructors = useCallback(async () => {
     try {
       const list = await apiClient.listInstructors({ active: true });
@@ -1396,16 +1408,7 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     }));
   };
 
-  if (businessInfoLoading) {
-    return (
-      <div className="p-8 flex items-center gap-3 text-foreground-secondary">
-        <RefreshCw className="w-4 h-4 animate-spin" />
-        Cargando configuración…
-      </div>
-    );
-  }
-
-  // Funciones helper para estadísticas y presets de filtros
+  // Funciones helper para estadísticas y presets de filtros - DEBEN estar antes de cualquier return condicional
   const getTodayStats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1497,20 +1500,17 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
     setFilters((prev) => ({ ...prev, from, to }));
   }, []);
 
-  // Filtrar sesiones por búsqueda
-  const filteredSessions = useMemo(() => {
-    if (!searchQuery.trim()) return sessions;
-    const query = searchQuery.toLowerCase().trim();
-    return sessions.filter((session) => {
-      const activity = (session.activity_type || "").toLowerCase();
-      const instructor = (session.instructor_name || "").toLowerCase();
-      const seriesId = (session.series_id || "").toLowerCase();
-      return activity.includes(query) || instructor.includes(query) || seriesId.includes(query);
-    });
-  }, [sessions, searchQuery]);
-
   // Usar sesiones filtradas en lugar de sesiones originales
   const displaySessions = searchQuery ? filteredSessions : sessions;
+
+  if (businessInfoLoading) {
+    return (
+      <div className="p-8 flex items-center gap-3 text-foreground-secondary">
+        <RefreshCw className="w-4 h-4 animate-spin" />
+        Cargando configuración…
+      </div>
+    );
+  }
 
   if (!classesEnabled) {
     return (
@@ -2320,44 +2320,65 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 </div>
               </div>
 
-              <form onSubmit={handleAddEnrollment} className="bg-background-secondary/40 border border-border rounded-lg p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" />
+              <form onSubmit={handleAddEnrollment} className="bg-background-secondary/60 border-2 border-border rounded-2xl p-5 space-y-4 shadow-lg">
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2 mb-4">
+                  <UserPlus className="w-5 h-5 text-primary-400" />
                   Añadir alumno
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    className="input"
-                    placeholder="Nombre"
-                    value={enrollForm.customerName}
-                    onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                  />
-                  <input
-                    className="input"
-                    placeholder="Teléfono (obligatorio)"
-                    value={enrollForm.customerPhone}
-                    onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerPhone: e.target.value }))}
-                    required
-                  />
-                  <input
-                    className="input"
-                    placeholder="ID cliente (opcional)"
-                    value={enrollForm.customerId}
-                    onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerId: e.target.value }))}
-                  />
-                  <input
-                    className="input"
-                    placeholder="Notas"
-                    value={enrollForm.notes}
-                    onChange={(e) => setEnrollForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-foreground">Nombre</span>
+                    <input
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
+                      placeholder="Nombre del alumno"
+                      value={enrollForm.customerName}
+                      onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      Teléfono
+                      <span className="text-red-400">*</span>
+                    </span>
+                    <input
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
+                      placeholder="+54911..."
+                      value={enrollForm.customerPhone}
+                      onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerPhone: e.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      ID cliente
+                      <span className="text-xs font-normal text-foreground-muted ml-2">(opcional)</span>
+                    </span>
+                    <input
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
+                      placeholder="ID del cliente existente"
+                      value={enrollForm.customerId}
+                      onChange={(e) => setEnrollForm((prev) => ({ ...prev, customerId: e.target.value }))}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      Notas
+                      <span className="text-xs font-normal text-foreground-muted ml-2">(opcional)</span>
+                    </span>
+                    <input
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
+                      placeholder="Notas adicionales"
+                      value={enrollForm.notes}
+                      onChange={(e) => setEnrollForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    />
+                  </label>
                 </div>
                 <button
                   type="submit"
                   disabled={savingEnrollment}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed font-semibold text-base shadow-lg shadow-primary-500/20"
                 >
-                  {savingEnrollment ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {savingEnrollment ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                   Inscribir alumno
                 </button>
               </form>
@@ -2419,9 +2440,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       </div>
 
       {sessionFormOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto p-4" onClick={(e) => e.target === e.currentTarget && setSessionFormOpen(false)}>
-          <div className="max-w-3xl w-full mx-auto my-8 bg-background border border-border rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 overflow-y-auto p-4" onClick={(e) => e.target === e.currentTarget && setSessionFormOpen(false)}>
+          <div className="max-w-3xl w-full mx-auto my-8 bg-background border-2 border-border rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <header className="flex items-center justify-between px-6 py-5 border-b-2 border-border bg-background-secondary/40">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">Programar nueva clase</h2>
                 <p className="text-sm text-foreground-secondary">
@@ -2441,12 +2462,15 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
             <div className="px-6 pt-5">
               <ActionBanner message={actionMessage} onClose={dismissMessage} />
             </div>
-            <form onSubmit={handleSessionFormSubmit} className="px-6 py-5 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Plantilla</span>
+            <form onSubmit={handleSessionFormSubmit} className="px-6 py-5 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Plantilla
+                    <span className="text-xs font-normal text-foreground-muted">(opcional)</span>
+                  </span>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.templateId}
                     onChange={(e) => handleTemplateApply(e.target.value)}
                   >
@@ -2459,25 +2483,32 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   </select>
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Tipo de actividad</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Tipo de actividad
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.activityType}
                     onChange={(e) => handleSessionFormChange("activityType", e.target.value)}
+                    placeholder="Ej: Yoga, Pilates, Spinning..."
                     required
                   />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Profesor</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Profesor
+                    <span className="text-red-400">*</span>
+                  </span>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.instructorId}
                     onChange={(e) => handleSessionFormChange("instructorId", e.target.value)}
                     required
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="">Seleccionar profesor</option>
                     {instructors.map((sty) => (
                       <option key={sty.id} value={sty.id}>
                         {sty.name}
@@ -2486,10 +2517,13 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   </select>
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Servicio (opcional)</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Servicio
+                    <span className="text-xs font-normal text-foreground-muted">(opcional)</span>
+                  </span>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.serviceId}
                     onChange={(e) => handleSessionFormChange("serviceId", e.target.value)}
                   >
@@ -2502,10 +2536,13 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   </select>
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Sucursal</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Sucursal
+                    <span className="text-red-400">*</span>
+                  </span>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base disabled:opacity-50 disabled:cursor-not-allowed"
                     value={sessionForm.branchId || ""}
                     onChange={(e) => handleSessionFormChange("branchId", e.target.value)}
                     disabled={branchesLoading || branches.length === 0}
@@ -2525,11 +2562,14 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   </select>
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Inicio</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Fecha y hora de inicio
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
                     type="datetime-local"
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.startsAt}
                     onChange={(e) => {
                       handleSessionFormChange("startsAt", e.target.value);
@@ -2543,12 +2583,15 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                   />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Duración (min)</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Duración (minutos)
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
                     type="number"
                     min={1}
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionDurationMin}
                     onChange={(e) => {
                       const newDuration = Number(e.target.value || 0);
@@ -2559,49 +2602,62 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                         handleSessionFormChange("endsAt", calculatedEnd);
                       }
                     }}
+                    placeholder="60"
                     required
                   />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Cupo máximo</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Cupo máximo
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
                     type="number"
                     min={1}
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.capacityMax}
                     onChange={(e) => handleSessionFormChange("capacityMax", e.target.value)}
+                    placeholder="10"
                     required
                   />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Precio</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Precio
+                    <span className="text-xs font-normal text-foreground-muted">(opcional)</span>
+                  </span>
                   <input
                     type="number"
                     min={0}
                     step="0.01"
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={sessionForm.priceDecimal}
                     onChange={(e) => handleSessionFormChange("priceDecimal", e.target.value)}
+                    placeholder="0.00"
                   />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm md:col-span-2">
-                  <span className="text-foreground-secondary">Notas</span>
+                <label className="flex flex-col gap-2 md:col-span-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Notas
+                    <span className="text-xs font-normal text-foreground-muted">(opcional)</span>
+                  </span>
                   <textarea
-                    className="input min-h-[80px]"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base min-h-[100px] resize-y"
                     value={sessionForm.notes}
                     onChange={(e) => handleSessionFormChange("notes", e.target.value)}
+                    placeholder="Notas adicionales sobre la clase..."
                   />
                 </label>
               </div>
 
-              <div className="rounded-2xl border border-border bg-background-secondary/40 p-4 space-y-4">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <div className="rounded-2xl border-2 border-border bg-background-secondary/60 p-5 space-y-5 shadow-lg">
+                <label className="flex items-center gap-3 text-base font-semibold text-foreground cursor-pointer">
                   <input
                     type="checkbox"
-                    className="rounded"
+                    className="w-5 h-5 rounded border-2 border-border text-primary-500 focus:ring-2 focus:ring-primary-500/50 cursor-pointer"
                     checked={repeatOptions.enabled}
                     onChange={(e) => handleRepeatToggle(e.target.checked)}
                   />
@@ -2610,18 +2666,19 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
 
                 {repeatOptions.enabled && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-foreground-secondary">Semanas (incluye la actual)</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      <label className="flex flex-col gap-2">
+                        <span className="text-sm font-semibold text-foreground">Semanas (incluye la actual)</span>
                         <input
                           type="number"
                           min={1}
-                          className="input"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                           value={repeatOptions.weeks}
                           onChange={(e) => handleRepeatFieldChange("weeks", e.target.value)}
+                          placeholder="4"
                         />
                       </label>
-                      <div className="md:col-span-2 text-xs text-foreground-secondary">
+                      <div className="md:col-span-2 text-sm text-foreground-secondary bg-background/40 p-4 rounded-xl border border-border/60">
                         Elegí cuántas semanas se generarán automáticamente. Podés sumar múltiples días y horarios por
                         semana con configuraciones personalizadas.
                       </div>
@@ -2632,25 +2689,25 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                       repeticiones configuradas para las semanas indicadas.
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {repeatOptions.patterns.map((pattern, index) => (
-                        <div key={`repeat-pattern-${index}`} className="rounded-xl border border-border bg-background p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-foreground">Repetición #{index + 1}</span>
+                        <div key={`repeat-pattern-${index}`} className="rounded-xl border-2 border-border bg-background-secondary/40 p-5 space-y-4 shadow-md">
+                          <div className="flex items-center justify-between pb-3 border-b border-border">
+                            <span className="text-base font-bold text-foreground">Repetición #{index + 1}</span>
                             <button
                               type="button"
                               onClick={() => handleRemovePattern(index)}
-                              className="text-xs text-red-400 hover:text-red-300"
+                              className="px-3 py-1.5 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 transition"
                             >
                               Quitar
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Día</span>
+                          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Día</span>
                               <select
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.weekday}
                                 onChange={(e) => handlePatternFieldChange(index, "weekday", Number(e.target.value))}
                               >
@@ -2662,32 +2719,32 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                               </select>
                             </label>
 
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Hora</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Hora</span>
                               <input
                                 type="time"
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.startTime || ""}
                                 onChange={(e) => handlePatternFieldChange(index, "startTime", e.target.value)}
                               />
                             </label>
 
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Duración (min)</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Duración (min)</span>
                               <input
                                 type="number"
                                 min={15}
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.durationMin ?? ""}
                                 onChange={(e) => handlePatternFieldChange(index, "durationMin", e.target.value)}
                                 placeholder={String(sessionDurationMin || 60)}
                               />
                             </label>
 
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Profesor</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Profesor</span>
                               <select
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.instructorId}
                                 onChange={(e) => handlePatternFieldChange(index, "instructorId", e.target.value)}
                               >
@@ -2700,25 +2757,25 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                               </select>
                             </label>
 
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Cupo</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Cupo</span>
                               <input
                                 type="number"
                                 min={1}
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.capacityMax ?? ""}
                                 onChange={(e) => handlePatternFieldChange(index, "capacityMax", e.target.value)}
                                 placeholder={String(sessionForm.capacityMax || 1)}
                               />
                             </label>
 
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Precio</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Precio</span>
                               <input
                                 type="number"
                                 min={0}
                                 step="0.01"
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.priceDecimal ?? ""}
                                 onChange={(e) => handlePatternFieldChange(index, "priceDecimal", e.target.value)}
                                 placeholder={String(sessionForm.priceDecimal || 0)}
@@ -2726,20 +2783,20 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                             </label>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Actividad</span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Actividad</span>
                               <input
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.activityType || ""}
                                 onChange={(e) => handlePatternFieldChange(index, "activityType", e.target.value)}
                                 placeholder="Usar actividad base"
                               />
                             </label>
-                            <label className="flex flex-col gap-1 text-sm">
-                              <span className="text-foreground-secondary">Servicio</span>
+                            <label className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">Servicio</span>
                               <select
-                                className="input"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                                 value={pattern.serviceId || ""}
                                 onChange={(e) => handlePatternFieldChange(index, "serviceId", e.target.value)}
                               >
@@ -2753,10 +2810,10 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                             </label>
                           </div>
 
-                          <label className="flex flex-col gap-1 text-sm">
-                            <span className="text-foreground-secondary">Notas</span>
+                          <label className="flex flex-col gap-2">
+                            <span className="text-sm font-semibold text-foreground">Notas</span>
                             <textarea
-                              className="input min-h-[60px]"
+                              className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base min-h-[80px] resize-y"
                               value={pattern.notes || ""}
                               onChange={(e) => handlePatternFieldChange(index, "notes", e.target.value)}
                               placeholder="Notas específicas para esta repetición"
@@ -2768,9 +2825,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                       <button
                         type="button"
                         onClick={handleAddPattern}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm text-foreground-secondary hover:bg-background-secondary transition"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-border text-base font-semibold text-foreground hover:bg-background-secondary hover:border-primary-500/50 transition"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-5 h-5" />
                         Agregar día y horario
                       </button>
                     </div>
@@ -2778,23 +2835,23 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t-2 border-border">
                 <button
                   type="button"
                   onClick={() => {
                     setSessionFormOpen(false);
                     setRepeatOptions(DEFAULT_REPEAT_OPTIONS);
                   }}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground-secondary hover:bg-background-secondary transition"
+                  className="px-6 py-3 rounded-xl border-2 border-border text-foreground-secondary hover:bg-background-secondary transition font-semibold text-base"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingSession}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed font-semibold text-base shadow-lg shadow-primary-500/20"
                 >
-                  {savingSession ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {savingSession ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                   Guardar clase
                 </button>
               </div>
@@ -2804,9 +2861,9 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
       )}
 
       {templateFormOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto p-4" onClick={(e) => e.target === e.currentTarget && setTemplateFormOpen(false)}>
-          <div className="max-w-2xl w-full mx-auto my-8 bg-background border border-border rounded-2xl shadow-2xl overflow-y-auto max-h-[85vh]">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 overflow-y-auto p-4" onClick={(e) => e.target === e.currentTarget && setTemplateFormOpen(false)}>
+          <div className="max-w-2xl w-full mx-auto my-8 bg-background border-2 border-border rounded-2xl shadow-2xl overflow-y-auto max-h-[85vh]">
+            <header className="flex items-center justify-between px-6 py-5 border-b-2 border-border bg-background-secondary/40">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">Nueva plantilla de clase</h2>
                 <p className="text-sm text-foreground-secondary">
@@ -2820,66 +2877,80 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                 <XCircle className="w-5 h-5" />
               </button>
             </header>
-            <form onSubmit={handleTemplateFormSubmit} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Nombre de la plantilla</span>
+            <form onSubmit={handleTemplateFormSubmit} className="px-6 py-5 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Nombre de la plantilla
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
+                    placeholder="Ej: Yoga Matutino"
                     value={templateForm.name}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                     required
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Tipo de actividad</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Tipo de actividad
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={templateForm.activityType}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, activityType: e.target.value }))}
+                    placeholder="Ej: Yoga, Pilates..."
                     required
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Cupo por defecto</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Cupo por defecto
+                    <span className="text-red-400">*</span>
+                  </span>
                   <input
                     type="number"
                     min={1}
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={templateForm.defaultCapacity}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultCapacity: e.target.value }))}
+                    placeholder="10"
                     required
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Duración (min)</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground">Duración (minutos)</span>
                   <input
                     type="number"
                     min={1}
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={templateForm.defaultDurationMin}
                     onChange={(e) =>
                       setTemplateForm((prev) => ({ ...prev, defaultDurationMin: e.target.value }))
                     }
+                    placeholder="60"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Precio sugerido</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground">Precio sugerido</span>
                   <input
                     type="number"
                     min={0}
                     step="0.01"
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={templateForm.defaultPriceDecimal}
                     onChange={(e) =>
                       setTemplateForm((prev) => ({ ...prev, defaultPriceDecimal: e.target.value }))
                     }
+                    placeholder="0.00"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground-secondary">Profesor por defecto</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-foreground">Profesor por defecto</span>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base"
                     value={templateForm.defaultInstructorId}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultInstructorId: e.target.value }))}
                   >
@@ -2891,37 +2962,39 @@ const { data: tenantBusinessInfo, loading: businessInfoLoading } = useQuery(
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm md:col-span-2">
-                  <span className="text-foreground-secondary">Descripción</span>
+                <label className="flex flex-col gap-2 md:col-span-2">
+                  <span className="text-sm font-semibold text-foreground">Descripción</span>
                   <textarea
-                    className="input min-h-[80px]"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition text-base min-h-[100px] resize-y"
                     value={templateForm.description}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Descripción de la plantilla..."
                   />
                 </label>
-                <label className="flex items-center gap-2 text-sm text-foreground-secondary">
+                <label className="flex items-center gap-3 text-base font-semibold text-foreground cursor-pointer md:col-span-2">
                   <input
                     type="checkbox"
+                    className="w-5 h-5 rounded border-2 border-border text-primary-500 focus:ring-2 focus:ring-primary-500/50 cursor-pointer"
                     checked={templateForm.isActive}
                     onChange={(e) => setTemplateForm((prev) => ({ ...prev, isActive: e.target.checked }))}
                   />
                   Plantilla activa
                 </label>
               </div>
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t-2 border-border">
                 <button
                   type="button"
                   onClick={() => setTemplateFormOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground-secondary hover:bg-background-secondary transition"
+                  className="px-6 py-3 rounded-xl border-2 border-border text-foreground-secondary hover:bg-background-secondary transition font-semibold text-base"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingTemplate}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition disabled:opacity-60 disabled:cursor-not-allowed font-semibold text-base shadow-lg shadow-primary-500/20"
                 >
-                  {savingTemplate ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {savingTemplate ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                   Guardar plantilla
                 </button>
               </div>
