@@ -58,7 +58,7 @@ function Section({ title, children, action }) {
         <h2 className="section-header">{title}</h2>
         {action}
       </div>
-      <div className="card card--space-lg card--no-hover">
+      <div className="card card--space-lg card--no-hover" style={{ minWidth: 0, overflow: 'visible' }}>
         {children}
       </div>
     </div>
@@ -103,6 +103,30 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const incomeChartRef = React.useRef(null);
+  const servicesChartRef = React.useRef(null);
+  const [chartDimensions, setChartDimensions] = React.useState({ width: 0, height: 280 });
+  
+  React.useEffect(() => {
+    const updateDimensions = () => {
+      if (incomeChartRef.current) {
+        const width = incomeChartRef.current.offsetWidth || incomeChartRef.current.clientWidth || 0;
+        if (width > 0) {
+          setChartDimensions(prev => ({ ...prev, width }));
+          console.log("[Dashboard] Dimensiones actualizadas:", width, "x", 280);
+        }
+      }
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    const timer = setTimeout(updateDimensions, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      clearTimeout(timer);
+    };
+  }, [incomeArr, topServicesArr]);
   
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
@@ -252,9 +276,17 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="w-full" style={{ height: '280px', position: 'relative' }}>
-                <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={incomeArr} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <div 
+                ref={incomeChartRef}
+                className="w-full" 
+                style={{ height: '280px', position: 'relative', minWidth: '300px', width: '100%' }}
+              >
+                {chartDimensions.width > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart 
+                      data={incomeArr} 
+                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
                       <XAxis
                         dataKey="month"
@@ -292,7 +324,12 @@ export default function DashboardPage() {
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+                  </div>
+                )}
+              </div>
             )}
           </Section>
         </div>
@@ -325,9 +362,17 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="w-full" style={{ height: '280px', position: 'relative' }}>
-                <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={topServicesArr} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+              <div 
+                ref={servicesChartRef}
+                className="w-full" 
+                style={{ height: '280px', position: 'relative', minWidth: '200px', width: '100%' }}
+              >
+                {chartDimensions.width > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart 
+                      data={topServicesArr} 
+                      margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+                    >
                       <defs>
                         <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#60a5fa" />
@@ -371,7 +416,12 @@ export default function DashboardPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+                  </div>
+                )}
+              </div>
             )}
           </Section>
         </div>
