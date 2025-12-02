@@ -137,10 +137,7 @@ function SortableAppointmentItem({ item }) {
   };
 
   const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.scheduled;
-  const time = new Date(item.starts_at).toLocaleTimeString("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const time = formatArgentinaTime(item.starts_at);
 
   return (
     <div
@@ -195,6 +192,66 @@ const getMonthName = (monthNumber) => {
   return months[num - 1] || monthNumber;
 };
 
+// Funciones para manejar hora argentina (UTC-3)
+const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
+
+// Convertir fecha ISO a hora argentina
+const toArgentinaTime = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  // Obtener la fecha en hora argentina
+  return new Date(date.toLocaleString('en-US', { timeZone: ARGENTINA_TIMEZONE }));
+};
+
+// Obtener fecha/hora actual en hora argentina
+const getArgentinaNow = () => {
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: ARGENTINA_TIMEZONE }));
+};
+
+// Crear fecha en hora argentina con hora específica
+const createArgentinaDate = (year, month, day, hour = 0, minute = 0) => {
+  // Crear fecha en UTC y luego convertir a hora argentina
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+  const localDate = new Date(dateStr);
+  // Calcular offset de Argentina (UTC-3)
+  const offset = -3 * 60; // -3 horas en minutos
+  const utc = localDate.getTime() + (localDate.getTimezoneOffset() * 60000);
+  return new Date(utc + (offset * 60000));
+};
+
+// Formatear hora en hora argentina
+const formatArgentinaTime = (dateString, options = { hour: '2-digit', minute: '2-digit' }) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('es-AR', { ...options, timeZone: ARGENTINA_TIMEZONE });
+};
+
+// Obtener hora y minutos en hora argentina
+const getArgentinaHoursMinutes = (dateString) => {
+  if (!dateString) return { hour: 0, minute: 0 };
+  const date = new Date(dateString);
+  // Obtener componentes en hora argentina usando Intl
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINA_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+  const minute = parseInt(parts.find(p => p.type === 'minute').value, 10);
+  return { hour, minute };
+};
+
+// Crear ISO string desde hora argentina
+const createISOFromArgentinaTime = (year, month, day, hour, minute) => {
+  // Crear fecha en hora argentina (UTC-3)
+  // Formato: YYYY-MM-DDTHH:mm:ss-03:00
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-03:00`;
+  return dateStr;
+};
+
 const money = (n) =>
   typeof n === "number"
     ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n)
@@ -236,7 +293,7 @@ export default function DashboardPage() {
     useQuery(() => apiClient.getAdminDashboard({ from, to }), [from, to]);
   const week = rawWeek?.data ?? rawWeek ?? {};
 
-  const year = new Date().getFullYear();
+  const year = getArgentinaNow().getFullYear();
   const { data: income, loading: loadingInc, error: errorInc } =
     useQuery(() => apiClient.getIncomeByMonth(year), [year]);
   const incomeArr = React.useMemo(() => {
@@ -326,18 +383,35 @@ export default function DashboardPage() {
         const newItems = arrayMove(agendaItems, oldIndex, newIndex);
         setAgendaItems(newItems);
         
-        // Intercambiar horas
+        // Intercambiar horas (mantener la fecha de hoy en hora argentina)
         const targetItem = agendaItems[newIndex];
-        const oldDate = new Date(draggedItem.starts_at);
-        const newDate = new Date(targetItem.starts_at);
+        const today = getArgentinaNow();
+        const oldTime = getArgentinaHoursMinutes(draggedItem.starts_at);
+        const newTime = getArgentinaHoursMinutes(targetItem.starts_at);
+        
+        // Crear nuevas fechas en hora argentina
+        const oldDateISO = createISOFromArgentinaTime(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          today.getDate(),
+          newTime.hour,
+          newTime.minute
+        );
+        const newDateISO = createISOFromArgentinaTime(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          today.getDate(),
+          oldTime.hour,
+          oldTime.minute
+        );
         
         try {
           await Promise.all([
             apiClient.updateAppointment(draggedItem.id, {
-              startsAt: newDate.toISOString()
+              startsAt: oldDateISO
             }),
             apiClient.updateAppointment(targetItem.id, {
-              startsAt: oldDate.toISOString()
+              startsAt: newDateISO
             })
           ]);
           
@@ -358,18 +432,27 @@ export default function DashboardPage() {
       const [hours, minutes] = slotTime.split(':');
       
       try {
-        const oldDate = new Date(draggedItem.starts_at);
-        const newDate = new Date(oldDate);
-        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // Obtener la fecha actual en hora argentina
+        const today = getArgentinaNow();
+        const oldDate = toArgentinaTime(draggedItem.starts_at);
+        
+        // Crear nueva fecha en hora argentina con la hora del slot
+        const newDateISO = createISOFromArgentinaTime(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          today.getDate(),
+          parseInt(hours),
+          parseInt(minutes)
+        );
         
         await apiClient.updateAppointment(draggedItem.id, {
-          startsAt: newDate.toISOString()
+          startsAt: newDateISO
         });
         
         // Actualizar localmente
         const updatedItems = agendaItems.map(item => 
           item.id === draggedItem.id 
-            ? { ...item, starts_at: newDate.toISOString() }
+            ? { ...item, starts_at: newDateISO }
             : item
         );
         setAgendaItems(updatedItems);
@@ -382,7 +465,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Organizar turnos por slots de hora
+  // Organizar turnos por slots de hora (en hora argentina)
   const organizeByTimeSlots = () => {
     const slots = Array.from({ length: 24 }, (_, i) => {
       const hour = Math.floor(i / 2) + 8;
@@ -396,9 +479,8 @@ export default function DashboardPage() {
     });
 
     agendaItems.forEach(item => {
-      const date = new Date(item.starts_at);
-      const hour = date.getHours();
-      const minute = date.getMinutes();
+      // Obtener hora en hora argentina
+      const { hour, minute } = getArgentinaHoursMinutes(item.starts_at);
       const slotIndex = (hour - 8) * 2 + Math.floor(minute / 30);
       
       if (slotIndex >= 0 && slotIndex < 24) {
@@ -748,10 +830,7 @@ export default function DashboardPage() {
                     const item = agendaItems.find(i => i.id === activeId);
                     if (!item) return null;
                     const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.scheduled;
-                    const time = new Date(item.starts_at).toLocaleTimeString("es-AR", {
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    });
+                    const time = formatArgentinaTime(item.starts_at);
                     return (
                       <>
                         <div className="text-xs font-medium text-foreground">{item.customer_name}</div>
