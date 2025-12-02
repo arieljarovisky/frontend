@@ -244,18 +244,21 @@ export default function BookingWidget() {
   }, [booking.serviceId, booking.date, booking.selectedSlot]);
 
   return (
-    <div className="bg-background rounded-2xl shadow-2xl border border-border p-6 mb-6">
+    <div className="bg-background rounded-2xl shadow-2xl border-2 border-primary/30 p-6 mb-6 relative overflow-hidden">
+      {/* Efecto de fondo destacado */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent pointer-events-none" />
+      <div className="relative z-10">
       {appointmentsEnabled && (<>
         <header className="mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Scissors className="w-6 h-6 text-indigo-400" />
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl ring-2 ring-indigo-500/30 shadow-lg">
+              <Scissors className="w-8 h-8 text-indigo-400" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
                 Reservá tu turno
               </h1>
-              <p className="text-foreground-secondary mt-1 text-sm">
+              <p className="text-foreground-secondary text-base">
                 Seguí los pasos para confirmar tu turno en minutos
               </p>
             </div>
@@ -649,6 +652,7 @@ export default function BookingWidget() {
           />
         </Section>
       )}
+      </div>
 
       {/* Modal de confirmación de WhatsApp */}
       {showWhatsAppModal && (
