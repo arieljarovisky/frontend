@@ -6,9 +6,31 @@ import {
 import { apiClient } from "../../api/client";
 import { toast } from "sonner";
 import { logger } from "../../utils/logger.js";
+// Chart.js
 import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Title,
+  ChartTooltip,
+  Legend
+);
 
 /* ===== helpers ===== */
 const money = (n) =>
@@ -987,15 +1009,76 @@ export default function InstructorStatsPage() {
               <div className="mb-3 text-sm font-medium text-foreground-secondary">Evolución diaria</div>
               {dailySeries.length ? (
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dailySeries}>
-                      <CartesianGrid strokeOpacity={0.1} />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip formatter={(v, n) => n === "amount" ? money(v) : v} />
-                      <Area type="monotone" dataKey="amount" stroke="#8884d8" fillOpacity={0.25} fill="#8884d8" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <Line
+                    data={{
+                      labels: dailySeries.map(d => {
+                        const date = new Date(d.date);
+                        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                      }),
+                      datasets: [
+                        {
+                          label: 'Monto',
+                          data: dailySeries.map(d => d.amount),
+                          borderColor: '#8884d8',
+                          backgroundColor: 'rgba(136, 132, 216, 0.25)',
+                          fill: true,
+                          tension: 0.4,
+                          pointRadius: 3,
+                          pointHoverRadius: 5,
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        tooltip: {
+                          backgroundColor: '#27272a',
+                          borderColor: '#3f3f46',
+                          borderWidth: 1,
+                          borderRadius: 12,
+                          padding: 12,
+                          titleColor: '#fafafa',
+                          bodyColor: '#fafafa',
+                          callbacks: {
+                            label: function(context) {
+                              return `Monto: ${money(context.parsed.y)}`;
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            }
+                          },
+                          grid: {
+                            color: 'rgba(63, 63, 70, 0.1)'
+                          }
+                        },
+                        y: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            },
+                            callback: function(value) {
+                              return money(value);
+                            }
+                          },
+                          grid: {
+                            color: 'rgba(63, 63, 70, 0.1)'
+                          }
+                        }
+                      }
+                    }}
+                  />
                 </div>
               ) : (
                 <Empty />

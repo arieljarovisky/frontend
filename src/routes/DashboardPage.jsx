@@ -97,6 +97,15 @@ const STATUS_CONFIG = {
 
 const asArray = (v) => Array.isArray(v) ? v : Array.isArray(v?.data) ? v.data : [];
 
+const getMonthName = (monthNumber) => {
+  const months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const num = parseInt(monthNumber, 10);
+  return months[num - 1] || monthNumber;
+};
+
 const money = (n) =>
   typeof n === "number"
     ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n)
@@ -280,7 +289,7 @@ export default function DashboardPage() {
               >
                 <Line
                   data={{
-                    labels: incomeArr.map(d => `Mes ${d.month}`),
+                    labels: incomeArr.map(d => getMonthName(d.month)),
                     datasets: [
                       {
                         label: 'Ingresos',
