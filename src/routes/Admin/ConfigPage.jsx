@@ -828,6 +828,8 @@ export default function ConfigPage() {
       const data = response?.data || response || {};
       
       // Si hay OAuth token y no hay phoneNumberId, intentar obtenerlo automáticamente
+      // Nota: El backend ya intenta obtenerlo automáticamente, pero lo intentamos aquí también
+      // para asegurarnos de que esté disponible inmediatamente
       if (data.hasOAuthToken && !data.phoneNumberId && !payload.phoneNumberId) {
         try {
           logger.log("[WhatsApp Config] Obteniendo Phone Number ID automáticamente...");
@@ -838,7 +840,7 @@ export default function ConfigPage() {
           }
         } catch (error) {
           logger.warn("[WhatsApp Config] No se pudo obtener Phone Number ID automáticamente:", error);
-          // Continuar sin el phoneNumberId, el usuario no necesita verlo
+          // Continuar sin el phoneNumberId, el backend lo intentará obtener
         }
       }
       
