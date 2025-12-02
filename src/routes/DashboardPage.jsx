@@ -107,27 +107,6 @@ export default function DashboardPage() {
   const servicesChartRef = React.useRef(null);
   const [chartDimensions, setChartDimensions] = React.useState({ width: 0, height: 280 });
   
-  React.useEffect(() => {
-    const updateDimensions = () => {
-      if (incomeChartRef.current) {
-        const width = incomeChartRef.current.offsetWidth || incomeChartRef.current.clientWidth || 0;
-        if (width > 0) {
-          setChartDimensions(prev => ({ ...prev, width }));
-          console.log("[Dashboard] Dimensiones actualizadas:", width, "x", 280);
-        }
-      }
-    };
-    
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    const timer = setTimeout(updateDimensions, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updateDimensions);
-      clearTimeout(timer);
-    };
-  }, [incomeArr, topServicesArr]);
-  
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
 
@@ -159,6 +138,28 @@ export default function DashboardPage() {
       count: Number(d.count ?? d.qty ?? 0),
     })).filter(d => d.service_name && d.count > 0); // Filtrar servicios vacíos o sin count
   }, [topServices]);
+
+  // Actualizar dimensiones después de que los datos estén listos
+  React.useEffect(() => {
+    const updateDimensions = () => {
+      if (incomeChartRef.current) {
+        const width = incomeChartRef.current.offsetWidth || incomeChartRef.current.clientWidth || 0;
+        if (width > 0) {
+          setChartDimensions(prev => ({ ...prev, width }));
+          console.log("[Dashboard] Dimensiones actualizadas:", width, "x", 280);
+        }
+      }
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    const timer = setTimeout(updateDimensions, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      clearTimeout(timer);
+    };
+  }, [incomeArr, topServicesArr]);
 
   // Debug: Log errores si existen
   if (errorInc) console.error("[Dashboard] Error cargando ingresos:", errorInc);
