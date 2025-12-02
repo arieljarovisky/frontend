@@ -103,6 +103,8 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const [chartsReady, setChartsReady] = React.useState(false);
+  
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
 
@@ -148,6 +150,7 @@ export default function DashboardPage() {
       console.log("[Dashboard] Array procesado de ingresos:", incomeArr);
       console.log("[Dashboard] ¿Tiene datos válidos?", incomeArr.length > 0);
       console.log("[Dashboard] ¿Renderizará gráfico?", incomeArr.length > 0 && !errorInc);
+      console.log("[Dashboard] Estado de carga:", { loadingInc, errorInc, hasData: incomeArr.length > 0 });
     }
   }, [loadingInc, income, incomeArr, errorInc]);
 
@@ -157,6 +160,7 @@ export default function DashboardPage() {
       console.log("[Dashboard] Array procesado de servicios:", topServicesArr);
       console.log("[Dashboard] ¿Tiene datos válidos?", topServicesArr.length > 0);
       console.log("[Dashboard] ¿Renderizará gráfico?", topServicesArr.length > 0 && !errorSvc);
+      console.log("[Dashboard] Estado de carga servicios:", { loadingSvc, errorSvc, hasData: topServicesArr.length > 0 });
     }
   }, [loadingSvc, topServices, topServicesArr, errorSvc]);
 
@@ -224,34 +228,33 @@ export default function DashboardPage() {
         {/* Income Chart */}
         <div className="lg:col-span-3">
           <Section title={`Ingresos ${year}`}>
-            <div className="w-full h-[280px] min-h-[280px]">
-              {loadingInc ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-                </div>
-              ) : errorInc ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                  <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
-                  <p className="text-foreground-secondary text-sm">
-                    Error al cargar los datos de ingresos
-                  </p>
-                  <p className="text-foreground-muted text-xs mt-1">
-                    {typeof errorInc === 'string' ? errorInc : errorInc?.message || "Intenta recargar la página"}
-                  </p>
-                </div>
-              ) : !incomeArr || incomeArr.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                  <DollarSign className="w-12 h-12 text-foreground-muted mb-3" />
-                  <p className="text-foreground-secondary text-sm">
-                    No hay datos de ingresos para mostrar
-                  </p>
-                  <p className="text-foreground-muted text-xs mt-1">
-                    Los ingresos aparecerán cuando tengas turnos completados
-                  </p>
-                </div>
-              ) : (
-                <div style={{ width: '100%', height: '280px', minHeight: '280px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+            {loadingInc ? (
+              <div className="w-full h-[280px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+              </div>
+            ) : errorInc ? (
+              <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
+                <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
+                <p className="text-foreground-secondary text-sm">
+                  Error al cargar los datos de ingresos
+                </p>
+                <p className="text-foreground-muted text-xs mt-1">
+                  {typeof errorInc === 'string' ? errorInc : errorInc?.message || "Intenta recargar la página"}
+                </p>
+              </div>
+            ) : !incomeArr || incomeArr.length === 0 ? (
+              <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
+                <DollarSign className="w-12 h-12 text-foreground-muted mb-3" />
+                <p className="text-foreground-secondary text-sm">
+                  No hay datos de ingresos para mostrar
+                </p>
+                <p className="text-foreground-muted text-xs mt-1">
+                  Los ingresos aparecerán cuando tengas turnos completados
+                </p>
+              </div>
+            ) : chartsReady ? (
+              <div className="w-full" style={{ height: '280px', position: 'relative', overflow: 'visible' }}>
+                <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={incomeArr} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
                       <XAxis
@@ -291,42 +294,44 @@ export default function DashboardPage() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              )}
-            </div>
+            ) : (
+              <div className="w-full h-[280px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+              </div>
+            )}
           </Section>
         </div>
 
         {/* Top Services Chart */}
         <div className="lg:col-span-2">
           <Section title="Servicios Top">
-            <div className="w-full h-[280px] min-h-[280px]">
-              {loadingSvc ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-                </div>
-              ) : errorSvc ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                  <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
-                  <p className="text-foreground-secondary text-sm">
-                    Error al cargar los servicios más solicitados
-                  </p>
-                  <p className="text-foreground-muted text-xs mt-1">
-                    {typeof errorSvc === 'string' ? errorSvc : errorSvc?.message || "Intenta recargar la página"}
-                  </p>
-                </div>
-              ) : !topServicesArr || topServicesArr.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                  <Users className="w-12 h-12 text-foreground-muted mb-3" />
-                  <p className="text-foreground-secondary text-sm">
-                    No hay datos de servicios para mostrar
-                  </p>
-                  <p className="text-foreground-muted text-xs mt-1">
-                    Los servicios aparecerán cuando tengas turnos programados
-                  </p>
-                </div>
-              ) : (
-                <div style={{ width: '100%', height: '280px', minHeight: '280px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+            {loadingSvc ? (
+              <div className="w-full h-[280px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+              </div>
+            ) : errorSvc ? (
+              <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
+                <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
+                <p className="text-foreground-secondary text-sm">
+                  Error al cargar los servicios más solicitados
+                </p>
+                <p className="text-foreground-muted text-xs mt-1">
+                  {typeof errorSvc === 'string' ? errorSvc : errorSvc?.message || "Intenta recargar la página"}
+                </p>
+              </div>
+            ) : !topServicesArr || topServicesArr.length === 0 ? (
+              <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
+                <Users className="w-12 h-12 text-foreground-muted mb-3" />
+                <p className="text-foreground-secondary text-sm">
+                  No hay datos de servicios para mostrar
+                </p>
+                <p className="text-foreground-muted text-xs mt-1">
+                  Los servicios aparecerán cuando tengas turnos programados
+                </p>
+              </div>
+            ) : chartsReady ? (
+              <div className="w-full" style={{ height: '280px', position: 'relative', overflow: 'visible' }}>
+                <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={topServicesArr} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
                       <defs>
                         <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
@@ -372,8 +377,11 @@ export default function DashboardPage() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              )}
-            </div>
+            ) : (
+              <div className="w-full h-[280px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+              </div>
+            )}
           </Section>
         </div>
       </div>
