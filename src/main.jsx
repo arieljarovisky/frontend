@@ -61,6 +61,10 @@ import HelpPage from "./routes/HelpPage.jsx";
 import ContactPage from "./routes/ContactPage.jsx";
 import TermsPage from "./routes/TermsPage.jsx";
 import PrivacyPage from "./routes/PrivacyPage.jsx";
+
+// Componente de redirección para mantener compatibilidad con /privacy
+const PrivacyRedirect = () => <Navigate to="/privacy.html" replace />;
+
 import PlansPage from "./routes/PlansPage.jsx";
 import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
 import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
@@ -86,7 +90,8 @@ const router = createBrowserRouter([
   { path: "/help", element: <HelpPage /> },
   { path: "/contact", element: <ContactPage /> },
   { path: "/terms", element: <TermsPage /> },
-  { path: "/privacy", element: <PrivacyPage /> },
+  { path: "/privacy", element: <PrivacyRedirect /> },
+  { path: "/privacy.html", element: <PrivacyPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
   { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },

@@ -691,7 +691,7 @@ export default function LandingPage() {
               <h4 className="font-semibold text-foreground mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-foreground-secondary">
                 <li><a href="/terms" onClick={(e) => { e.preventDefault(); navigate("/terms"); }} className="hover:text-foreground transition-colors">Términos</a></li>
-                <li><a href="/privacy" onClick={(e) => { e.preventDefault(); navigate("/privacy"); }} className="hover:text-foreground transition-colors">Privacidad</a></li>
+                <li><a href="/privacy.html" className="hover:text-foreground transition-colors">Privacidad</a></li>
               </ul>
             </div>
           </div>
