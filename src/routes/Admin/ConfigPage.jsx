@@ -807,10 +807,7 @@ export default function ConfigPage() {
     setSavingWhatsApp(true);
     try {
       const payload = { phoneDisplay };
-      // Si hay un phoneNumberId ingresado manualmente, incluirlo
-      if (whatsappConfig.phoneNumberId) {
-        payload.phoneNumberId = whatsappConfig.phoneNumberId.trim();
-      }
+      // El phoneNumberId se obtiene automáticamente por el sistema, no se envía manualmente
       // Incluir configuración del agente de soporte (siempre enviar, incluso si está vacío para poder limpiarlo)
       payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled;
       payload.supportAgentPhone = whatsappConfig.supportAgentPhone ? whatsappConfig.supportAgentPhone.trim() : "";
@@ -829,6 +826,21 @@ export default function ConfigPage() {
       
       // Asegurarse de que tenemos los datos correctos
       const data = response?.data || response || {};
+      
+      // Si hay OAuth token y no hay phoneNumberId, intentar obtenerlo automáticamente
+      if (data.hasOAuthToken && !data.phoneNumberId && !payload.phoneNumberId) {
+        try {
+          logger.log("[WhatsApp Config] Obteniendo Phone Number ID automáticamente...");
+          const phoneIdData = await apiClient.refreshWhatsAppPhoneId();
+          if (phoneIdData.ok && phoneIdData.data?.phoneNumberId) {
+            logger.log("[WhatsApp Config] Phone Number ID obtenido automáticamente:", phoneIdData.data.phoneNumberId);
+            data.phoneNumberId = phoneIdData.data.phoneNumberId;
+          }
+        } catch (error) {
+          logger.warn("[WhatsApp Config] No se pudo obtener Phone Number ID automáticamente:", error);
+          // Continuar sin el phoneNumberId, el usuario no necesita verlo
+        }
+      }
       
       const normalized = {
         phoneDisplay: data.phoneDisplay ?? phoneDisplay,
@@ -2108,85 +2120,7 @@ export default function ConfigPage() {
                         />
                       </FieldGroup>
 
-                      {/* Phone Number ID - Solo mostrar si es necesario */}
-                      {(whatsappConfig.needsPhoneNumberId || whatsappConfig.hasOAuthToken) && (
-                        <div className="mt-4 pt-4 border-t border-border/40">
-                          <FieldGroup
-                            label="Phone Number ID (avanzado)"
-                            hint={
-                              <span className="text-xs">
-                                {String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim() ? (
-                                  "⚠️ Modificá el número arriba y guardalo para habilitar este campo"
-                                ) : (
-                                  <>
-                                    Guardá tu número primero, luego usá "Obtener automáticamente" o ingresalo manualmente desde{" "}
-                                    <a
-                                      href="https://business.facebook.com/settings/whatsapp-business-accounts"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary-400 hover:text-primary-300 underline"
-                                    >
-                                      Meta Business Manager
-                                    </a>
-                                  </>
-                                )}
-                              </span>
-                            }
-                          >
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={whatsappConfig.phoneNumberId || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setWhatsappConfig((prev) => ({ ...prev, phoneNumberId: value }));
-                                }}
-                                disabled={String(whatsappConfig.phoneDisplay || "").trim() === String(originalPhoneDisplay || "").trim()}
-                                className="input flex-1 text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder="123456789012345"
-                              />
-                              {whatsappConfig.hasOAuthToken && (
-                                <Button
-                                  type="button"
-                                  onClick={async () => {
-                                    const currentPhoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
-                                    if (!currentPhoneDisplay) {
-                                      toast.error("Primero debés guardar tu número de WhatsApp");
-                                      return;
-                                    }
-                                    setSavingWhatsApp(true);
-                                    try {
-                                      const data = await apiClient.refreshWhatsAppPhoneId();
-                                      if (data.ok && data.data?.phoneNumberId) {
-                                        toast.success(`Phone Number ID actualizado: ${data.data.phoneNumberId}`);
-                                        await loadData();
-                                      } else {
-                                        toast.error(data.error || "No se pudo obtener el phone_number_id");
-                                      }
-                                    } catch (error) {
-                                      toast.error(error?.response?.data?.error || error?.message || "Error al obtener el phone_number_id");
-                                    } finally {
-                                      setSavingWhatsApp(false);
-                                    }
-                                  }}
-                                  disabled={savingWhatsApp || !String(whatsappConfig.phoneDisplay || "").trim()}
-                                  variant="secondary"
-                                  size="sm"
-                                >
-                                  {savingWhatsApp ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <RefreshCw className="w-4 h-4" />
-                                      Auto
-                                    </>
-                                  )}
-                                </Button>
-                              )}
-                            </div>
-                          </FieldGroup>
-                        </div>
-                      )}
+                      {/* Phone Number ID - Oculto, se maneja automáticamente por el sistema */}
 
                       {/* Botón de Desconectar */}
                       <div className="mt-6 pt-4 border-t border-border/40">
