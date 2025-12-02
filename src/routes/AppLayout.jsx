@@ -130,6 +130,28 @@ export default function AppLayout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { features } = useApp();
 
+  // Bloquear scroll del body cuando el sidebar está abierto en móviles
+  useEffect(() => {
+    if (sidebarOpen) {
+      // Guardar el scroll actual
+      const scrollY = window.scrollY;
+      // Bloquear el scroll del body
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Restaurar el scroll cuando se cierra
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [sidebarOpen]);
+
   // Obtener tipo de negocio - debe ejecutarse antes de cualquier return condicional
   const { data: businessTypeData } = useQuery(
     async () => {

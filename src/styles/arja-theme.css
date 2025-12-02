@@ -26,7 +26,9 @@
   transition: transform 0.32s ease;
   color: rgb(var(--sidebar-text));
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .arja-sidebar.is-open {
