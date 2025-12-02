@@ -562,7 +562,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Organizar turnos por slots de hora (en hora argentina) - solo mostrar próximos turnos
+  // Organizar turnos por slots de hora (en hora argentina) - solo mostrar primeros horarios
   const organizeByTimeSlots = () => {
     // Crear todos los slots posibles
     const allSlots = Array.from({ length: 24 }, (_, i) => {
@@ -602,26 +602,23 @@ export default function DashboardPage() {
       }
     });
 
-    // Encontrar el rango de slots con turnos
-    const slotsWithAppointments = allSlots.filter(slot => slot.items.length > 0);
-    
-    if (slotsWithAppointments.length === 0) {
-      // Si no hay turnos, mostrar solo algunos slots vacíos del medio del día
-      return { slots: allSlots.slice(8, 16), hasMore: false, canMinimize: false }; // 12:00 a 16:00
-    }
-
-    const firstSlotIndex = slotsWithAppointments[0].index;
-    const lastSlotIndex = slotsWithAppointments[slotsWithAppointments.length - 1].index;
+    // Siempre mostrar solo los primeros horarios (8:00 a 14:00 = 12 slots = 6 horas)
+    // Independientemente de si hay turnos más tarde
+    const DEFAULT_END_SLOT = 11; // 14:00 (slot 11 = índice 11, que es 8 + 11*0.5 = 13.5 = 14:00)
+    const baseEndIndex = DEFAULT_END_SLOT;
     
     // Calcular cuántos slots mostrar según el nivel de expansión
     // Cada expansión agrega 4 slots más (2 horas)
-    const baseEndIndex = Math.min(23, lastSlotIndex + 1); // Vista compacta: último turno + 1 slot
     const expansionIncrement = 4; // 4 slots = 2 horas por expansión
     const maxExpandedIndex = baseEndIndex + (expandedSlots * expansionIncrement);
     const endIndex = Math.min(23, maxExpandedIndex);
     
+    // Verificar si hay turnos más allá del rango visible
+    const slotsWithAppointments = allSlots.filter(slot => slot.items.length > 0);
+    const hasAppointmentsLater = slotsWithAppointments.some(slot => slot.index > endIndex);
+    
     const slots = allSlots.slice(0, endIndex + 1);
-    const hasMore = endIndex < 23;
+    const hasMore = hasAppointmentsLater || endIndex < 23;
     const canMinimize = expandedSlots > 0;
     
     return { slots, hasMore, canMinimize };
