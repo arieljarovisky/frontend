@@ -282,12 +282,11 @@ export default function DashboardPage() {
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '300px', width: '100%' }}
               >
-                {chartDimensions.width > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart 
-                      data={incomeArr} 
-                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                    >
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart 
+                    data={incomeArr} 
+                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                  >
                       <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
                       <XAxis
                         dataKey="month"
@@ -323,13 +322,8 @@ export default function DashboardPage() {
                         dot={{ fill: '#0ea5e9', strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6 }}
                       />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-                  </div>
-                )}
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             )}
           </Section>
@@ -368,12 +362,11 @@ export default function DashboardPage() {
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '200px', width: '100%' }}
               >
-                {chartDimensions.width > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart 
-                      data={topServicesArr} 
-                      margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                    >
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart 
+                    data={topServicesArr} 
+                    margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+                  >
                       <defs>
                         <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#60a5fa" />
@@ -417,11 +410,6 @@ export default function DashboardPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-                  </div>
-                )}
               </div>
             )}
           </Section>
