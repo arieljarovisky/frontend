@@ -18,6 +18,11 @@ import {
   Repeat,
   ShieldAlert,
   Bell,
+  FileText,
+  Package,
+  Plus,
+  Minus,
+  Search,
 } from "lucide-react";
 
 const CLASS_STATUS_STYLES = {
@@ -124,6 +129,16 @@ export default function AppointmentModal({ open, onClose, event }) {
   const [classLoading, setClassLoading] = useState(false);
   const [classError, setClassError] = useState("");
 
+  // Facturación
+  const [invoiceUI, setInvoiceUI] = useState({ visible: false });
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState({}); // { productId: { quantity, price } }
+  const [productSearch, setProductSearch] = useState("");
+  const [invoiceConstants, setInvoiceConstants] = useState(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
+
   const seriesId = a.series_id || a.seriesId || null;
   const isSeries = Boolean(seriesId);
   const [applySeries, setApplySeries] = useState(isSeries ? "future" : "none");
@@ -217,11 +232,50 @@ export default function AppointmentModal({ open, onClose, event }) {
     if (!open) {
       setClassDetail(null);
       setClassError("");
+      setInvoiceUI({ visible: false });
+      setSelectedProducts({});
+      setProductSearch("");
       return;
     }
     if (!isClassSession) return;
     fetchClassDetail();
   }, [open, isClassSession, fetchClassDetail]);
+
+  // Cargar productos y constantes cuando se abre la UI de facturación
+  useEffect(() => {
+    if (!invoiceUI.visible || !open) return;
+    
+    const loadData = async () => {
+      try {
+        setProductsLoading(true);
+        
+        // Cargar productos
+        const productsResponse = await apiClient.get("/api/stock/products");
+        const productsData = productsResponse.data?.data || productsResponse.data || [];
+        setProducts(productsData.filter(p => p.active !== false));
+        
+        // Cargar constantes de facturación
+        const constantsResponse = await apiClient.get("/api/invoicing/constants");
+        setInvoiceConstants(constantsResponse.data?.data || constantsResponse.data);
+        
+        // Cargar clientes (para obtener datos del cliente del turno)
+        try {
+          const customersResponse = await apiClient.get("/api/admin/customers");
+          const customersData = customersResponse.data?.data || customersResponse.data || [];
+          setCustomers(Array.isArray(customersData) ? customersData : []);
+        } catch (err) {
+          logger.warn("Error cargando clientes:", err);
+        }
+      } catch (error) {
+        logger.error("Error cargando datos para facturación:", error);
+        toast.error("Error al cargar datos para facturación");
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [invoiceUI.visible, open]);
 
   const onChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
@@ -401,6 +455,147 @@ export default function AppointmentModal({ open, onClose, event }) {
         }
       },
     });
+  };
+
+  // Funciones de facturación
+  const handleProductSelect = (product) => {
+    setSelectedProducts(prev => {
+      const current = prev[product.id] || { quantity: 1, price: parseFloat(product.sale_price || product.price || 0) };
+      return {
+        ...prev,
+        [product.id]: current
+      };
+    });
+  };
+
+  const updateProductQuantity = (productId, delta) => {
+    setSelectedProducts(prev => {
+      const current = prev[productId];
+      if (!current) return prev;
+      const newQuantity = Math.max(1, (current.quantity || 1) + delta);
+      return {
+        ...prev,
+        [productId]: { ...current, quantity: newQuantity }
+      };
+    });
+  };
+
+  const removeProduct = (productId) => {
+    setSelectedProducts(prev => {
+      const newState = { ...prev };
+      delete newState[productId];
+      return newState;
+    });
+  };
+
+  const calculateInvoiceTotal = () => {
+    let total = 0;
+    
+    // Precio del servicio
+    if (selectedService?.price_decimal) {
+      total += Number(selectedService.price_decimal);
+    }
+    
+    // Productos adicionales
+    total += Object.entries(selectedProducts).reduce((sum, [_, data]) => {
+      return sum + (data.price * data.quantity);
+    }, 0);
+    
+    return total;
+  };
+
+  const handleInvoice = async () => {
+    if (!a.id) {
+      toast.error("No se puede facturar un turno sin ID");
+      return;
+    }
+
+    setInvoiceLoading(true);
+    setError("");
+    setMsg("");
+
+    try {
+      // Obtener datos del cliente
+      const customerId = a.customer_id || a.customer?.id;
+      const customer = customers.find(c => c.id === customerId) || {
+        id: customerId,
+        name: form.customerName || a.customer_name || "Consumidor Final",
+        documento: "00000000"
+      };
+
+      // Items de la factura
+      const items = [];
+
+      // Item del servicio
+      if (selectedService?.price_decimal && Number(selectedService.price_decimal) > 0) {
+        items.push({
+          descripcion: selectedService.name || "Servicio",
+          cantidad: 1,
+          precio_unitario: Number(selectedService.price_decimal),
+          alicuota_iva: 21
+        });
+      }
+
+      // Items de productos adicionales
+      Object.entries(selectedProducts).forEach(([productId, data]) => {
+        const product = products.find(p => p.id === parseInt(productId));
+        if (product && data.quantity > 0 && data.price > 0) {
+          items.push({
+            descripcion: product.name || `Producto ${productId}`,
+            cantidad: data.quantity,
+            precio_unitario: data.price,
+            alicuota_iva: 21,
+            codigo: product.code || null,
+            product_id: productId
+          });
+        }
+      });
+
+      if (items.length === 0) {
+        toast.error("No hay items para facturar");
+        return;
+      }
+
+      const importe_neto = items.reduce((sum, item) => sum + (item.precio_unitario * (item.cantidad || 1)), 0);
+      const importe_iva = importe_neto * 0.21;
+      const importe_total = importe_neto + importe_iva;
+
+      // Llamar a la API para facturar
+      const response = await apiClient.post("/api/invoicing/arca/generate", {
+        tipo_comprobante: invoiceConstants?.COMPROBANTE_TIPOS?.FACTURA_B || 6,
+        customer_id: customer.id,
+        items: items,
+        importe_neto: importe_neto,
+        importe_iva: importe_iva,
+        importe_total: importe_total,
+        concepto: invoiceConstants?.CONCEPTOS?.SERVICIOS || 2,
+        tipo_doc_cliente: customer.documento?.length === 11 ? 80 : 96,
+        doc_cliente: customer.documento || "00000000",
+        razon_social: customer.name || "Consumidor Final",
+        condicion_iva: invoiceConstants?.CONDICIONES_IVA?.CONSUMIDOR_FINAL || 5,
+        appointment_ids: [a.id],
+        product_ids: Object.keys(selectedProducts).map(id => parseInt(id))
+      });
+
+      if (response.data?.ok) {
+        toast.success("Turno facturado correctamente", {
+          description: `Factura generada para ${customer.name}`,
+        });
+        setMsg("Turno facturado correctamente.");
+        setInvoiceUI({ visible: false });
+        setSelectedProducts({});
+        setProductSearch("");
+        onClose?.();
+      } else {
+        throw new Error(response.data?.error || "Error al facturar el turno");
+      }
+    } catch (err) {
+      const errorMsg = err?.response?.data?.error || err?.message || "Error al facturar el turno";
+      toast.error("Error al facturar", { description: errorMsg });
+      setError(errorMsg);
+    } finally {
+      setInvoiceLoading(false);
+    }
   };
 
   const renderClassContent = () => {
@@ -765,6 +960,179 @@ export default function AppointmentModal({ open, onClose, event }) {
               <p className={`mt-2 text-xs ${subtextColor}`}>
                 Elegí si querés modificar únicamente este turno o toda la serie recurrente.
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Facturación */}
+        <div className={`mb-4 p-4 rounded-xl border ${borderColor}`}>
+          <div className="flex justify-between items-center mb-3">
+            <div className={`font-semibold flex items-center gap-2 ${textColor}`}>
+              <FileText className="w-4 h-4" />
+              Facturar turno
+            </div>
+            <button 
+              onClick={() => setInvoiceUI({ visible: !invoiceUI.visible })} 
+              className={`px-3 py-1.5 rounded-lg text-xs ${buttonSecondary} border`}
+            >
+              {invoiceUI.visible ? "Cerrar" : "Abrir"}
+            </button>
+          </div>
+          {invoiceUI.visible && (
+            <div className={`p-3 rounded-lg ${darkMode ? "bg-slate-800/50" : "bg-gray-50"}`}>
+              {productsLoading ? (
+                <div className={`text-center py-4 text-sm ${subtextColor}`}>
+                  Cargando productos...
+                </div>
+              ) : (
+                <>
+                  {/* Buscar productos */}
+                  <div className="mb-3">
+                    <label className={`block text-xs font-medium mb-1 ${textColor}`}>
+                      Agregar productos (opcional)
+                    </label>
+                    <div className="relative">
+                      <Search className={`absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 ${subtextColor}`} />
+                      <input
+                        type="text"
+                        className={`w-full rounded-lg border pl-8 pr-3 py-2 text-sm ${inputBg}`}
+                        placeholder="Buscar producto por nombre o código..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && productSearch.trim()) {
+                            const filtered = products.filter(p => 
+                              p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
+                              p.code?.toLowerCase().includes(productSearch.toLowerCase())
+                            );
+                            if (filtered.length > 0) {
+                              const product = filtered[0];
+                              handleProductSelect(product);
+                              setProductSearch("");
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    {productSearch && (
+                      <div className="mt-1 max-h-32 overflow-y-auto border rounded-lg bg-background">
+                        {products
+                          .filter(p => 
+                            p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
+                            p.code?.toLowerCase().includes(productSearch.toLowerCase())
+                          )
+                          .slice(0, 5)
+                          .map(product => (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => {
+                                handleProductSelect(product);
+                                setProductSearch("");
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-background-secondary border-b last:border-b-0"
+                            >
+                              <div className="font-medium">{product.name}</div>
+                              <div className={`text-xs ${subtextColor}`}>
+                                {product.code ? `Código: ${product.code} • ` : ""}
+                                ${parseFloat(product.sale_price || product.price || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                              </div>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Productos seleccionados */}
+                  {Object.keys(selectedProducts).length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {Object.entries(selectedProducts).map(([productId, data]) => {
+                        const product = products.find(p => p.id === parseInt(productId));
+                        if (!product) return null;
+                        return (
+                          <div key={productId} className="flex items-center justify-between p-2 bg-background-secondary rounded-lg">
+                            <div className="flex-1">
+                              <div className={`text-sm font-medium ${textColor}`}>{product.name}</div>
+                              <div className={`text-xs ${subtextColor}`}>
+                                ${data.price.toLocaleString("es-AR", { minimumFractionDigits: 2 })} x {data.quantity}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => updateProductQuantity(productId, -1)}
+                                className="p-1 rounded hover:bg-background"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="text-sm w-8 text-center">{data.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => updateProductQuantity(productId, 1)}
+                                className="p-1 rounded hover:bg-background"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeProduct(productId)}
+                                className="p-1 rounded hover:bg-red-100 text-red-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Resumen */}
+                  <div className="mb-3 pt-3 border-t border-border">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">Servicio:</span>
+                      <span className="text-sm">
+                        ${selectedService?.price_decimal ? Number(selectedService.price_decimal).toLocaleString("es-AR", { minimumFractionDigits: 2 }) : "0.00"}
+                      </span>
+                    </div>
+                    {Object.keys(selectedProducts).length > 0 && (
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Productos:</span>
+                        <span className="text-sm">
+                          ${Object.entries(selectedProducts).reduce((sum, [_, data]) => sum + (data.price * data.quantity), 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-2 border-t border-border">
+                      <span className="font-semibold">Total:</span>
+                      <span className="font-bold text-lg">
+                        ${calculateInvoiceTotal().toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setInvoiceUI({ visible: false });
+                        setSelectedProducts({});
+                        setProductSearch("");
+                      }} 
+                      className={`px-3 py-1.5 rounded-lg text-sm ${buttonSecondary} border flex-1`} 
+                      disabled={invoiceLoading}
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      onClick={handleInvoice}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${buttonPrimary} text-white flex-1`}
+                      disabled={invoiceLoading || !a.id}
+                    >
+                      {invoiceLoading ? "Facturando…" : "Facturar"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
