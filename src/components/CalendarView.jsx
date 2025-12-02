@@ -478,24 +478,52 @@ export default function CalendarView() {
   useEffect(() => {
     const elId = "instructor-colors";
     let styleEl = document.getElementById(elId);
-    if (!styleEl) {
-      styleEl = document.createElement("style");
-      styleEl.id = elId;
-      document.head.appendChild(styleEl);
-    }
-
-    const map = buildInstructorColorMap(instructors);
-    const rules = Object.entries(map).map(([id, hex]) => {
-      const light = hexToRgba(hex, 0.04);
-      return `
-        .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
-          background: ${light};
+    
+    // Verificar que document.head existe y es válido (importante durante traducciones)
+    if (!document.head) return;
+    
+    try {
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = elId;
+        // Verificar que el elemento no esté ya en el DOM antes de agregarlo
+        if (!document.getElementById(elId)) {
+          document.head.appendChild(styleEl);
+        } else {
+          styleEl = document.getElementById(elId);
         }
-      `;
-    }).join("\n");
+      }
 
-    styleEl.textContent = rules;
-    return () => { /* si querés limpiar en unmount, podés borrar styleEl */ };
+      // Verificar que el elemento aún está en el DOM antes de modificar
+      if (styleEl && styleEl.parentNode === document.head) {
+        const map = buildInstructorColorMap(instructors);
+        const rules = Object.entries(map).map(([id, hex]) => {
+          const light = hexToRgba(hex, 0.04);
+          return `
+            .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
+              background: ${light};
+            }
+          `;
+        }).join("\n");
+
+        styleEl.textContent = rules;
+      }
+    } catch (error) {
+      // Silenciar errores de DOM durante traducciones automáticas
+      console.warn("Error al actualizar estilos de instructores:", error);
+    }
+    
+    return () => {
+      // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
+      try {
+        const el = document.getElementById(elId);
+        if (el && el.parentNode === document.head) {
+          document.head.removeChild(el);
+        }
+      } catch (error) {
+        // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
+      }
+    };
   }, [instructors]);
 
   // Render elegante del evento
@@ -633,52 +661,79 @@ export default function CalendarView() {
   // CSS para los headers personalizados
   useEffect(() => {
     const styleId = "calendar-header-styles";
-    let styleEl = document.getElementById(styleId);
-    if (!styleEl) {
-      styleEl = document.createElement("style");
-      styleEl.id = styleId;
-      document.head.appendChild(styleEl);
+    
+    // Verificar que document.head existe y es válido (importante durante traducciones)
+    if (!document.head) return;
+    
+    try {
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        // Verificar que el elemento no esté ya en el DOM antes de agregarlo
+        if (!document.getElementById(styleId)) {
+          document.head.appendChild(styleEl);
+        } else {
+          styleEl = document.getElementById(styleId);
+        }
+      }
+      
+      // Verificar que el elemento aún está en el DOM antes de modificar
+      if (styleEl && styleEl.parentNode === document.head) {
+        styleEl.textContent = `
+          .fc-day-header-custom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 8px 0;
+          }
+          .fc-day-header-dow {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+          }
+          .fc-day-header-date {
+            font-size: 1rem;
+            font-weight: 700;
+          }
+          .fc-day-header-custom.fc-day-today {
+            position: relative;
+          }
+          .fc-day-header-custom.fc-day-today .fc-day-header-date {
+            color: #3b82f6;
+          }
+          .fc-day-header-custom.fc-day-today::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: #3b82f6;
+            border-radius: 2px;
+          }
+        `;
+      }
+    } catch (error) {
+      // Silenciar errores de DOM durante traducciones automáticas
+      console.warn("Error al actualizar estilos de headers del calendario:", error);
     }
     
-    styleEl.textContent = `
-      .fc-day-header-custom {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-        padding: 8px 0;
+    return () => {
+      // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
+      try {
+        const el = document.getElementById(styleId);
+        if (el && el.parentNode === document.head) {
+          document.head.removeChild(el);
+        }
+      } catch (error) {
+        // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
       }
-      .fc-day-header-dow {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        opacity: 0.8;
-      }
-      .fc-day-header-date {
-        font-size: 1rem;
-        font-weight: 700;
-      }
-      .fc-day-header-custom.fc-day-today {
-        position: relative;
-      }
-      .fc-day-header-custom.fc-day-today .fc-day-header-date {
-        color: #3b82f6;
-      }
-      .fc-day-header-custom.fc-day-today::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 30px;
-        height: 3px;
-        background: #3b82f6;
-        border-radius: 2px;
-      }
-    `;
-    
-    return () => { /* cleanup */ };
+    };
   }, []);
 
   return (
@@ -925,16 +980,24 @@ export default function CalendarView() {
                 moreLinkClick={(arg) => {
                   // Mejorar el popover
                   setTimeout(() => {
-                    document.querySelectorAll(".fc-popover").forEach((el) => {
-                      el.classList.add("fc-popover-modern");
-                      el.style.maxHeight = "70vh";
-                      el.style.overflow = "hidden";
-                      const body = el.querySelector(".fc-popover-body");
-                      if (body) {
-                        body.style.maxHeight = "60vh";
-                        body.style.overflow = "auto";
-                      }
-                    });
+                    try {
+                      document.querySelectorAll(".fc-popover").forEach((el) => {
+                        // Verificar que el elemento aún está en el DOM antes de modificar
+                        if (el && el.parentNode && document.body.contains(el)) {
+                          el.classList.add("fc-popover-modern");
+                          el.style.maxHeight = "70vh";
+                          el.style.overflow = "hidden";
+                          const body = el.querySelector(".fc-popover-body");
+                          if (body && body.parentNode) {
+                            body.style.maxHeight = "60vh";
+                            body.style.overflow = "auto";
+                          }
+                        }
+                      });
+                    } catch (error) {
+                      // Silenciar errores de DOM durante traducciones automáticas
+                      console.warn("Error al actualizar popover del calendario:", error);
+                    }
                   }, 0);
                   return "popover";
                 }}
