@@ -103,21 +103,21 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { data: topServices, loading: loadingSvc } =
+  const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
 
-  const { data: raw, loading: loadingM } =
+  const { data: raw, loading: loadingM, error: errorM } =
     useQuery(() => apiClient.getAdminDashboard({}), []);
   const dashboard = raw?.data ?? raw ?? {};
 
   const from = ymd(startOfWeek());
   const to = ymd(endOfWeek());
-  const { data: rawWeek } =
+  const { data: rawWeek, error: errorWeek } =
     useQuery(() => apiClient.getAdminDashboard({ from, to }), [from, to]);
   const week = rawWeek?.data ?? rawWeek ?? {};
 
   const year = new Date().getFullYear();
-  const { data: income, loading: loadingInc } =
+  const { data: income, loading: loadingInc, error: errorInc } =
     useQuery(() => apiClient.getIncomeByMonth(year), [year]);
   const incomeArr = asArray(income).map(d => ({
     month: String(d.month ?? d.mm ?? d.m ?? "").padStart(2, "0"),
@@ -127,6 +127,16 @@ export default function DashboardPage() {
     service_name: String(d.service_name ?? d.name ?? ""),
     count: Number(d.count ?? d.qty ?? 0),
   }));
+
+  // Debug: Log errores si existen
+  if (errorInc) console.error("[Dashboard] Error cargando ingresos:", errorInc);
+  if (errorSvc) console.error("[Dashboard] Error cargando servicios top:", errorSvc);
+  if (errorM) console.error("[Dashboard] Error cargando dashboard:", errorM);
+  if (errorWeek) console.error("[Dashboard] Error cargando semana:", errorWeek);
+  
+  // Debug: Log datos recibidos
+  if (!loadingInc && income) console.log("[Dashboard] Datos de ingresos recibidos:", income, "Array procesado:", incomeArr);
+  if (!loadingSvc && topServices) console.log("[Dashboard] Datos de servicios recibidos:", topServices, "Array procesado:", topServicesArr);
 
 
 
@@ -197,9 +207,29 @@ export default function DashboardPage() {
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
                 </div>
+              ) : errorInc ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
+                  <p className="text-foreground-secondary text-sm">
+                    Error al cargar los datos de ingresos
+                  </p>
+                  <p className="text-foreground-muted text-xs mt-1">
+                    {typeof errorInc === 'string' ? errorInc : errorInc?.message || "Intenta recargar la página"}
+                  </p>
+                </div>
+              ) : !incomeArr || incomeArr.length === 0 || incomeArr.every(d => d.income === 0) ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <DollarSign className="w-12 h-12 text-foreground-muted mb-3" />
+                  <p className="text-foreground-secondary text-sm">
+                    No hay datos de ingresos para mostrar
+                  </p>
+                  <p className="text-foreground-muted text-xs mt-1">
+                    Los ingresos aparecerán cuando tengas turnos completados
+                  </p>
+                </div>
               ) : (
-                <ResponsiveContainer>
-                  <LineChart data={Array.isArray(incomeArr) ? incomeArr : []}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={incomeArr}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
                     <XAxis
                       dataKey="month"
@@ -217,6 +247,7 @@ export default function DashboardPage() {
                         borderRadius: '12px',
                         color: '#fafafa'
                       }}
+                      formatter={(value) => money(value)}
                     />
                     <Legend
                       wrapperStyle={{ color: '#a1a1aa' }}
@@ -244,9 +275,29 @@ export default function DashboardPage() {
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
                 </div>
+              ) : errorSvc ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
+                  <p className="text-foreground-secondary text-sm">
+                    Error al cargar los servicios más solicitados
+                  </p>
+                  <p className="text-foreground-muted text-xs mt-1">
+                    {typeof errorSvc === 'string' ? errorSvc : errorSvc?.message || "Intenta recargar la página"}
+                  </p>
+                </div>
+              ) : !topServicesArr || topServicesArr.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <Users className="w-12 h-12 text-foreground-muted mb-3" />
+                  <p className="text-foreground-secondary text-sm">
+                    No hay datos de servicios para mostrar
+                  </p>
+                  <p className="text-foreground-muted text-xs mt-1">
+                    Los servicios aparecerán cuando tengas turnos programados
+                  </p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={Array.isArray(topServicesArr) ? topServicesArr : []}>
+                  <BarChart data={topServicesArr}>
                     <defs>
                       <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#60a5fa" />
@@ -268,7 +319,7 @@ export default function DashboardPage() {
                       tick={{ fill: "#a1a1aa", fontSize: 12 }}
                     />
                     <Tooltip
-                      cursor={{ fill: "rgba(255,255,255,0.04)" }}           // 👈 sin hover blanco
+                      cursor={{ fill: "rgba(255,255,255,0.04)" }}
                       contentStyle={{
                         backgroundColor: "#18181b",
                         border: "1px solid #3f3f46",
@@ -282,7 +333,7 @@ export default function DashboardPage() {
                       dataKey="count"
                       fill="url(#barFill)"
                       radius={[12, 12, 0, 0]}
-                      background={false}                                    // 👈 saca la banda gris
+                      background={false}
                     />
                   </BarChart>
                 </ResponsiveContainer>

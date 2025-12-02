@@ -814,11 +814,24 @@ apiClient.getMPConnectedAccounts = async function () {
    CUSTOMERS API
 ========================= */
 
-apiClient.listCustomers = async function (q = "", signal) {
+apiClient.listCustomers = async function (q = "", signal, options = {}) {
+  const params = { q };
+  if (options.page) params.page = options.page;
+  if (options.limit) params.limit = options.limit;
+  
   const { data } = await apiClient.get("/api/admin/customers", {
-    params: { q },
+    params,
     signal,
   });
+  
+  // Si viene con paginación, devolver objeto completo, sino solo el array
+  if (data?.pagination) {
+    return {
+      data: data.data || [],
+      pagination: data.pagination
+    };
+  }
+  
   return data?.data || [];
 };
 
