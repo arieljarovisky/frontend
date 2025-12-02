@@ -14,12 +14,33 @@ import {
   Plus
 } from "lucide-react";
 
-// Recharts
+// Chart.js
 import {
-  ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  LineChart, Line, Legend
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  Filler
+);
 
 function StatCard({ title, value, subtitle, icon: Icon, trend, color = "primary" }) {
   const colorClasses = {
@@ -103,9 +124,6 @@ const endOfWeek = (base = new Date()) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const incomeChartRef = React.useRef(null);
-  const servicesChartRef = React.useRef(null);
-  const [chartDimensions, setChartDimensions] = React.useState({ width: 0, height: 280 });
   
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
     useQuery(() => apiClient.getTopServices({ months: 3, limit: 6 }), []);
@@ -139,27 +157,6 @@ export default function DashboardPage() {
     })).filter(d => d.service_name && d.count > 0); // Filtrar servicios vacíos o sin count
   }, [topServices]);
 
-  // Actualizar dimensiones después de que los datos estén listos
-  React.useEffect(() => {
-    const updateDimensions = () => {
-      if (incomeChartRef.current) {
-        const width = incomeChartRef.current.offsetWidth || incomeChartRef.current.clientWidth || 0;
-        if (width > 0) {
-          setChartDimensions(prev => ({ ...prev, width }));
-          console.log("[Dashboard] Dimensiones actualizadas:", width, "x", 280);
-        }
-      }
-    };
-    
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    const timer = setTimeout(updateDimensions, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updateDimensions);
-      clearTimeout(timer);
-    };
-  }, [incomeArr, topServicesArr]);
 
   // Debug: Log errores si existen
   if (errorInc) console.error("[Dashboard] Error cargando ingresos:", errorInc);
@@ -278,52 +275,88 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div 
-                ref={incomeChartRef}
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '300px', width: '100%' }}
               >
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart 
-                    data={incomeArr} 
-                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                  >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.3} />
-                      <XAxis
-                        dataKey="month"
-                        stroke="#a1a1aa"
-                        style={{ fontSize: '12px' }}
-                        tick={{ fill: '#a1a1aa' }}
-                      />
-                      <YAxis
-                        stroke="#a1a1aa"
-                        style={{ fontSize: '12px' }}
-                        tick={{ fill: '#a1a1aa' }}
-                        tickFormatter={(value) => `$${value.toLocaleString('es-AR')}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#27272a',
-                          border: '1px solid #3f3f46',
-                          borderRadius: '12px',
-                          color: '#fafafa'
-                        }}
-                        formatter={(value) => money(value)}
-                        labelFormatter={(label) => `Mes ${label}`}
-                      />
-                      <Legend
-                        wrapperStyle={{ color: '#a1a1aa', fontSize: '12px' }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="income"
-                        name="Ingresos"
-                        stroke="#0ea5e9"
-                        strokeWidth={3}
-                        dot={{ fill: '#0ea5e9', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Line
+                  data={{
+                    labels: incomeArr.map(d => `Mes ${d.month}`),
+                    datasets: [
+                      {
+                        label: 'Ingresos',
+                        data: incomeArr.map(d => d.income),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#0ea5e9',
+                        pointBorderColor: '#0ea5e9',
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                          color: '#a1a1aa',
+                          font: {
+                            size: 12
+                          }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: '#27272a',
+                        borderColor: '#3f3f46',
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        titleColor: '#fafafa',
+                        bodyColor: '#fafafa',
+                        callbacks: {
+                          label: function(context) {
+                            return `Ingresos: ${money(context.parsed.y)}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        ticks: {
+                          color: '#a1a1aa',
+                          font: {
+                            size: 12
+                          }
+                        },
+                        grid: {
+                          color: 'rgba(63, 63, 70, 0.3)',
+                          borderDash: [3, 3]
+                        }
+                      },
+                      y: {
+                        ticks: {
+                          color: '#a1a1aa',
+                          font: {
+                            size: 12
+                          },
+                          callback: function(value) {
+                            return `$${value.toLocaleString('es-AR')}`;
+                          }
+                        },
+                        grid: {
+                          color: 'rgba(63, 63, 70, 0.3)',
+                          borderDash: [3, 3]
+                        }
+                      }
+                    }
+                  }}
+                />
               </div>
             )}
           </Section>
@@ -358,58 +391,80 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div 
-                ref={servicesChartRef}
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '200px', width: '100%' }}
               >
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart 
-                    data={topServicesArr} 
-                    margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                  >
-                      <defs>
-                        <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#60a5fa" />
-                          <stop offset="100%" stopColor="#a78bfa" />
-                        </linearGradient>
-                      </defs>
-
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" opacity={0.25} />
-                      <XAxis
-                        dataKey="service_name"
-                        stroke="#a1a1aa"
-                        tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                        interval={0}
-                        angle={-12}
-                        dy={8}
-                        height={60}
-                      />
-                      <YAxis
-                        stroke="#a1a1aa"
-                        tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                        width={50}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                        contentStyle={{
-                          backgroundColor: "#18181b",
-                          border: "1px solid #3f3f46",
-                          borderRadius: 12,
-                          color: "#fafafa",
-                        }}
-                        itemStyle={{ color: "#fafafa" }}
-                        labelStyle={{ color: "#fafafa" }}
-                        formatter={(value) => `${value} turno${value !== 1 ? 's' : ''}`}
-                      />
-                      <Bar
-                        dataKey="count"
-                        name="Turnos"
-                        fill="url(#barFill)"
-                        radius={[12, 12, 0, 0]}
-                        background={false}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <Bar
+                  data={{
+                    labels: topServicesArr.map(d => d.service_name),
+                    datasets: [
+                      {
+                        label: 'Turnos',
+                        data: topServicesArr.map(d => d.count),
+                        backgroundColor: (context) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+                          gradient.addColorStop(0, '#60a5fa');
+                          gradient.addColorStop(1, '#a78bfa');
+                          return gradient;
+                        },
+                        borderRadius: 12,
+                        borderSkipped: false,
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false
+                      },
+                      tooltip: {
+                        backgroundColor: '#18181b',
+                        borderColor: '#3f3f46',
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        titleColor: '#fafafa',
+                        bodyColor: '#fafafa',
+                        callbacks: {
+                          label: function(context) {
+                            const value = context.parsed.y;
+                            return `${value} turno${value !== 1 ? 's' : ''}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        ticks: {
+                          color: '#a1a1aa',
+                          font: {
+                            size: 11
+                          },
+                          maxRotation: 12,
+                          minRotation: 12
+                        },
+                        grid: {
+                          display: false
+                        }
+                      },
+                      y: {
+                        ticks: {
+                          color: '#a1a1aa',
+                          font: {
+                            size: 12
+                          }
+                        },
+                        grid: {
+                          color: 'rgba(63, 63, 70, 0.25)',
+                          borderDash: [3, 3]
+                        }
+                      }
+                    }
+                  }}
+                />
               </div>
             )}
           </Section>
