@@ -253,13 +253,13 @@ export default function CustomerDetailPage() {
             ← Volver
           </Link>
           {!isEditing ? (
-            <button
-              type="button"
-              onClick={handleStartEditing}
-              className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
-            >
-              Editar
-            </button>
+              <button
+                type="button"
+                onClick={handleStartEditing}
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+              >
+                Editar
+              </button>
           ) : null}
         </div>
       </div>
