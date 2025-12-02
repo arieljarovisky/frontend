@@ -72,40 +72,40 @@ export default function CustomersPage() {
 
     const columnLayout = useMemo(() => {
         const base = {
-            customer: 5,
-            phone: 4,
-            appointments: 3,
+            customer: 4,
+            phone: 3,
+            appointments: 2,
             classes: 0,
             membership: 0,
         };
 
         if (classesEnabled && showMembershipColumn) {
             return {
-                customer: 4,
-                phone: 3,
+                customer: 3,
+                phone: 2,
                 appointments: 2,
                 classes: 2,
-                membership: 1,
+                membership: 3,
             };
         }
 
         if (classesEnabled) {
             return {
-                customer: 5,
+                customer: 4,
                 phone: 3,
                 appointments: 2,
-                classes: 2,
+                classes: 3,
                 membership: 0,
             };
         }
 
         if (showMembershipColumn) {
             return {
-                customer: 5,
-                phone: 3,
+                customer: 4,
+                phone: 2,
                 appointments: 2,
                 classes: 0,
-                membership: 2,
+                membership: 4,
             };
         }
 
@@ -136,21 +136,21 @@ export default function CustomersPage() {
                 : null;
 
         return (
-            <div className="flex flex-col items-end gap-1.5 text-right">
-                <span className={`inline-flex items-center justify-end rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${style.className}`}>
+            <div className="flex flex-col items-end gap-1.5 text-right w-full">
+                <span className={`inline-flex items-center justify-end rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${style.className}`}>
                     {style.label}
                 </span>
                 {planLabel ? (
-                    <div className="text-xs font-medium text-foreground">{planLabel}</div>
+                    <div className="text-xs font-medium text-foreground truncate w-full text-right">{planLabel}</div>
                 ) : null}
                 {(amountLabel || row?.primary_last_payment_at || row?.primary_next_charge_at) ? (
-                    <div className="text-[11px] leading-tight text-foreground-muted space-y-0.5">
-                        {amountLabel ? <div>{amountLabel}</div> : null}
-                        <div>
+                    <div className="text-[11px] leading-tight text-foreground-muted space-y-0.5 w-full">
+                        {amountLabel ? <div className="truncate text-right">{amountLabel}</div> : null}
+                        <div className="truncate text-right">
                             Último pago:{" "}
                             {row?.primary_last_payment_at ? formatDateTime(row.primary_last_payment_at) : "—"}
                         </div>
-                        <div>
+                        <div className="truncate text-right">
                             Próximo:{" "}
                             {row?.primary_next_charge_at ? formatDateTime(row.primary_next_charge_at) : "—"}
                         </div>
@@ -218,12 +218,23 @@ export default function CustomersPage() {
             {/* Tabla */}
             <div className="card overflow-hidden">
                 {/* Header de la tabla */}
-                <div className="grid grid-cols-12 px-6 py-4 text-xs font-semibold text-foreground-secondary border-b border-border bg-background-secondary/50">
-                    <div className={`col-span-${columnLayout.customer}`}>Cliente</div>
-                    <div className={`col-span-${columnLayout.phone}`}>Teléfono</div>
-                    <div className={`col-span-${columnLayout.appointments} text-right`}>Turnos</div>
+                <div 
+                    className="grid px-4 md:px-6 py-4 text-xs font-semibold text-foreground-secondary border-b border-border bg-background-secondary/50 gap-x-3"
+                    style={{
+                        gridTemplateColumns: classesEnabled && showMembershipColumn
+                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr ${columnLayout.membership}fr`
+                            : classesEnabled
+                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr`
+                            : showMembershipColumn
+                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.membership}fr`
+                            : `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr`
+                    }}
+                >
+                    <div className="min-w-0">Cliente</div>
+                    <div className="min-w-0">Teléfono</div>
+                    <div className="text-right min-w-0">Turnos</div>
                     {classesEnabled ? (
-                        <div className={`col-span-${columnLayout.classes} text-right`}>
+                        <div className="text-right min-w-0">
                             <div># Clases</div>
                             <div className="text-[10px] text-foreground-muted uppercase tracking-wide font-normal mt-0.5">
                                 Anotadas / Realizadas
@@ -231,7 +242,7 @@ export default function CustomersPage() {
                         </div>
                     ) : null}
                     {showMembershipColumn ? (
-                        <div className={`col-span-${columnLayout.membership} text-right`}>Membresía</div>
+                        <div className="text-right min-w-0">Membresía</div>
                     ) : null}
                 </div>
 
@@ -264,42 +275,51 @@ export default function CustomersPage() {
                             <Link
                                 key={r.id}
                                 to={`/${tenantSlug}/customers/${r.id}`}
-                                className="w-full text-left px-6 py-4 hover:bg-background-secondary/50 grid grid-cols-12 items-center transition-colors group"
+                                className="w-full text-left px-4 md:px-6 py-4 hover:bg-background-secondary/50 grid items-start gap-x-3 transition-colors group"
+                                style={{
+                                    gridTemplateColumns: classesEnabled && showMembershipColumn
+                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr ${columnLayout.membership}fr`
+                                        : classesEnabled
+                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr`
+                                        : showMembershipColumn
+                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.membership}fr`
+                                        : `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr`
+                                }}
                             >
-                                <div className={`col-span-${columnLayout.customer} flex items-center gap-3`}>
+                                <div className="flex items-center gap-3 min-w-0">
                                     <div className="size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold flex-shrink-0 group-hover:bg-primary-500/20 transition-colors">
                                         {initials(r.name || "?")}
                                     </div>
-                                    <div className="min-w-0 flex-1">
+                                    <div className="min-w-0 flex-1 overflow-hidden">
                                         <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
                                             {r.name || "(Sin nombre)"}
                                         </div>
-                                        <div className="text-xs text-foreground-muted">ID #{r.id}</div>
+                                        <div className="text-xs text-foreground-muted truncate">ID #{r.id}</div>
                                     </div>
                                 </div>
-                                <div className={`col-span-${columnLayout.phone} text-sm text-foreground-secondary`}>
+                                <div className="text-sm text-foreground-secondary min-w-0 truncate">
                                     {formatPhone(r.phone_e164 ?? r.phone) || "—"}
                                 </div>
-                                <div className={`col-span-${columnLayout.appointments} text-right`}>
+                                <div className="text-right min-w-0">
                                     <div className="text-sm font-semibold text-foreground">
                                         {r.total_appointments ?? r.appointments_count ?? 0}
                                     </div>
                                 </div>
                                 {classesEnabled ? (
-                                    <div className={`col-span-${columnLayout.classes} text-right`}>
-                                        <div className="text-sm font-semibold text-foreground">
+                                    <div className="text-right min-w-0">
+                                        <div className="text-sm font-semibold text-foreground whitespace-nowrap">
                                             {r.upcoming_classes ?? 0}{" "}
                                             <span className="text-xs text-foreground-muted font-normal uppercase tracking-wide">
                                                 anotadas
                                             </span>
                                         </div>
-                                        <div className="text-xs text-foreground-secondary">
+                                        <div className="text-xs text-foreground-secondary whitespace-nowrap">
                                             {r.completed_classes ?? 0} realizadas
                                         </div>
                                     </div>
                                 ) : null}
                                 {showMembershipColumn ? (
-                                    <div className={`col-span-${columnLayout.membership} text-right`}>
+                                    <div className="text-right min-w-0 overflow-hidden">
                                         {renderMembershipInfo(r)}
                                     </div>
                                 ) : null}
