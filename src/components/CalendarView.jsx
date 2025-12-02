@@ -475,8 +475,48 @@ export default function CalendarView() {
     setModalOpen(true);
   }, []);
 
+  // Detectar si la página está siendo traducida (Google Translate, etc.)
+  const [isPageBeingTranslated, setIsPageBeingTranslated] = useState(false);
+  
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
+    const checkTranslation = () => {
+      // Google Translate agrega clases específicas al body/html
+      const isTranslated = 
+        document.documentElement.classList.contains('translated-ltr') ||
+        document.documentElement.classList.contains('translated-rtl') ||
+        document.body.classList.contains('translated-ltr') ||
+        document.body.classList.contains('translated-rtl') ||
+        // También verificar si hay elementos con atributos de traducción
+        document.querySelector('[data-google-translate]') !== null;
+      
+      setIsPageBeingTranslated(isTranslated);
+    };
+    
+    // Verificar inicialmente
+    checkTranslation();
+    
+    // Observar cambios en las clases del documento
+    const observer = new MutationObserver(checkTranslation);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const elId = "instructor-colors";
+    
+    // No manipular DOM si la página está siendo traducida
+    if (isPageBeingTranslated) return;
+    
     let styleEl = document.getElementById(elId);
     
     // Verificar que document.head existe y es válido (importante durante traducciones)
@@ -510,11 +550,15 @@ export default function CalendarView() {
       }
     } catch (error) {
       // Silenciar errores de DOM durante traducciones automáticas
-      console.warn("Error al actualizar estilos de instructores:", error);
+      if (error.name !== 'NotFoundError') {
+        console.warn("Error al actualizar estilos de instructores:", error);
+      }
     }
     
     return () => {
       // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
+      if (isPageBeingTranslated) return;
+      
       try {
         const el = document.getElementById(elId);
         if (el && el.parentNode === document.head) {
@@ -522,9 +566,12 @@ export default function CalendarView() {
         }
       } catch (error) {
         // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
+        if (error.name !== 'NotFoundError') {
+          console.warn("Error durante cleanup de estilos:", error);
+        }
       }
     };
-  }, [instructors]);
+  }, [instructors, isPageBeingTranslated]);
 
   // Render elegante del evento
   const eventContent = useCallback((arg) => {
@@ -662,6 +709,9 @@ export default function CalendarView() {
   useEffect(() => {
     const styleId = "calendar-header-styles";
     
+    // No manipular DOM si la página está siendo traducida
+    if (isPageBeingTranslated) return;
+    
     // Verificar que document.head existe y es válido (importante durante traducciones)
     if (!document.head) return;
     
@@ -720,11 +770,15 @@ export default function CalendarView() {
       }
     } catch (error) {
       // Silenciar errores de DOM durante traducciones automáticas
-      console.warn("Error al actualizar estilos de headers del calendario:", error);
+      if (error.name !== 'NotFoundError') {
+        console.warn("Error al actualizar estilos de headers del calendario:", error);
+      }
     }
     
     return () => {
       // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
+      if (isPageBeingTranslated) return;
+      
       try {
         const el = document.getElementById(styleId);
         if (el && el.parentNode === document.head) {
@@ -732,9 +786,12 @@ export default function CalendarView() {
         }
       } catch (error) {
         // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
+        if (error.name !== 'NotFoundError') {
+          console.warn("Error durante cleanup de estilos:", error);
+        }
       }
     };
-  }, []);
+  }, [isPageBeingTranslated]);
 
   return (
     <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative min-h-screen`}>
@@ -978,6 +1035,9 @@ export default function CalendarView() {
                 displayEventTime={true}
                 eventClassNames="fc-event-modern"
                 moreLinkClick={(arg) => {
+                  // No manipular DOM si la página está siendo traducida
+                  if (isPageBeingTranslated) return "popover";
+                  
                   // Mejorar el popover
                   setTimeout(() => {
                     try {
@@ -996,7 +1056,9 @@ export default function CalendarView() {
                       });
                     } catch (error) {
                       // Silenciar errores de DOM durante traducciones automáticas
-                      console.warn("Error al actualizar popover del calendario:", error);
+                      if (error.name !== 'NotFoundError') {
+                        console.warn("Error al actualizar popover del calendario:", error);
+                      }
                     }
                   }, 0);
                   return "popover";

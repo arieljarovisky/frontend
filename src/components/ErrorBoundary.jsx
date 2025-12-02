@@ -10,10 +10,35 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
+    // Si es un error de DOM durante traducción, intentar recuperarse automáticamente
+    if (error?.name === 'NotFoundError' && 
+        error?.message?.includes('removeChild') &&
+        typeof document !== 'undefined' &&
+        (document.documentElement.classList.contains('translated-ltr') ||
+         document.documentElement.classList.contains('translated-rtl'))) {
+      // No mostrar error para estos casos, solo loguear
+      logger.warn("Error de DOM durante traducción automática (ignorado):", error);
+      return { hasError: false, error: null, errorInfo: null };
+    }
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
+    // Ignorar errores de DOM durante traducciones automáticas
+    if (error?.name === 'NotFoundError' && 
+        error?.message?.includes('removeChild') &&
+        typeof document !== 'undefined' &&
+        (document.documentElement.classList.contains('translated-ltr') ||
+         document.documentElement.classList.contains('translated-rtl'))) {
+      logger.warn("Error de DOM durante traducción automática (ignorado):", error);
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+      });
+      return;
+    }
+    
     logger.error("ErrorBoundary capturó un error:", error, errorInfo);
     this.setState({
       error,

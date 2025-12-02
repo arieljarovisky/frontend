@@ -105,6 +105,7 @@ const router = createBrowserRouter([
         <AppLayout />
       </AppProvider>
     ),
+    errorElement: <ErrorBoundary><div className="min-h-screen bg-background flex items-center justify-center p-4"><div className="text-center"><h1 className="text-2xl font-bold text-foreground mb-4">Error al cargar la página</h1><p className="text-foreground-muted mb-4">Ocurrió un error al cargar esta sección. Por favor, recarga la página.</p><button onClick={() => window.location.reload()} className="btn-primary">Recargar página</button></div></div></ErrorBoundary>,
     children: [
       // Redirección del index a dashboard
       {
@@ -383,6 +384,44 @@ if (typeof window !== 'undefined') {
     startMonitoring(60000); // Cada minuto
     logger.log('💡 Tip: Usa window.checkServerPerformance() en la consola para ver el diagnóstico');
   }
+  
+  // Protección global contra errores de DOM durante traducciones automáticas
+  const originalErrorHandler = window.onerror;
+  window.onerror = (message, source, lineno, colno, error) => {
+    // Verificar si es un error de removeChild durante traducción
+    if (error?.name === 'NotFoundError' && 
+        typeof message === 'string' && 
+        message.includes('removeChild') &&
+        (document.documentElement.classList.contains('translated-ltr') ||
+         document.documentElement.classList.contains('translated-rtl') ||
+         document.body.classList.contains('translated-ltr') ||
+         document.body.classList.contains('translated-rtl'))) {
+      // Silenciar el error durante traducciones
+      logger.warn('Error de DOM durante traducción automática (ignorado):', { message, error });
+      return true; // Prevenir que el error se propague
+    }
+    
+    // Llamar al manejador original si existe
+    if (originalErrorHandler) {
+      return originalErrorHandler(message, source, lineno, colno, error);
+    }
+    return false;
+  };
+  
+  // También capturar errores no manejados en promesas
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason?.name === 'NotFoundError' && 
+        typeof event.reason?.message === 'string' && 
+        event.reason.message.includes('removeChild') &&
+        (document.documentElement.classList.contains('translated-ltr') ||
+         document.documentElement.classList.contains('translated-rtl') ||
+         document.body.classList.contains('translated-ltr') ||
+         document.body.classList.contains('translated-rtl'))) {
+      // Silenciar el error durante traducciones
+      logger.warn('Error de DOM durante traducción automática (ignorado):', event.reason);
+      event.preventDefault(); // Prevenir que el error se propague
+    }
+  });
 }
 
 createRoot(document.getElementById("root")).render(
