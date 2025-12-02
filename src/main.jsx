@@ -403,10 +403,17 @@ if (typeof window !== 'undefined') {
            (error?.name === 'NotFoundError' || error?.name === 'DOMException');
   };
   
+  const isInsertBeforeError = (message, error) => {
+    const msg = String(message || '');
+    const errMsg = error?.message ? String(error.message) : '';
+    return (msg.includes('insertBefore') || errMsg.includes('insertBefore')) &&
+           (error?.name === 'NotFoundError' || error?.name === 'DOMException');
+  };
+  
   const originalErrorHandler = window.onerror;
   window.onerror = (message, source, lineno, colno, error) => {
-    // Verificar si es un error de removeChild durante traducción
-    if (isRemoveChildError(message, error) && isPageTranslated()) {
+    // Verificar si es un error de removeChild o insertBefore durante traducción
+    if ((isRemoveChildError(message, error) || isInsertBeforeError(message, error)) && isPageTranslated()) {
       // Silenciar el error durante traducciones
       if (import.meta.env.DEV) {
         logger.warn('Error de DOM durante traducción automática (ignorado):', { message, error });
@@ -423,7 +430,7 @@ if (typeof window !== 'undefined') {
   
   // También capturar errores no manejados en promesas
   window.addEventListener('unhandledrejection', (event) => {
-    if (isRemoveChildError(event.reason?.message, event.reason) && isPageTranslated()) {
+    if ((isRemoveChildError(event.reason?.message, event.reason) || isInsertBeforeError(event.reason?.message, event.reason)) && isPageTranslated()) {
       // Silenciar el error durante traducciones
       if (import.meta.env.DEV) {
         logger.warn('Error de DOM durante traducción automática (ignorado):', event.reason);
@@ -487,6 +494,75 @@ if (typeof window !== 'undefined') {
         }
       };
       Node.prototype.removeChild._translationProtected = true;
+    }
+  }
+  
+  // Interceptar insertBefore a nivel de Node.prototype para prevenir errores
+  if (typeof Node !== 'undefined' && Node.prototype.insertBefore) {
+    // Solo interceptar si no fue ya interceptado por el script inline
+    if (!Node.prototype.insertBefore._translationProtected) {
+      const originalInsertBefore = Node.prototype.insertBefore;
+      Node.prototype.insertBefore = function(newNode, referenceNode) {
+        try {
+          // Verificar si el nodo de referencia es realmente hijo
+          let isReferenceChild = false;
+          if (referenceNode && this) {
+            try {
+              // Método 1: contains
+              if (this.contains) {
+                isReferenceChild = this.contains(referenceNode);
+              }
+              // Método 2: comparar parentNode
+              if (!isReferenceChild && referenceNode.parentNode === this) {
+                isReferenceChild = true;
+              }
+              // Método 3: verificar en childNodes
+              if (!isReferenceChild && this.childNodes) {
+                isReferenceChild = Array.from(this.childNodes).includes(referenceNode);
+              }
+            } catch (e) {
+              // Si cualquier verificación falla, asumir que no es hijo
+              isReferenceChild = false;
+            }
+          }
+          
+          // Si referenceNode es null, insertBefore funciona como appendChild
+          if (referenceNode === null) {
+            return originalInsertBefore.call(this, newNode, referenceNode);
+          }
+          
+          if (!isReferenceChild) {
+            // Si la página está siendo traducida, intentar appendChild como fallback
+            if (isPageTranslated()) {
+              if (import.meta.env.DEV) {
+                logger.warn('Intento de insertar nodo antes de uno que no es hijo (ignorado durante traducción)');
+              }
+              try {
+                return this.appendChild(newNode);
+              } catch (e) {
+                return newNode;
+              }
+            }
+            // Si no está siendo traducida, lanzar el error normalmente
+            throw new DOMException('Failed to execute \'insertBefore\' on \'Node\': The node before which the new node is to be inserted is not a child of this node.', 'NotFoundError');
+          }
+          return originalInsertBefore.call(this, newNode, referenceNode);
+        } catch (error) {
+          // Si es un error de insertBefore durante traducción, ignorarlo
+          if (isPageTranslated() && isInsertBeforeError(error.message, error)) {
+            if (import.meta.env.DEV) {
+              logger.warn('Error de insertBefore durante traducción (ignorado):', error);
+            }
+            try {
+              return this.appendChild(newNode);
+            } catch (e) {
+              return newNode;
+            }
+          }
+          throw error;
+        }
+      };
+      Node.prototype.insertBefore._translationProtected = true;
     }
   }
 }

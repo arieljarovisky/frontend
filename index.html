@@ -91,6 +91,76 @@
         Node.prototype.removeChild._translationProtected = true;
       }
       
+      // Interceptar insertBefore ANTES de que React se monte
+      if (typeof Node !== 'undefined' && Node.prototype.insertBefore) {
+        const originalInsertBefore = Node.prototype.insertBefore;
+        Node.prototype.insertBefore = function(newNode, referenceNode) {
+          try {
+            // Verificar si el nodo de referencia es realmente hijo usando múltiples métodos
+            let isReferenceChild = false;
+            if (referenceNode && this) {
+              try {
+                // Método 1: contains
+                if (this.contains) {
+                  isReferenceChild = this.contains(referenceNode);
+                }
+                // Método 2: comparar parentNode
+                if (!isReferenceChild && referenceNode.parentNode === this) {
+                  isReferenceChild = true;
+                }
+                // Método 3: verificar en childNodes
+                if (!isReferenceChild && this.childNodes) {
+                  try {
+                    isReferenceChild = Array.prototype.indexOf.call(this.childNodes, referenceNode) !== -1;
+                  } catch (e) {
+                    // Si childNodes no es accesible, continuar
+                  }
+                }
+              } catch (e) {
+                // Si cualquier verificación falla, asumir que no es hijo
+                isReferenceChild = false;
+              }
+            }
+            
+            // Si referenceNode es null, insertBefore funciona como appendChild
+            if (referenceNode === null) {
+              return originalInsertBefore.call(this, newNode, referenceNode);
+            }
+            
+            if (!isReferenceChild) {
+              // Si la página está siendo traducida, intentar appendChild como fallback
+              if (isPageTranslated()) {
+                // Silenciar el error durante traducciones y usar appendChild
+                try {
+                  return this.appendChild(newNode);
+                } catch (e) {
+                  // Si appendChild también falla, retornar el nodo sin insertar
+                  return newNode;
+                }
+              }
+              // Si no está siendo traducida, lanzar el error normalmente
+              throw new DOMException('Failed to execute \'insertBefore\' on \'Node\': The node before which the new node is to be inserted is not a child of this node.', 'NotFoundError');
+            }
+            return originalInsertBefore.call(this, newNode, referenceNode);
+          } catch (error) {
+            // Si es un error de insertBefore durante traducción, ignorarlo
+            if (isPageTranslated() && 
+                (error.name === 'NotFoundError' || error.name === 'DOMException') &&
+                (error.message && error.message.includes('insertBefore'))) {
+              // Intentar appendChild como fallback
+              try {
+                return this.appendChild(newNode);
+              } catch (e) {
+                return newNode;
+              }
+            }
+            throw error;
+          }
+        };
+        // Marcar como protegido para evitar doble interceptación
+        Node.prototype.insertBefore._translationProtected = true;
+      }
+      
       // También observar cambios en el DOM para detectar traducción temprana
       if (typeof document !== 'undefined' && document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
