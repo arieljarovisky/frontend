@@ -341,6 +341,84 @@
     box-shadow: var(--fc-shadow-md);
     filter: brightness(1.1);
   }
+
+  /* ==========================================
+     DRAG AND DROP - ESTILOS MEJORADOS
+     ========================================== */
+  /* Cursor de arrastre moderno - manito/puño */
+  .calendar-dark .fc-event.fc-event-start-editable,
+  .calendar-dark .fc-event.fc-event-duration-editable,
+  .calendar-dark .fc-event.fc-event-resource-editable,
+  .calendar-dark [draggable="true"] {
+    cursor: grab !important;
+    cursor: -webkit-grab !important;
+    cursor: -moz-grab !important;
+  }
+
+  .calendar-dark .fc-event.fc-event-start-editable:active,
+  .calendar-dark .fc-event.fc-event-duration-editable:active,
+  .calendar-dark .fc-event.fc-event-resource-editable:active,
+  .calendar-dark [draggable="true"]:active {
+    cursor: grabbing !important;
+    cursor: -webkit-grabbing !important;
+    cursor: -moz-grabbing !important;
+  }
+  
+  /* Cursor pointer moderno para elementos clickeables */
+  .calendar-dark .fc-event,
+  .calendar-dark [role="button"],
+  .calendar-dark button {
+    cursor: pointer !important;
+  }
+
+  /* Evento siendo arrastrado */
+  .calendar-dark .fc-event.fc-event-dragging {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: var(--fc-shadow-lg), 0 0 20px rgba(59, 130, 246, 0.4);
+    z-index: 9999;
+    border: 2px dashed var(--fc-accent-primary);
+  }
+
+  /* Indicador de zona de drop válida */
+  .calendar-dark .fc-timegrid-slot.fc-timegrid-slot-minor.fc-timegrid-slot-highlight,
+  .calendar-dark .fc-daygrid-day.fc-day-today.fc-day-highlight {
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px dashed var(--fc-accent-primary);
+  }
+
+  /* Efecto visual al pasar sobre una zona válida para drop */
+  .calendar-dark .fc-timegrid-col.fc-timegrid-col-highlight,
+  .calendar-dark .fc-daygrid-day.fc-day-highlight {
+    background: rgba(59, 130, 246, 0.05);
+    border-color: var(--fc-accent-primary);
+  }
+
+  /* Eventos no editables (cancelados) */
+  .calendar-dark .fc-event.fc-event-cancelled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Resize handles visibles */
+  .calendar-dark .fc-event-resizer {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    transition: var(--fc-transition);
+  }
+
+  .calendar-dark .fc-event-resizer:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.2);
+  }
+
+  /* Feedback visual al cambiar de recurso */
+  .calendar-dark .fc-resource-timegrid .fc-timegrid-col.fc-timegrid-col-highlight {
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.1) 0%, 
+      rgba(139, 92, 246, 0.1) 100%);
+    border-left: 3px solid var(--fc-accent-primary);
+  }
   
   /* Estados de eventos */
   .calendar-dark .fc-event.fc-event-confirmed {

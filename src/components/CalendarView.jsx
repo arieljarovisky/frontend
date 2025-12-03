@@ -1,37 +1,7 @@
-// src/components/CalendarView.jsx — FullCalendar Premium con diseño mejorado
-import { useMemo, useRef, useState, useCallback, useEffect, useContext } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import listPlugin from "@fullcalendar/list";
-// Locale en español - definido manualmente para evitar problemas de importación
-// FullCalendar v6 usa un formato diferente para los locales
-const esLocale = {
-  code: "es",
-  week: { 
-    dow: 1, // Lunes como primer día de la semana
-    doy: 4  // La semana que contiene el 4 de enero es la primera semana del año
-  },
-  buttonText: {
-    prev: "Ant",
-    next: "Sig",
-    today: "Hoy",
-    year: "Año",
-    month: "Mes",
-    week: "Semana",
-    day: "Día",
-    list: "Agenda"
-  },
-  weekText: "Sm",
-  allDayText: "Todo el día",
-  moreLinkText: "más",
-  noEventsText: "No hay eventos para mostrar"
-  // Nota: monthNames, monthNamesShort, dayNames, dayNamesShort ya no son opciones válidas en FullCalendar v6
-  // FullCalendar usa Intl.DateTimeFormat internamente para formatear fechas
-};
-import "../calendar-dark.css"; // Estilos dark del calendario
-import "../calendar-light.css"; // Estilos light del calendario
+// src/components/CalendarView.jsx — Vista de Agenda Personalizada
+import { useMemo, useState, useCallback, useEffect, useContext } from "react";
+import "../calendar-dark.css";
+import "../calendar-light.css";
 import { 
   Filter, 
   RefreshCw, 
@@ -42,15 +12,13 @@ import {
   ChevronRight,
   CalendarDays,
   CalendarRange,
-  List,
   Activity,
-  Trash2
+  LayoutGrid,
+  Columns
 } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
 import { AppContext } from "../context/AppProvider";
 import { useTheme } from "../context/ThemeContext";
-import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
-import resourcePlugin from "@fullcalendar/resource";
 import apiClient from "../api/client";
 import { logger } from "../utils/logger.js";
 import { toast } from "sonner";
@@ -250,31 +218,1035 @@ function buildInstructorColorMap(instructors) {
 }
 
 /* =========================
-   Estadísticas rápidas
+   Vista de Día por Instructor
+========================= */
+function DayView({ events, instructors, instructorColors, timeRange, onEventClick, selectedDate, onDateChange, onEventDrop }) {
+  // Estado para drag and drop
+  const [draggedEvent, setDraggedEvent] = useState(null);
+  const [dragOverSlot, setDragOverSlot] = useState(null);
+  const [dragOverInstructor, setDragOverInstructor] = useState(null);
+
+  // Filtrar eventos para la fecha seleccionada
+  const dayEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return events.filter(e => {
+      if (!e.start) return false;
+      const start = new Date(e.start);
+      if (isNaN(start.getTime())) return false;
+      return start >= startOfDay && start <= endOfDay && e.extendedProps?.status !== 'cancelled';
+    });
+  }, [events, selectedDate]);
+
+  // Agrupar eventos por instructor
+  const eventsByInstructor = useMemo(() => {
+    const grouped = {};
+    
+    // Inicializar con todos los instructores
+    (instructors || []).forEach(instructor => {
+      grouped[instructor.id] = {
+        instructor,
+        events: []
+      };
+    });
+    
+    // Agregar eventos sin instructor asignado
+    const hasUnassignedEvents = dayEvents.some(event => {
+      const instructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId;
+      return !instructorId;
+    });
+    
+    if (hasUnassignedEvents) {
+      grouped['unassigned'] = {
+        instructor: { id: 'unassigned', name: 'Sin asignar', color_hex: '#6B7280' },
+        events: []
+      };
+    }
+    
+    // Agrupar eventos
+    dayEvents.forEach(event => {
+      const instructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId;
+      const key = instructorId || 'unassigned';
+      
+      if (!grouped[key]) {
+        grouped[key] = {
+          instructor: { id: key, name: 'Sin asignar', color_hex: '#6B7280' },
+          events: []
+        };
+      }
+      
+      grouped[key].events.push(event);
+    });
+    
+    // Mostrar todos los instructores, incluso si no tienen eventos
+    return Object.values(grouped);
+  }, [dayEvents, instructors]);
+
+  // Generar slots de tiempo
+  const generateTimeSlots = useCallback(() => {
+    const slots = [];
+    const minHour = parseInt(timeRange?.min?.split(':')[0] || 6);
+    const maxHour = parseInt(timeRange?.max?.split(':')[0] || 23);
+    
+    for (let hour = minHour; hour <= maxHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === maxHour) {
+          const maxMinute = parseInt(timeRange?.max?.split(':')[1] || 0);
+          if (minute > maxMinute) break;
+        }
+        const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        slots.push({ time, id: `slot-${time}` });
+      }
+    }
+    return slots;
+  }, [timeRange]);
+
+  const timeSlots = useMemo(() => generateTimeSlots(), [generateTimeSlots]);
+
+  // Asignar eventos a slots por instructor
+  const getEventsForSlot = useCallback((slotTime, instructorEvents) => {
+    return instructorEvents.filter(event => {
+      const start = new Date(event.start);
+      const hour = start.getHours();
+      const minute = start.getMinutes();
+      const totalMinutes = hour * 60 + minute;
+      const slotMinutes = Math.round(totalMinutes / 30) * 30;
+      const slotHour = Math.floor(slotMinutes / 60);
+      const slotMin = slotMinutes % 60;
+      const eventSlotTime = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
+      return eventSlotTime === slotTime;
+    });
+  }, []);
+
+  // Handlers para drag and drop
+  const handleDragStart = useCallback((e, event, instructorId) => {
+    if (event.extendedProps?.status === 'cancelled') return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ''); // Necesario para algunos navegadores
+    setDraggedEvent({ event, sourceInstructorId: instructorId });
+  }, []);
+
+  const handleDragOver = useCallback((e, slotTime, instructorId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedEvent) {
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverSlot(slotTime);
+      setDragOverInstructor(instructorId);
+    }
+  }, [draggedEvent]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedEvent(null);
+    setDragOverSlot(null);
+    setDragOverInstructor(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e, slotTime, targetInstructorId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedEvent || !onEventDrop) {
+      handleDragEnd();
+      return;
+    }
+
+    const { event, sourceInstructorId } = draggedEvent;
+    
+    // Calcular nueva fecha/hora
+    const [hour, minute] = slotTime.split(':').map(Number);
+    const newDate = new Date(selectedDate);
+    newDate.setHours(hour, minute || 0, 0, 0);
+    
+    // Calcular duración del evento original
+    const originalStart = new Date(event.start);
+    const originalEnd = new Date(event.end || new Date(originalStart.getTime() + 30 * 60 * 1000));
+    const duration = originalEnd.getTime() - originalStart.getTime();
+    
+    // Calcular nueva hora sin minutos para comparación más precisa
+    const newDateRounded = new Date(newDate);
+    newDateRounded.setSeconds(0, 0);
+    const originalStartRounded = new Date(originalStart);
+    originalStartRounded.setSeconds(0, 0);
+    
+    // Si cambió el instructor o el horario (comparar con tolerancia de 30 segundos)
+    const oldInstructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId || null;
+    const instructorChanged = String(targetInstructorId) !== String(oldInstructorId || 'unassigned');
+    const timeChanged = Math.abs(newDateRounded.getTime() - originalStartRounded.getTime()) > 30000; // Más de 30 segundos de diferencia
+
+    // Verificar que sea un appointment (no una clase)
+    const eventType = event.extendedProps?.eventType;
+    if (eventType === 'class_session') {
+      logger.warn("[DayView] No se puede mover una clase con drag and drop");
+      handleDragEnd();
+      return;
+    }
+
+    // Siempre actualizar si hay cambios
+    if (instructorChanged || timeChanged) {
+      try {
+        const updates = {
+          start_time: newDate.toISOString(),
+          end_time: new Date(newDate.getTime() + duration).toISOString(),
+        };
+
+        if (targetInstructorId && targetInstructorId !== 'unassigned') {
+          updates.instructor_id = parseInt(targetInstructorId);
+        } else {
+          updates.instructor_id = null;
+        }
+
+        // Llamar a onEventDrop antes de limpiar el estado
+        await onEventDrop(event.id, updates);
+        
+        // Limpiar el estado de drag después de la actualización
+        handleDragEnd();
+      } catch (error) {
+        logger.error("[DayView] Error en handleDrop:", error);
+        handleDragEnd(); // Limpiar estado incluso si hay error
+        throw error;
+      }
+    } else {
+      // Si no hay cambios, solo limpiar el estado
+      handleDragEnd();
+    }
+  }, [draggedEvent, selectedDate, onEventDrop, handleDragEnd]);
+
+  // Formatear fecha
+  const formattedDate = useMemo(() => {
+    if (!selectedDate) return '';
+    const date = new Date(selectedDate);
+    const isToday = date.toDateString() === new Date().toDateString();
+    return {
+      label: isToday ? 'Hoy' : date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      isToday
+    };
+  }, [selectedDate]);
+
+  if ((!instructors || instructors.length === 0) && eventsByInstructor.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-6 border border-blue-500/20 mb-6">
+        <p className="text-sm text-blue-300 text-center">No hay instructores configurados</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      {/* Header con navegación de fechas */}
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-xl">
+              <CalendarDays className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-blue-300 font-semibold">Agenda</p>
+              <p className="text-sm text-blue-200">{formattedDate.label}</p>
+            </div>
+          </div>
+          
+          {/* Navegación de fechas */}
+          {onDateChange && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const prev = new Date(selectedDate);
+                  prev.setDate(prev.getDate() - 1);
+                  onDateChange(prev);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Día anterior"
+              >
+                <ChevronLeft className="w-4 h-4 text-blue-400" />
+              </button>
+              
+              <button
+                onClick={() => onDateChange(new Date())}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-xs text-blue-300 font-medium"
+                title="Ir a hoy"
+              >
+                Hoy
+              </button>
+              
+              <button
+                onClick={() => {
+                  const next = new Date(selectedDate);
+                  next.setDate(next.getDate() + 1);
+                  onDateChange(next);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Día siguiente"
+              >
+                <ChevronRight className="w-4 h-4 text-blue-400" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-x-auto">
+        {eventsByInstructor.map(({ instructor, events: instructorEvents }) => {
+          const instructorColor = instructorColors[instructor.id] || instructor.color_hex || "#3b82f6";
+          
+          return (
+            <div 
+              key={instructor.id} 
+              className="bg-background-secondary rounded-xl border border-border p-4 min-w-[280px]"
+            >
+              {/* Header del instructor */}
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                <div 
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: instructorColor }}
+                />
+                <h3 className="text-sm font-semibold text-foreground truncate">
+                  {instructor.name}
+                </h3>
+                <span className="text-xs text-foreground-muted ml-auto">
+                  {instructorEvents.length} {instructorEvents.length === 1 ? 'turno' : 'turnos'}
+                </span>
+              </div>
+              
+              {/* Slots de tiempo */}
+              <div className="space-y-0 max-h-[600px] overflow-y-auto scrollbar-hide">
+                {timeSlots.map((slot) => {
+                  const slotEvents = getEventsForSlot(slot.time, instructorEvents);
+                  const hasAppointments = slotEvents.length > 0;
+                  
+                  return (
+                    <div
+                      key={slot.id}
+                      className="relative flex items-start gap-2 py-1 min-h-[50px]"
+                    >
+                      {/* Hora */}
+                      <div className="flex flex-col items-center flex-shrink-0 w-12">
+                        <div className={`text-[10px] font-bold ${
+                          hasAppointments ? 'text-foreground' : 'text-foreground-muted'
+                        }`}>
+                          {slot.time}
+                        </div>
+                        <div className={`w-0.5 flex-1 mt-0.5 ${
+                          hasAppointments 
+                            ? 'bg-primary/40' 
+                            : 'bg-border/20'
+                        }`} />
+                      </div>
+                      
+                      {/* Contenido */}
+                      <div 
+                        className={`flex-1 min-w-0 pt-0.5 transition-all ${
+                          dragOverSlot === slot.time && dragOverInstructor === instructor.id
+                            ? 'bg-primary/10 rounded-lg border-2 border-primary/40 border-dashed'
+                            : ''
+                        }`}
+                        onDragOver={(e) => handleDragOver(e, slot.time, instructor.id)}
+                        onDrop={(e) => handleDrop(e, slot.time, instructor.id)}
+                      >
+                        {hasAppointments ? (
+                          <div className="space-y-1.5">
+                            {slotEvents.map((item) => {
+                              const ep = item.extendedProps || {};
+                              const status = ep.status;
+                              
+                              const isDragging = draggedEvent?.event.id === item.id;
+                              
+                              return (
+                                <div
+                                  key={item.id}
+                                  draggable={status !== 'cancelled'}
+                                  onDragStart={(e) => {
+                                    if (status !== 'cancelled') {
+                                      handleDragStart(e, item, instructor.id);
+                                    }
+                                  }}
+                                  onDragEnd={handleDragEnd}
+                                  onClick={() => onEventClick(item)}
+                                  className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-2 transition-all hover:shadow-md hover:scale-[1.01] ${
+                                    isDragging ? 'opacity-50' : ''
+                                  } ${status === 'cancelled' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  style={{
+                                    borderColor: instructorColor,
+                                    backgroundColor: `${instructorColor}15`
+                                  }}
+                                >
+                                  <div className="text-xs font-semibold text-foreground truncate mb-1">
+                                    {item.title}
+                                  </div>
+                                  {ep.customer_name && (
+                                    <div className="text-[10px] text-foreground-muted truncate">
+                                      {ep.customer_name}
+                                    </div>
+                                  )}
+                                  {status === "confirmed" && (
+                                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1" />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-[9px] text-foreground-muted/50 italic py-1">
+                            Libre
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Vista de Semana por Instructor
+========================= */
+function WeekView({ events, instructors, instructorColors, timeRange, onEventClick, selectedDate, onDateChange, onEventDrop }) {
+  const [draggedEvent, setDraggedEvent] = useState(null);
+  const [dragOverSlot, setDragOverSlot] = useState(null);
+  const [dragOverInstructor, setDragOverInstructor] = useState(null);
+  const [dragOverDay, setDragOverDay] = useState(null);
+
+  // Calcular inicio y fin de semana (lunes a domingo)
+  const weekRange = useMemo(() => {
+    if (!selectedDate) return { start: null, end: null, days: [] };
+    
+    const date = new Date(selectedDate);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Ajuste para lunes como primer día
+    
+    const weekStart = new Date(date.setDate(diff));
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      days.push(day);
+    }
+    
+    const weekEnd = new Date(days[6]);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return { start: weekStart, end: weekEnd, days };
+  }, [selectedDate]);
+
+  // Filtrar eventos de la semana
+  const weekEvents = useMemo(() => {
+    if (!weekRange.start || !weekRange.end) return [];
+    return events.filter(e => {
+      if (!e.start) return false;
+      const start = new Date(e.start);
+      if (isNaN(start.getTime())) return false;
+      return start >= weekRange.start && start <= weekRange.end && e.extendedProps?.status !== 'cancelled';
+    });
+  }, [events, weekRange]);
+
+  // Agrupar eventos por día e instructor
+  const eventsByDayAndInstructor = useMemo(() => {
+    const grouped = {};
+    
+    weekRange.days.forEach(day => {
+      const dayKey = day.toISOString().split('T')[0];
+      grouped[dayKey] = {};
+      
+      // Inicializar con todos los instructores
+      (instructors || []).forEach(instructor => {
+        grouped[dayKey][instructor.id] = {
+          instructor,
+          events: []
+        };
+      });
+      
+      // Eventos sin asignar
+      grouped[dayKey]['unassigned'] = {
+        instructor: { id: 'unassigned', name: 'Sin asignar', color_hex: '#6B7280' },
+        events: []
+      };
+    });
+    
+    // Agrupar eventos
+    weekEvents.forEach(event => {
+      const start = new Date(event.start);
+      const dayKey = start.toISOString().split('T')[0];
+      if (!grouped[dayKey]) return;
+      
+      const instructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId;
+      const key = instructorId || 'unassigned';
+      
+      if (!grouped[dayKey][key]) {
+        grouped[dayKey][key] = {
+          instructor: { id: key, name: 'Sin asignar', color_hex: '#6B7280' },
+          events: []
+        };
+      }
+      
+      grouped[dayKey][key].events.push(event);
+    });
+    
+    return grouped;
+  }, [weekEvents, weekRange.days, instructors]);
+
+  // Generar slots de tiempo (cada hora para semana, más compacto)
+  const generateTimeSlots = useCallback(() => {
+    const slots = [];
+    const minHour = parseInt(timeRange?.min?.split(':')[0] || 6);
+    const maxHour = parseInt(timeRange?.max?.split(':')[0] || 23);
+    
+    // Para semana, usar intervalos de 1 hora para hacerla más compacta
+    for (let hour = minHour; hour <= maxHour; hour++) {
+      const time = `${String(hour).padStart(2, '0')}:00`;
+      slots.push({ time, id: `slot-${time}` });
+    }
+    return slots;
+  }, [timeRange]);
+
+  const timeSlots = useMemo(() => generateTimeSlots(), [generateTimeSlots]);
+
+  const getEventsForSlot = useCallback((slotTime, dayEvents) => {
+    return dayEvents.filter(event => {
+      const start = new Date(event.start);
+      const hour = start.getHours();
+      const minute = start.getMinutes();
+      // Redondear a la hora más cercana para vista semanal
+      const eventSlotTime = `${String(hour).padStart(2, '0')}:00`;
+      return eventSlotTime === slotTime;
+    });
+  }, []);
+
+  // Handlers drag and drop
+  const handleDragStart = useCallback((e, event) => {
+    if (event.extendedProps?.status === 'cancelled') return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ''); // Necesario para algunos navegadores
+    console.log("[WeekView] handleDragStart:", { eventId: event.id, event });
+    setDraggedEvent(event);
+  }, []);
+
+  const handleDragOver = useCallback((e, slotTime, instructorId, day) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedEvent) {
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverSlot(slotTime);
+      setDragOverInstructor(instructorId);
+      setDragOverDay(day);
+    }
+  }, [draggedEvent]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedEvent(null);
+    setDragOverSlot(null);
+    setDragOverInstructor(null);
+    setDragOverDay(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e, slotTime, targetInstructorId, targetDay) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedEvent || !onEventDrop) {
+      handleDragEnd();
+      return;
+    }
+
+    // Parsear fecha del día objetivo
+    const [hour, minute] = slotTime.split(':').map(Number);
+    let newDate;
+    
+    if (targetDay) {
+      // Si targetDay es un string (dayKey), crear fecha desde ese string
+      if (typeof targetDay === 'string') {
+        newDate = new Date(targetDay + 'T00:00:00');
+      } else {
+        newDate = new Date(targetDay);
+      }
+    } else {
+      // Fallback a selectedDate si no hay targetDay
+      newDate = new Date(selectedDate);
+    }
+    
+    newDate.setHours(hour, minute || 0, 0, 0);
+    
+    // Calcular duración del evento original
+    const originalStart = new Date(draggedEvent.start);
+    const originalEnd = new Date(draggedEvent.end || new Date(originalStart.getTime() + 30 * 60 * 1000));
+    const duration = originalEnd.getTime() - originalStart.getTime();
+    
+    const oldInstructorId = draggedEvent.extendedProps?.instructor_id || draggedEvent.extendedProps?.instructorId || null;
+    const instructorChanged = String(targetInstructorId) !== String(oldInstructorId || 'unassigned');
+    const timeChanged = Math.abs(newDate.getTime() - originalStart.getTime()) > 60000; // Más de 1 minuto de diferencia
+
+    // Verificar que sea un appointment (no una clase)
+    const eventType = draggedEvent.extendedProps?.eventType;
+    if (eventType === 'class_session') {
+      logger.warn("[WeekView] No se puede mover una clase con drag and drop");
+      handleDragEnd();
+      return;
+    }
+
+    // Siempre actualizar si hay cambios
+    if (instructorChanged || timeChanged) {
+      try {
+        const updates = {
+          start_time: newDate.toISOString(),
+          end_time: new Date(newDate.getTime() + duration).toISOString(),
+        };
+
+        if (targetInstructorId && targetInstructorId !== 'unassigned') {
+          updates.instructor_id = parseInt(targetInstructorId);
+        } else {
+          updates.instructor_id = null;
+        }
+
+        // Llamar a onEventDrop antes de limpiar el estado
+        await onEventDrop(draggedEvent.id, updates);
+        
+        // Limpiar el estado de drag después de la actualización
+        handleDragEnd();
+      } catch (error) {
+        logger.error("[WeekView] Error en handleDrop:", error);
+        handleDragEnd(); // Limpiar estado incluso si hay error
+        throw error;
+      }
+    } else {
+      // Si no hay cambios, solo limpiar el estado
+      handleDragEnd();
+    }
+  }, [draggedEvent, selectedDate, onEventDrop, handleDragEnd]);
+
+  // Formatear rango de semana
+  const formattedWeek = useMemo(() => {
+    if (!weekRange.start || !weekRange.end) return '';
+    const start = weekRange.start.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+    const end = weekRange.end.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${start} - ${end}`;
+  }, [weekRange]);
+
+  if (!weekRange.start || !weekRange.end) {
+    return (
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-6 border border-blue-500/20 mb-6">
+        <p className="text-sm text-blue-300 text-center">Cargando semana...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-xl">
+              <CalendarRange className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-blue-300 font-semibold">Semana</p>
+              <p className="text-sm text-blue-200">{formattedWeek}</p>
+            </div>
+          </div>
+          
+          {onDateChange && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const prev = new Date(selectedDate);
+                  prev.setDate(prev.getDate() - 7);
+                  onDateChange(prev);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Semana anterior"
+              >
+                <ChevronLeft className="w-4 h-4 text-blue-400" />
+              </button>
+              
+              <button
+                onClick={() => onDateChange(new Date())}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-xs text-blue-300 font-medium"
+              >
+                Hoy
+              </button>
+              
+              <button
+                onClick={() => {
+                  const next = new Date(selectedDate);
+                  next.setDate(next.getDate() + 7);
+                  onDateChange(next);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Semana siguiente"
+              >
+                <ChevronRight className="w-4 h-4 text-blue-400" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Grid de días e instructores */}
+      <div className="overflow-x-auto">
+        <div className="min-w-full">
+          {/* Header de días */}
+          <div className="grid grid-cols-8 gap-2 mb-2 sticky top-0 bg-background-secondary z-10 pb-2">
+            <div className="w-16"></div> {/* Columna de horas */}
+            {weekRange.days.map((day) => {
+              const isToday = day.toDateString() === new Date().toDateString();
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`text-center p-2 rounded-lg ${isToday ? 'bg-blue-500/20' : 'bg-background-secondary'}`}
+                >
+                  <div className="text-xs font-semibold text-foreground-muted uppercase">
+                    {day.toLocaleDateString('es-AR', { weekday: 'short' })}
+                  </div>
+                  <div className={`text-lg font-bold ${isToday ? 'text-blue-400' : 'text-foreground'}`}>
+                    {day.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Grid principal: horas x días x instructores */}
+          <div className="space-y-4">
+            {(instructors || []).map((instructor) => {
+              const instructorColor = instructorColors[instructor.id] || instructor.color_hex || "#3b82f6";
+              
+              return (
+                <div key={instructor.id} className="bg-background-secondary rounded-lg border border-border p-3">
+                  {/* Header del instructor - más compacto */}
+                  <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-border/50">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: instructorColor }}
+                    />
+                    <h3 className="text-xs font-semibold text-foreground">{instructor.name}</h3>
+                  </div>
+
+                  {/* Grid de días - diseño compacto */}
+                  <div className="grid grid-cols-8 gap-1.5">
+                    {/* Columna de horas */}
+                    <div className="space-y-0 sticky left-0 bg-background-secondary z-5">
+                      {timeSlots.map((slot) => (
+                        <div key={slot.id} className="h-[40px] flex items-center justify-end pr-2">
+                          <span className="text-[10px] text-foreground-muted font-semibold">
+                            {slot.time}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Columnas de días */}
+                    {weekRange.days.map((day) => {
+                      const dayKey = day.toISOString().split('T')[0];
+                      const dayEvents = eventsByDayAndInstructor[dayKey]?.[instructor.id]?.events || [];
+                      const isToday = day.toDateString() === new Date().toDateString();
+                      
+                      return (
+                        <div
+                          key={dayKey}
+                          className={`space-y-0 rounded border ${isToday ? 'border-blue-500/40 bg-blue-500/5' : 'border-border/50'}`}
+                        >
+                          {timeSlots.map((slot) => {
+                            const slotEvents = getEventsForSlot(slot.time, dayEvents);
+                            const hasAppointments = slotEvents.length > 0;
+                            const isDragOver = dragOverSlot === slot.time && 
+                                              dragOverInstructor === String(instructor.id) && 
+                                              dragOverDay === dayKey;
+
+                            return (
+                              <div
+                                key={slot.id}
+                                className={`h-[40px] border-b border-border/10 relative transition-all ${
+                                  isDragOver ? 'bg-primary/10 border-primary/40 border-2 border-dashed' : ''
+                                }`}
+                                onDragOver={(e) => handleDragOver(e, slot.time, instructor.id, dayKey)}
+                                onDrop={(e) => handleDrop(e, slot.time, instructor.id, dayKey)}
+                              >
+                                {hasAppointments && (
+                                  <div className="absolute inset-0 p-0.5 flex flex-col gap-0.5">
+                                    {slotEvents.slice(0, 2).map((item) => {
+                                      const ep = item.extendedProps || {};
+                                      const isDragging = draggedEvent?.id === item.id;
+                                      
+                                      return (
+                                        <div
+                                          key={item.id}
+                                          draggable={ep.status !== 'cancelled'}
+                                          onDragStart={(e) => {
+                                            if (ep.status !== 'cancelled') {
+                                              handleDragStart(e, item);
+                                            }
+                                          }}
+                                          onDragEnd={handleDragEnd}
+                                          onClick={() => onEventClick(item)}
+                                          className={`cursor-grab active:cursor-grabbing rounded text-[8px] px-1 py-0.5 truncate transition-all hover:scale-[1.02] ${
+                                            isDragging ? 'opacity-50' : ''
+                                          } ${ep.status === 'cancelled' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          style={{
+                                            backgroundColor: `${instructorColor}25`,
+                                            borderLeft: `2px solid ${instructorColor}`,
+                                            color: '#fff',
+                                            fontWeight: '500'
+                                          }}
+                                          title={`${item.title} - ${new Date(item.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
+                                        >
+                                          {item.title}
+                                        </div>
+                                      );
+                                    })}
+                                    {slotEvents.length > 2 && (
+                                      <div className="text-[7px] text-foreground-muted/70 px-1">
+                                        +{slotEvents.length - 2}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Vista de Mes
+========================= */
+function MonthView({ events, instructors, instructorColors, onEventClick, selectedDate, onDateChange }) {
+  // Calcular inicio y fin del mes
+  const monthRange = useMemo(() => {
+    if (!selectedDate) return { start: null, end: null, days: [] };
+    
+    const date = new Date(selectedDate);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Ajustar para empezar en lunes
+    const startDate = new Date(firstDay);
+    const dayOfWeek = startDate.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDate.setDate(startDate.getDate() - diff);
+    
+    // Generar todas las fechas del mes (incluyendo días previos y siguientes para completar semanas)
+    const days = [];
+    const currentDate = new Date(startDate);
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Completar hasta domingo
+    
+    while (currentDate <= endDate) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return {
+      start: firstDay,
+      end: lastDay,
+      days,
+      monthName: date.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+    };
+  }, [selectedDate]);
+
+  // Filtrar eventos del mes
+  const monthEvents = useMemo(() => {
+    if (!monthRange.start || !monthRange.end) return [];
+    return events.filter(e => {
+      if (!e.start) return false;
+      const start = new Date(e.start);
+      if (isNaN(start.getTime())) return false;
+      return start >= monthRange.start && start <= monthRange.end && e.extendedProps?.status !== 'cancelled';
+    });
+  }, [events, monthRange]);
+
+  // Agrupar eventos por día
+  const eventsByDay = useMemo(() => {
+    const grouped = {};
+    
+    monthEvents.forEach(event => {
+      const start = new Date(event.start);
+      const dayKey = start.toISOString().split('T')[0];
+      
+      if (!grouped[dayKey]) {
+        grouped[dayKey] = [];
+      }
+      
+      grouped[dayKey].push(event);
+    });
+    
+    return grouped;
+  }, [monthEvents]);
+
+  const isToday = (day) => day.toDateString() === new Date().toDateString();
+  const isCurrentMonth = (day) => day.getMonth() === new Date(selectedDate).getMonth();
+
+  return (
+    <div className="mb-6">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-xl">
+              <LayoutGrid className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-blue-300 font-semibold">Mes</p>
+              <p className="text-sm text-blue-200 capitalize">{monthRange.monthName}</p>
+            </div>
+          </div>
+          
+          {onDateChange && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const prev = new Date(selectedDate);
+                  prev.setMonth(prev.getMonth() - 1);
+                  onDateChange(prev);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Mes anterior"
+              >
+                <ChevronLeft className="w-4 h-4 text-blue-400" />
+              </button>
+              
+              <button
+                onClick={() => onDateChange(new Date())}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-xs text-blue-300 font-medium"
+              >
+                Hoy
+              </button>
+              
+              <button
+                onClick={() => {
+                  const next = new Date(selectedDate);
+                  next.setMonth(next.getMonth() + 1);
+                  onDateChange(next);
+                }}
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                title="Mes siguiente"
+              >
+                <ChevronRight className="w-4 h-4 text-blue-400" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Grid del mes */}
+      <div className="bg-background-secondary rounded-xl border border-border p-4">
+        {/* Días de la semana */}
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+            <div key={day} className="text-center p-2 text-xs font-semibold text-foreground-muted uppercase">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Días del mes */}
+        <div className="grid grid-cols-7 gap-2">
+          {monthRange.days.map((day) => {
+            const dayKey = day.toISOString().split('T')[0];
+            const dayEvents = eventsByDay[dayKey] || [];
+            const today = isToday(day);
+            const currentMonth = isCurrentMonth(day);
+            
+            return (
+              <div
+                key={dayKey}
+                className={`min-h-[120px] rounded-lg border p-2 transition-all ${
+                  today 
+                    ? 'border-blue-500 bg-blue-500/10' 
+                    : currentMonth
+                      ? 'border-border bg-background-secondary/50'
+                      : 'border-border/30 bg-background-secondary/20 opacity-50'
+                }`}
+                onClick={() => onDateChange?.(day)}
+              >
+                <div className={`text-sm font-bold mb-1 ${today ? 'text-blue-400' : currentMonth ? 'text-foreground' : 'text-foreground-muted'}`}>
+                  {day.getDate()}
+                </div>
+                
+                <div className="space-y-1">
+                  {dayEvents.slice(0, 3).map((event) => {
+                    const ep = event.extendedProps || {};
+                    const instructorId = ep.instructor_id || ep.instructorId;
+                    const instructorColor = instructorColors[instructorId] || "#3b82f6";
+                    
+                    return (
+                      <div
+                        key={event.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEventClick(event);
+                        }}
+                        className="text-[10px] px-2 py-1 rounded truncate cursor-grab active:cursor-grabbing transition-all hover:scale-[1.02]"
+                        style={{
+                          backgroundColor: `${instructorColor}20`,
+                          borderLeft: `3px solid ${instructorColor}`,
+                          color: '#fff'
+                        }}
+                        title={event.title}
+                      >
+                        <div className="font-semibold truncate">{event.title}</div>
+                        <div className="text-[9px] opacity-75 truncate">
+                          {new Date(event.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {dayEvents.length > 3 && (
+                    <div className="text-[9px] text-foreground-muted font-semibold">
+                      +{dayEvents.length - 3} más
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Estadísticas rápidas (solo estadísticas, sin "Hoy")
 ========================= */
 function QuickStats({ events, instructors }) {
   const stats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const todayEvents = events.filter(e => {
-      if (!e.start) return false; // Validar que start existe
-      const start = new Date(e.start);
-      if (isNaN(start.getTime())) return false; // Validar que la fecha es válida
-      return start >= today && start < tomorrow && e.extendedProps?.status !== 'cancelled';
-    });
-
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
     const weekEvents = events.filter(e => {
-      if (!e.start) return false; // Validar que start existe
+      if (!e.start) return false;
       const start = new Date(e.start);
-      if (isNaN(start.getTime())) return false; // Validar que la fecha es válida
+      if (isNaN(start.getTime())) return false;
       return start >= weekStart && start < weekEnd && e.extendedProps?.status !== 'cancelled';
     });
 
@@ -283,7 +1255,6 @@ function QuickStats({ events, instructors }) {
     );
 
     return {
-      todayCount: todayEvents.length,
       weekCount: weekEvents.length,
       pendingCount: pendingDeposits.length,
       cancelledCount: events.filter(e => e.extendedProps?.status === 'cancelled').length
@@ -291,19 +1262,7 @@ function QuickStats({ events, instructors }) {
   }, [events]);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-500/20 rounded-xl">
-            <CalendarDays className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <p className="text-xs text-blue-300">Hoy</p>
-            <p className="text-2xl font-bold text-blue-100">{stats.todayCount}</p>
-          </div>
-        </div>
-      </div>
-
+    <div className="grid grid-cols-3 gap-4 mb-6">
       <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-2xl p-4 border border-purple-500/20">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-purple-500/20 rounded-xl">
@@ -343,80 +1302,6 @@ function QuickStats({ events, instructors }) {
   );
 }
 
-/* =========================
-   Adaptador de eventos
-========================= */
-function useCalendarEvents(events, instructorColors, useResources = false) {
-  return useMemo(
-    () =>
-      (Array.isArray(events) ? events : []).map((ev) => {
-        const type = ev.extendedProps?.eventType || "appointment";
-        const st = ev.extendedProps?.status;
-        const sid = ev.extendedProps?.instructor_id ?? ev.extendedProps?.instructorId;
-        
-        // Obtener color del instructor o usar color por defecto
-        const instructorColor = instructorColors[sid] || "#6B7280";
-        const baseColor = ev.backgroundColor || ev.extendedProps?.color_hex || instructorColor;
-        const baseBorder = ev.borderColor || baseColor;
-
-        let bg = baseColor;
-        let border = baseBorder;
-        let opacity = 1;
-
-        // Ajustes por estado
-        if (type !== "class_session") {
-          if (st === "pending_deposit") {
-            opacity = 0.85;
-            border = "#f59e0b"; // Amarillo para pendientes
-          }
-          if (st === "cancelled") {
-            bg = "#475569";
-            border = "#64748B";
-            opacity = 0.5;
-          }
-          if (st === "confirmed" || st === "deposit_paid") {
-            border = "#10b981"; // Verde para confirmados
-          }
-        } else if (st === "cancelled") {
-          opacity = 0.5;
-        }
-
-        // Solo asignar resourceId si estamos usando vista de recursos
-        let resourceId = undefined;
-        if (useResources) {
-          if (sid) {
-            resourceId = String(sid);
-          } else if (type === "class_session" || type === "appointment") {
-            resourceId = "unassigned";
-          }
-        }
-
-        // Clases CSS según estado
-        const classNames = [
-          opacity < 1 ? "fc-opacity" : "",
-          st === "confirmed" ? "fc-event-confirmed" : "",
-          st === "cancelled" ? "fc-event-cancelled" : "",
-          st === "pending_deposit" ? "fc-event-pending" : "",
-          st === "deposit_paid" ? "fc-event-deposit" : ""
-        ].filter(Boolean);
-
-        return {
-          ...ev,
-          resourceId,
-          backgroundColor: bg,
-          borderColor: border,
-          textColor: "#ffffff",
-          classNames,
-          // Agregar datos del estado como atributo para CSS
-          extendedProps: {
-            ...ev.extendedProps,
-            'data-status': st
-          }
-        };
-      }),
-    [events, instructorColors, useResources]
-  );
-}
 
 export default function CalendarView() {
   const appCtx = useContext(AppContext);
@@ -434,11 +1319,13 @@ export default function CalendarView() {
   const [instructorFilter, setInstructorFilter] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const calendarRef = useRef(null);
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
-  const [currentView, setCurrentView] = useState("resourceTimeGridDay");
   const [showStats, setShowStats] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState("day"); // "day" | "week" | "month"
+  const [refreshKey, setRefreshKey] = useState(0); // Key para forzar re-render después de actualizaciones
+  const [lastUpdateTime, setLastUpdateTime] = useState(Date.now()); // Timestamp de última actualización
 
   const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
 
@@ -504,398 +1391,67 @@ export default function CalendarView() {
     return list;
   }, [events, instructorFilter, hideCancelled]);
 
-  const fullEvents = useCalendarEvents(filtered, instructorColors, currentView === "resourceTimeGridDay");
-
-  // Rango sin desmontar
-  const handleDatesSet = useCallback(
-    (arg) => {
-      const fromIso = arg.startStr;
-      if (!arg.end) {
-        setRange({ fromIso, toIso: fromIso });
-        return;
-      }
-      const end = new Date(arg.end);
-      if (isNaN(end.getTime())) {
-        setRange({ fromIso, toIso: fromIso });
-        return;
-      }
-      end.setSeconds(end.getSeconds() - 1);
-      setRange({ fromIso, toIso: end.toISOString() });
-      // Actualizar la vista actual y ajustar recursos
-      if (arg.view) {
-        const viewType = arg.view.type;
-        setCurrentView(viewType);
-        // Activar recursos solo para vista de día con recursos
-        if (viewType === "resourceTimeGridDay") {
-          arg.view.calendar.setOption("resources", resources);
-        } else {
-          arg.view.calendar.setOption("resources", null);
-        }
-      }
-    },
-    [setRange, resources]
-  );
-
-  // Actualizar recursos cuando cambien los instructores o la vista
-  useEffect(() => {
-    if (calendarRef.current && calendarRef.current.getApi) {
-      const calendarApi = calendarRef.current.getApi();
-      const currentViewType = calendarApi.view?.type;
-      if (currentViewType === "resourceTimeGridDay" && resources.length > 0) {
-        calendarApi.setOption("resources", resources);
-      }
-    }
-  }, [resources, currentView]);
-
-  // Cambia vista al redimensionar sin perder estado
-  const handleWindowResize = useCallback((arg) => {
-    const desired = window.innerWidth < 768 ? "listWeek" : "timeGridWeek";
-    if (arg.view.type !== desired) {
-      // Si cambiamos de vista de recursos a normal, quitar recursos
-      if (arg.view.type.includes("resource") && desired === "timeGridWeek") {
-        arg.view.calendar.setOption("resources", false);
-      }
-      arg.view.calendar.changeView(desired);
-    }
-  }, []);
-
-  const eventClick = useCallback((info) => {
-    const e = info.event;
-    const ep = e.extendedProps || {};
-    if (ep.status === "cancelled" && !info.jsEvent.ctrlKey && !info.jsEvent.metaKey) return;
-    setSelectedEvent({
-      id: e.id,
-      title: e.title,
-      start: e.start ? (() => {
-        const d = new Date(e.start);
-        return isNaN(d.getTime()) ? null : d.toISOString();
-      })() : null,
-      end: e.end ? (() => {
-        const d = new Date(e.end);
-        return isNaN(d.getTime()) ? null : d.toISOString();
-      })() : null,
-      extendedProps: ep,
-    });
-    setModalOpen(true);
-  }, []);
-
-  // Detectar si la página está siendo traducida (Google Translate, etc.)
-  const [isPageBeingTranslated, setIsPageBeingTranslated] = useState(false);
-  
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    
-    const checkTranslation = () => {
-      // Google Translate agrega clases específicas al body/html
-      const isTranslated = 
-        document.documentElement.classList.contains('translated-ltr') ||
-        document.documentElement.classList.contains('translated-rtl') ||
-        document.body.classList.contains('translated-ltr') ||
-        document.body.classList.contains('translated-rtl') ||
-        // También verificar si hay elementos con atributos de traducción
-        document.querySelector('[data-google-translate]') !== null;
-      
-      setIsPageBeingTranslated(isTranslated);
-    };
-    
-    // Verificar inicialmente
-    checkTranslation();
-    
-    // Observar cambios en las clases del documento
-    const observer = new MutationObserver(checkTranslation);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-    
-    return () => observer.disconnect();
-  }, []);
+  // Forzar actualización visual cuando cambian los eventos
+  // Usamos un hash simple basado en los IDs y fechas de los eventos para detectar cambios reales
+  const eventsHash = useMemo(() => {
+    if (!Array.isArray(events) || events.length === 0) return '';
+    // Incluir más información para detectar cambios: ID, start, end, instructor_id
+    return events
+      .map(e => {
+        const start = e.start ? new Date(e.start).toISOString() : '';
+        const end = e.end ? new Date(e.end).toISOString() : '';
+        const instructorId = e.extendedProps?.instructor_id || e.extendedProps?.instructorId || 'none';
+        return `${e.id}-${start}-${end}-${instructorId}`;
+      })
+      .sort()
+      .join('|');
+  }, [events]);
 
   useEffect(() => {
-    const elId = "instructor-colors";
-    
-    // No manipular DOM si la página está siendo traducida
-    if (isPageBeingTranslated) return;
-    
-    let styleEl = document.getElementById(elId);
-    
-    // Verificar que document.head existe y es válido (importante durante traducciones)
-    if (!document.head) return;
-    
-    try {
-      if (!styleEl) {
-        styleEl = document.createElement("style");
-        styleEl.id = elId;
-        // Verificar que el elemento no esté ya en el DOM antes de agregarlo
-        if (!document.getElementById(elId)) {
-          document.head.appendChild(styleEl);
-        } else {
-          styleEl = document.getElementById(elId);
-        }
-      }
-
-      // Verificar que el elemento aún está en el DOM antes de modificar
-      if (styleEl && styleEl.parentNode === document.head) {
-        const map = buildInstructorColorMap(instructors);
-        const rules = Object.entries(map).map(([id, hex]) => {
-          const light = hexToRgba(hex, 0.04);
-          return `
-            .fc-resource-timegrid .fc-col-header-cell[data-resource-id="${id}"] {
-              background: ${light};
-            }
-          `;
-        }).join("\n");
-
-        styleEl.textContent = rules;
-      }
-    } catch (error) {
-      // Silenciar errores de DOM durante traducciones automáticas
-      if (error.name !== 'NotFoundError') {
-        console.warn("Error al actualizar estilos de instructores:", error);
-      }
+    // Actualizar lastUpdateTime cuando cambia el hash de eventos
+    if (eventsHash) {
+      const newUpdateTime = Date.now();
+      setLastUpdateTime(newUpdateTime);
+      logger.info("[CalendarView] Hash de eventos cambió, actualizando lastUpdateTime:", newUpdateTime, "hash length:", eventsHash.length);
     }
-    
-    return () => {
-      // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
-      if (isPageBeingTranslated) return;
-      
-      try {
-        const el = document.getElementById(elId);
-        if (el && el.parentNode === document.head) {
-          document.head.removeChild(el);
-        }
-      } catch (error) {
-        // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
-        if (error.name !== 'NotFoundError') {
-          console.warn("Error durante cleanup de estilos:", error);
-        }
-      }
-    };
-  }, [instructors, isPageBeingTranslated]);
+  }, [eventsHash]);
 
-  // Render elegante del evento
-  const eventContent = useCallback((arg) => {
-    const ep = arg.event.extendedProps || {};
-    const type = ep.eventType || "appointment";
-    const status = ep.status;
-    const occupancy =
-      type === "class_session" && ep.enrolled_count != null && ep.capacity_max != null
-        ? `${ep.enrolled_count}/${ep.capacity_max}`
-        : null;
-    
-    const isTimeGrid = arg.view.type.includes('timeGrid');
-    const isList = arg.view.type.includes('list');
-    const isDayGrid = arg.view.type.includes('dayGrid');
-    
-    // Para vista de lista, mostrar información completa
-    if (isList) {
-      return (
-        <div className="flex flex-col gap-0.5 p-1 w-full">
-          <div className="text-sm font-semibold text-foreground">
-            {arg.event.title}
-          </div>
-          <div className="flex flex-wrap gap-1 items-center">
-            {ep.instructor_name && (
-              <span
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-white"
-                style={{
-                  backgroundColor: instructorColors[ep.instructor_id] || "#3b82f6",
-                }}
-              >
-                {ep.instructor_name}
-              </span>
-            )}
-            {occupancy && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-500/20 text-indigo-200 font-medium">
-                👥 {occupancy}
-              </span>
-            )}
-            {type !== "class_session" && status === "deposit_paid" && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-emerald-500/20 text-emerald-200 font-medium">
-                💰 Seña
-              </span>
-            )}
-            {status === "cancelled" && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-red-500/20 text-red-200 font-medium">
-                ❌ Cancelado
-              </span>
-            )}
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className={`flex flex-col gap-1 ${isTimeGrid ? 'p-2' : 'p-3'} min-h-[${isTimeGrid ? '60px' : '72px'}] w-full overflow-hidden`}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold leading-snug overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-            {arg.event.title}
-          </div>
-          {status === "confirmed" && (
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0" title="Confirmado" />
-          )}
-        </div>
-        
-        {!isDayGrid && (
-          <div className="flex flex-wrap gap-1 items-center">
-            {ep.instructor_name && !isList && (
-              <span
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-white shadow-sm overflow-hidden text-ellipsis whitespace-nowrap max-w-full"
-                style={{
-                  backgroundColor: instructorColors[ep.instructor_id] || "#3b82f6",
-                  opacity: 0.9,
-                }}
-              >
-                {ep.instructor_name}
-              </span>
-            )}
-            
-            {occupancy && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-500/20 text-indigo-200 font-medium whitespace-nowrap">
-                👥 {occupancy}
-              </span>
-            )}
-            
-            {type !== "class_session" && status === "deposit_paid" && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-emerald-500/20 text-emerald-200 font-medium whitespace-nowrap">
-                💰 Seña
-              </span>
-            )}
-            
-            {status === "cancelled" && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-red-500/20 text-red-200 font-medium whitespace-nowrap">
-                ❌ Cancelado
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }, [instructorColors]);
-
-  // Vista/toolbar responsive mejorada
-  const headerToolbar = useMemo(
-    () => ({
-      left: isMobile ? "prev,next" : "prev,next today", 
-      center: "title",
-      right: isMobile ? "listWeek,dayGridMonth" : "resourceTimeGridDay,timeGridWeek,dayGridMonth,listWeek"
-    }),
-    [isMobile]
-  );
-
-  // Día en dos líneas (DOW + DD/MM) en week/day/month
-  const dayHeaderContent = useCallback((arg) => {
-    const d = arg.date;
-    const isToday = new Date().toDateString() === d.toDateString();
-    const dow = d.toLocaleDateString("es-AR", { weekday: "short" }).toUpperCase();
-    const day = d.getDate();
-    const month = d.toLocaleDateString("es-AR", { month: "short" });
-    
-    if (["timeGridWeek", "resourceTimeGridDay"].includes(arg.view.type)) {
-      return { 
-        html: `
-          <div class="fc-day-header-custom ${isToday ? 'fc-day-today' : ''}">
-            <div class="fc-day-header-dow">${dow}</div>
-            <div class="fc-day-header-date">${day} ${month}</div>
-          </div>
-        ` 
-      };
-    }
-    
-    return undefined;
-  }, []);
-
-  // CSS para los headers personalizados
+  // Cargar eventos según la vista actual
   useEffect(() => {
-    const styleId = "calendar-header-styles";
+    if (!selectedDate) return;
     
-    // No manipular DOM si la página está siendo traducida
-    if (isPageBeingTranslated) return;
+    let startDate, endDate;
     
-    // Verificar que document.head existe y es válido (importante durante traducciones)
-    if (!document.head) return;
-    
-    try {
-      let styleEl = document.getElementById(styleId);
-      if (!styleEl) {
-        styleEl = document.createElement("style");
-        styleEl.id = styleId;
-        // Verificar que el elemento no esté ya en el DOM antes de agregarlo
-        if (!document.getElementById(styleId)) {
-          document.head.appendChild(styleEl);
-        } else {
-          styleEl = document.getElementById(styleId);
-        }
-      }
+    if (currentView === "day") {
+      startDate = new Date(selectedDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(selectedDate);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (currentView === "week") {
+      const date = new Date(selectedDate);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Lunes como primer día
       
-      // Verificar que el elemento aún está en el DOM antes de modificar
-      if (styleEl && styleEl.parentNode === document.head) {
-        styleEl.textContent = `
-          .fc-day-header-custom {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            padding: 8px 0;
-          }
-          .fc-day-header-dow {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.8;
-          }
-          .fc-day-header-date {
-            font-size: 1rem;
-            font-weight: 700;
-          }
-          .fc-day-header-custom.fc-day-today {
-            position: relative;
-          }
-          .fc-day-header-custom.fc-day-today .fc-day-header-date {
-            color: #3b82f6;
-          }
-          .fc-day-header-custom.fc-day-today::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 3px;
-            background: #3b82f6;
-            border-radius: 2px;
-          }
-        `;
-      }
-    } catch (error) {
-      // Silenciar errores de DOM durante traducciones automáticas
-      if (error.name !== 'NotFoundError') {
-        console.warn("Error al actualizar estilos de headers del calendario:", error);
-      }
+      startDate = new Date(date.setDate(diff));
+      startDate.setHours(0, 0, 0, 0);
+      
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (currentView === "month") {
+      const date = new Date(selectedDate);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      
+      startDate = new Date(year, month, 1);
+      startDate.setHours(0, 0, 0, 0);
+      
+      endDate = new Date(year, month + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
     }
     
-    return () => {
-      // Cleanup seguro: verificar que el elemento existe y es hijo antes de remover
-      if (isPageBeingTranslated) return;
-      
-      try {
-        const el = document.getElementById(styleId);
-        if (el && el.parentNode === document.head) {
-          document.head.removeChild(el);
-        }
-      } catch (error) {
-        // Ignorar errores durante cleanup (puede ocurrir durante traducciones)
-        if (error.name !== 'NotFoundError') {
-          console.warn("Error durante cleanup de estilos:", error);
-        }
-      }
-    };
-  }, [isPageBeingTranslated]);
+    setRange({ fromIso: startDate.toISOString(), toIso: endDate.toISOString() });
+  }, [selectedDate, currentView, setRange]);
 
   return (
     <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative w-full`}>
@@ -945,7 +1501,9 @@ export default function CalendarView() {
             </div>
 
             {/* Estadísticas rápidas */}
-            {showStats && <QuickStats events={events} instructors={instructors} />}
+            {showStats && (
+              <QuickStats events={events} instructors={instructors} />
+            )}
 
             {/* Filtros y controles */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0">
@@ -1026,193 +1584,267 @@ export default function CalendarView() {
             </div>
           )}
 
-          {/* Calendario con diseño premium */}
-          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-2 sm:p-3
-                          shadow-inner" style={{ backgroundColor: 'var(--fc-surface-bg, #0f1825)' }}>
-            {/* Loading overlay mejorado */}
+          {/* Vista de Agenda Personalizada */}
+          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-2 sm:p-3 shadow-inner">
+            {/* Loading overlay */}
             {eventsLoading && (
-              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 
-                              flex items-center justify-center rounded-2xl">
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative">
                     <div className="w-16 h-16 border-4 border-primary/20 rounded-full" />
-                    <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent 
-                                    rounded-full animate-spin" />
+                    <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                   <p className="text-sm font-medium text-foreground-muted">Cargando eventos...</p>
                 </div>
               </div>
             )}
             
-            {/* Empty state mejorado */}
-            {!eventsLoading && fullEvents.length === 0 && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center 
-                              text-center text-sm text-foreground-muted z-10 px-6">
-                <div className="bg-background-secondary/80 backdrop-blur-sm rounded-2xl p-8 
-                                border border-border shadow-xl">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500/20 to-purple-500/20 
-                                  rounded-2xl flex items-center justify-center">
-                    <Calendar className="w-8 h-8 text-blue-400" />
-                  </div>
-                  <p className="font-semibold text-base mb-2">No hay eventos en este rango</p>
-                  <p className="text-xs text-foreground-muted/70">
-                    Programá una nueva clase o turno para que aparezca acá.
-                  </p>
+            {/* Selector de vista */}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <button
+                onClick={() => setCurrentView("day")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  currentView === "day"
+                    ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
+                    : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  Día
                 </div>
-              </div>
-            )}
-
-            <div className="w-full min-w-0 rounded-xl bg-background-secondary relative" style={{ minHeight: currentView === "listWeek" || currentView === "listDay" ? '800px' : 'auto' }}>
-              <FullCalendar
-                ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, resourceTimeGridPlugin, resourcePlugin]}
-                locale={esLocale}
-                headerToolbar={headerToolbar}
-                initialView={isMobile ? "listWeek" : "resourceTimeGridDay"}
-                windowResize={handleWindowResize}
-                resources={isMobile ? null : resources}
-                resourceGroupField="title"
-                buttonText={{ 
-                  today: "Hoy", 
-                  month: "Mes", 
-                  week: "Semana", 
-                  day: "Día", 
-                  list: "Agenda" 
+              </button>
+              
+              <button
+                onClick={() => setCurrentView("week")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  currentView === "week"
+                    ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
+                    : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Columns className="w-4 h-4" />
+                  Semana
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setCurrentView("month")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  currentView === "month"
+                    ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
+                    : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  Mes
+                </div>
+              </button>
+            </div>
+            
+            {/* Vista según selección */}
+            {currentView === "day" && (
+              <DayView
+                key={`day-${refreshKey}-${lastUpdateTime}-${eventsHash.length > 0 ? eventsHash.substring(0, 100) : 'empty'}-${filtered.length}-${selectedDate.toISOString()}`}
+                events={filtered}
+                instructors={instructors}
+                instructorColors={instructorColors}
+                timeRange={calendarTimeRange}
+                selectedDate={selectedDate}
+                onDateChange={(date) => {
+                  setSelectedDate(date);
                 }}
-                dayHeaderContent={dayHeaderContent}
-                allDaySlot={false}
-                slotMinTime={calendarTimeRange.min}
-                slotMaxTime={calendarTimeRange.max}
-                slotDuration="00:30:00"
-                slotLabelFormat={{
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setModalOpen(true);
                 }}
-                expandRows={true}
-                stickyHeaderDates
-                nowIndicator={!isMobile}
-                navLinks={!isMobile}
-                height="auto"
-                contentHeight={
-                  isMobile 
-                    ? 600 
-                    : currentView === "dayGridMonth" 
-                      ? "auto" 
-                      : currentView === "listWeek" || currentView === "listDay"
-                        ? 0
-                        : currentView === "resourceTimeGridDay" || currentView === "timeGridDay"
-                          ? 800
-                          : currentView === "timeGridWeek"
-                            ? 750
-                            : 700
-                }
-                aspectRatio={isMobile ? 0.95 : currentView === "dayGridMonth" ? 1.35 : undefined}
-                datesSet={handleDatesSet}
-                viewDidMount={(arg) => {
-                  // Ajustar recursos cuando cambia la vista
-                  const viewType = arg.view.type;
-                  setCurrentView(viewType);
-                  if (viewType === "resourceTimeGridDay") {
-                    // Asegurar que los recursos se actualicen
-                    arg.view.calendar.setOption("resources", resources);
-                  } else {
-                    arg.view.calendar.setOption("resources", null);
-                  }
-                }}
-                events={fullEvents}
-                eventClick={eventClick}
-                eventContent={eventContent}
-                eventDidMount={(info) => {
+                onEventDrop={async (eventId, updates) => {
                   try {
-                    // Aplicar altura mínima según la vista
-                    info.el.style.minHeight = info.view.type.includes('timeGrid') ? "60px" : "72px";
+                    logger.info("[CalendarView] Actualizando turno:", { eventId, updates });
+                    const result = await apiClient.updateAppointment(eventId, updates);
+                    logger.info("[CalendarView] Respuesta del backend:", result);
                     
-                    // Aplicar data-status para CSS
-                    const status = info.event.extendedProps?.status;
-                    if (status) {
-                      info.el.setAttribute('data-status', status);
-                    }
-                    
-                    // Asegurar que el color de fondo se aplique correctamente en vista mes
-                    if (info.view.type === 'dayGridMonth' && info.event.backgroundColor) {
-                      info.el.style.backgroundColor = info.event.backgroundColor;
-                      info.el.style.borderColor = info.event.borderColor || info.event.backgroundColor;
-                    }
-                    
-                    // Añadir tooltip
-                    const ep = info.event.extendedProps;
-                    if (ep.customer_name || ep.service_name) {
-                      info.el.title = `${ep.customer_name || 'Cliente'} - ${ep.service_name || 'Servicio'}`;
-                    }
-                  } catch {}
-                }}
-                dayMaxEvents={isMobile ? 2 : 3}
-                displayEventTime={true}
-                eventClassNames="fc-event-modern"
-                moreLinkClick={(arg) => {
-                  // No manipular DOM si la página está siendo traducida
-                  if (isPageBeingTranslated) return "popover";
-                  
-                  // Mejorar el popover
-                  setTimeout(() => {
-                    try {
-                      document.querySelectorAll(".fc-popover").forEach((el) => {
-                        // Verificar que el elemento aún está en el DOM antes de modificar
-                        if (el && el.parentNode && document.body.contains(el)) {
-                          el.classList.add("fc-popover-modern");
-                          el.style.maxHeight = "70vh";
-                          el.style.overflow = "hidden";
-                          const body = el.querySelector(".fc-popover-body");
-                          if (body && body.parentNode) {
-                            body.style.maxHeight = "60vh";
-                            body.style.overflow = "auto";
-                          }
-                        }
-                      });
-                    } catch (error) {
-                      // Silenciar errores de DOM durante traducciones automáticas
-                      if (error.name !== 'NotFoundError') {
-                        console.warn("Error al actualizar popover del calendario:", error);
+                    // Actualizar el rango ANTES de recargar eventos para asegurar que se carguen los datos correctos
+                    // Esto es crítico porque loadEvents usa rangeRef.current que se actualiza en un useEffect
+                    if (updates.start_time) {
+                      const newDate = new Date(updates.start_time);
+                      const newDateOnly = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+                      const currentDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                      
+                      if (newDateOnly.getTime() !== currentDateOnly.getTime()) {
+                        setSelectedDate(newDateOnly);
                       }
+                      
+                      // Actualizar el rango para asegurar que loadEvents cargue los datos correctos
+                      const startOfDay = new Date(newDateOnly);
+                      startOfDay.setHours(0, 0, 0, 0);
+                      const endOfDay = new Date(newDateOnly);
+                      endOfDay.setHours(23, 59, 59, 999);
+                      setRange({ fromIso: startOfDay.toISOString(), toIso: endOfDay.toISOString() });
+                      
+                      // Esperar a que el rango se actualice en el ref antes de recargar eventos
+                      // El useEffect que actualiza rangeRef.current necesita tiempo para ejecutarse
+                      await new Promise(resolve => setTimeout(resolve, 150));
                     }
-                  }, 0);
-                  return "popover";
-                }}
-                moreLinkText={(n) => `+${n} más`}
-                // Personalización adicional de vistas
-                views={{
-                  dayGridMonth: {
-                    dayMaxEventRows: 3,
-                    fixedWeekCount: false
-                  },
-                  timeGridWeek: {
-                    dayHeaderFormat: { weekday: 'short', day: 'numeric' }
-                  },
-                  listWeek: {
-                    listDayFormat: { weekday: 'long', month: 'long', day: 'numeric' },
-                    listDaySideFormat: false,
-                    height: 'auto',
-                    contentHeight: 0
+                    
+                    // Recargar eventos inmediatamente
+                    logger.info("[CalendarView] Recargando eventos (primera vez)...");
+                    await loadEvents();
+                    
+                    // Esperar un poco para que React procese la actualización
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Recargar eventos una segunda vez para asegurar que se actualicen
+                    logger.info("[CalendarView] Recargando eventos (segunda vez)...");
+                    await loadEvents();
+                    
+                    // Esperar un poco más para que el estado se actualice completamente
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Forzar actualización del componente después de recargar eventos
+                    // Esto asegura que el componente se re-renderice con los datos actualizados
+                    const updateTime = Date.now();
+                    setRefreshKey(prev => {
+                      const newKey = prev + 1;
+                      logger.info("[CalendarView] Actualización completada, refreshKey:", newKey, "updateTime:", updateTime);
+                      return newKey;
+                    });
+                    
+                    // Actualizar lastUpdateTime para forzar re-render
+                    setLastUpdateTime(updateTime);
+                    
+                    // Forzar un re-render adicional después de un pequeño delay para asegurar que los eventos se hayan actualizado
+                    setTimeout(() => {
+                      const newUpdateTime = Date.now();
+                      setLastUpdateTime(newUpdateTime);
+                      logger.info("[CalendarView] Re-render forzado, nuevo updateTime:", newUpdateTime);
+                    }, 150);
+                    
+                    toast.success("Turno actualizado correctamente");
+                  } catch (error) {
+                    logger.error("[CalendarView] Error al actualizar turno:", error);
+                    const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el turno";
+                    toast.error(errorMessage);
                   }
                 }}
               />
-              {(currentView === "listWeek" || currentView === "listDay") && (
-                <div className="absolute top-[60px] left-0 right-0 bottom-0 overflow-hidden z-10 bg-background-secondary rounded-xl" style={{ height: '740px' }}>
-                  <div className="h-full overflow-y-auto px-2 pb-4">
-                    <TimeSlotListView 
-                      events={fullEvents}
-                      onEventClick={(event) => {
-                        setSelectedEvent(event);
-                        setModalOpen(true);
-                      }}
-                      instructorColors={instructorColors}
-                      timeRange={calendarTimeRange}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
+            
+            {currentView === "week" && (
+              <WeekView
+                key={`week-${refreshKey}-${lastUpdateTime}-${eventsHash.length > 0 ? eventsHash.substring(0, 100) : 'empty'}-${filtered.length}-${selectedDate.toISOString()}`}
+                events={filtered}
+                instructors={instructors}
+                instructorColors={instructorColors}
+                timeRange={calendarTimeRange}
+                selectedDate={selectedDate}
+                onDateChange={(date) => {
+                  setSelectedDate(date);
+                }}
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setModalOpen(true);
+                }}
+                onEventDrop={async (eventId, updates) => {
+                  try {
+                    await apiClient.updateAppointment(eventId, updates);
+                    
+                    // Si el evento cambió de día, actualizar la fecha seleccionada y el rango si es necesario
+                    if (updates.start_time) {
+                      const newDate = new Date(updates.start_time);
+                      const newDateOnly = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+                      const currentDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                      
+                      // Calcular semana actual
+                      const weekStart = new Date(selectedDate);
+                      const day = weekStart.getDay();
+                      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+                      weekStart.setDate(diff);
+                      weekStart.setHours(0, 0, 0, 0);
+                      
+                      const weekEnd = new Date(weekStart);
+                      weekEnd.setDate(weekStart.getDate() + 6);
+                      weekEnd.setHours(23, 59, 59, 999);
+                      
+                      // Si el nuevo día está fuera de la semana actual, actualizar fecha y rango
+                      if (newDateOnly < weekStart || newDateOnly > weekEnd) {
+                        setSelectedDate(newDateOnly);
+                        // Calcular nueva semana
+                        const newWeekStart = new Date(newDateOnly);
+                        const newDay = newWeekStart.getDay();
+                        const newDiff = newWeekStart.getDate() - newDay + (newDay === 0 ? -6 : 1);
+                        newWeekStart.setDate(newDiff);
+                        newWeekStart.setHours(0, 0, 0, 0);
+                        
+                        const newWeekEnd = new Date(newWeekStart);
+                        newWeekEnd.setDate(newWeekStart.getDate() + 6);
+                        newWeekEnd.setHours(23, 59, 59, 999);
+                        setRange({ fromIso: newWeekStart.toISOString(), toIso: newWeekEnd.toISOString() });
+                      } else {
+                        // Asegurar que el rango esté actualizado
+                        setRange({ fromIso: weekStart.toISOString(), toIso: weekEnd.toISOString() });
+                      }
+                    }
+                    
+                    // Recargar eventos inmediatamente
+                    logger.info("[CalendarView] Recargando eventos (primera vez - semana)...");
+                    await loadEvents();
+                    
+                    // Esperar un poco para que React procese la actualización
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Recargar eventos una segunda vez para asegurar que se actualicen
+                    logger.info("[CalendarView] Recargando eventos (segunda vez - semana)...");
+                    await loadEvents();
+                    
+                    // Esperar un poco más para que el estado se actualice completamente
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Forzar actualización del componente después de recargar eventos
+                    const updateTime = Date.now();
+                    setRefreshKey(prev => {
+                      const newKey = prev + 1;
+                      logger.info("[CalendarView] Actualización completada (semana), refreshKey:", newKey, "updateTime:", updateTime);
+                      return newKey;
+                    });
+                    
+                    // Actualizar lastUpdateTime para forzar re-render
+                    setLastUpdateTime(updateTime);
+                    
+                    // Forzar un re-render adicional después de un pequeño delay para asegurar que los eventos se hayan actualizado
+                    setTimeout(() => {
+                      const newUpdateTime = Date.now();
+                      setLastUpdateTime(newUpdateTime);
+                      logger.info("[CalendarView] Re-render forzado (semana), nuevo updateTime:", newUpdateTime);
+                    }, 150);
+                    
+                    toast.success("Turno actualizado correctamente");
+                  } catch (error) {
+                    logger.error("[CalendarView] Error al actualizar turno (semana):", error);
+                    const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el turno";
+                    toast.error(errorMessage);
+                  }
+                }}
+              />
+            )}
+            
+            {currentView === "month" && (
+              <MonthView
+                events={filtered}
+                instructors={instructors}
+                instructorColors={instructorColors}
+                selectedDate={selectedDate}
+                onDateChange={(date) => {
+                  setSelectedDate(date);
+                }}
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setModalOpen(true);
+                }}
+              />
+            )}
           </div>
 
           <AppointmentModal
