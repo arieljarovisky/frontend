@@ -92,11 +92,11 @@ function TimeSlotListView({ events, onEventClick, instructorColors, timeRange })
         return (
           <div
             key={slot.id}
-            className="relative flex items-start gap-3 py-1.5 min-h-[60px] transition-all"
+            className="relative flex items-start gap-2 sm:gap-3 py-1 sm:py-1.5 min-h-[55px] sm:min-h-[60px] transition-all"
           >
             {/* Línea vertical del timeline */}
-            <div className="flex flex-col items-center flex-shrink-0 w-16 pointer-events-none">
-              <div className={`text-xs font-bold ${
+            <div className="flex flex-col items-center flex-shrink-0 w-12 sm:w-14 md:w-16 pointer-events-none">
+              <div className={`text-[10px] sm:text-xs font-bold ${
                 hasAppointments ? 'text-foreground' : 'text-foreground-muted'
               }`}>
                 {slot.time}
@@ -111,7 +111,7 @@ function TimeSlotListView({ events, onEventClick, instructorColors, timeRange })
             {/* Contenido de los turnos */}
             <div className="flex-1 min-w-0 pt-0.5">
               {hasAppointments ? (
-                <div className={`${multipleAppointments ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2' : ''}`}>
+                <div className={`${multipleAppointments ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2' : ''}`}>
                   {slot.items.map((item) => {
                     const ep = item.extendedProps || {};
                     const type = ep.eventType || "appointment";
@@ -123,49 +123,49 @@ function TimeSlotListView({ events, onEventClick, instructorColors, timeRange })
                       <div
                         key={item.id}
                         onClick={() => onEventClick(item)}
-                        className="cursor-pointer rounded-lg border-2 p-3 transition-all hover:shadow-lg hover:scale-[1.02]"
+                        className="cursor-pointer rounded-lg border-2 p-2 sm:p-2.5 md:p-3 transition-all hover:shadow-lg hover:scale-[1.02]"
                         style={{
                           borderColor: instructorColor,
                           backgroundColor: `${instructorColor}15`
                         }}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-foreground truncate">
+                            <div className="text-xs sm:text-sm font-semibold text-foreground truncate">
                               {item.title}
                             </div>
                             {ep.customer_name && (
-                              <div className="text-xs text-foreground-muted mt-0.5">
+                              <div className="text-[10px] sm:text-xs text-foreground-muted mt-0.5 truncate">
                                 {ep.customer_name}
                               </div>
                             )}
                           </div>
                           {status === "confirmed" && (
-                            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0 mt-1" title="Confirmado" />
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-400 rounded-full animate-pulse shrink-0 mt-1" title="Confirmado" />
                           )}
                         </div>
                         
                         <div className="flex flex-wrap gap-1 items-center">
                           {ep.instructor_name && (
                             <span
-                              className="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-white"
+                              className="px-1 sm:px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-medium text-white truncate max-w-full"
                               style={{ backgroundColor: instructorColor }}
                             >
                               {ep.instructor_name}
                             </span>
                           )}
                           {type === "class_session" && ep.enrolled_count != null && ep.capacity_max != null && (
-                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-500/20 text-indigo-200 font-medium">
+                            <span className="px-1 sm:px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-indigo-500/20 text-indigo-200 font-medium">
                               👥 {ep.enrolled_count}/{ep.capacity_max}
                             </span>
                           )}
                           {type !== "class_session" && status === "deposit_paid" && (
-                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-emerald-500/20 text-emerald-200 font-medium">
+                            <span className="px-1 sm:px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-200 font-medium">
                               💰 Seña
                             </span>
                           )}
                           {status === "cancelled" && (
-                            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-red-500/20 text-red-200 font-medium">
+                            <span className="px-1 sm:px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-red-500/20 text-red-200 font-medium">
                               ❌ Cancelado
                             </span>
                           )}
@@ -175,7 +175,7 @@ function TimeSlotListView({ events, onEventClick, instructorColors, timeRange })
                   })}
                 </div>
               ) : (
-                <div className="text-[10px] text-foreground-muted italic py-1">
+                <div className="text-[9px] sm:text-[10px] text-foreground-muted italic py-1">
                   Libre
                 </div>
               )}
@@ -508,36 +508,36 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
   return (
     <div className="mb-6">
       {/* Header con navegación de fechas */}
-      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20 mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-xl">
-              <CalendarDays className="w-5 h-5 text-blue-400" />
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-blue-500/20 mb-3 sm:mb-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg sm:rounded-xl flex-shrink-0">
+              <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
             </div>
-            <div>
-              <p className="text-xs text-blue-300 font-semibold">Agenda</p>
-              <p className="text-sm text-blue-200">{formattedDate.label}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-xs text-blue-300 font-semibold">Agenda</p>
+              <p className="text-xs sm:text-sm text-blue-200 truncate">{formattedDate.label}</p>
             </div>
           </div>
           
           {/* Navegación de fechas */}
           {onDateChange && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => {
                   const prev = new Date(selectedDate);
                   prev.setDate(prev.getDate() - 1);
                   onDateChange(prev);
                 }}
-                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors flex-shrink-0"
                 title="Día anterior"
               >
-                <ChevronLeft className="w-4 h-4 text-blue-400" />
+                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
               </button>
               
               <button
                 onClick={() => onDateChange(new Date())}
-                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-xs text-blue-300 font-medium"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-[10px] sm:text-xs text-blue-300 font-medium whitespace-nowrap"
                 title="Ir a hoy"
               >
                 Hoy
@@ -549,35 +549,35 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                   next.setDate(next.getDate() + 1);
                   onDateChange(next);
                 }}
-                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors flex-shrink-0"
                 title="Día siguiente"
               >
-                <ChevronRight className="w-4 h-4 text-blue-400" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
               </button>
             </div>
           )}
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-x-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 overflow-x-hidden">
         {eventsByInstructor.map(({ instructor, events: instructorEvents }) => {
           const instructorColor = instructorColors[instructor.id] || instructor.color_hex || "#3b82f6";
           
           return (
             <div 
               key={instructor.id} 
-              className="bg-background-secondary rounded-xl border border-border p-4 min-w-[280px]"
+              className="bg-background-secondary rounded-xl border border-border p-3 sm:p-4 w-full min-w-0"
             >
               {/* Header del instructor */}
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-border">
                 <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: instructorColor }}
                 />
-                <h3 className="text-sm font-semibold text-foreground truncate">
+                <h3 className="text-xs sm:text-sm font-semibold text-foreground truncate min-w-0 flex-1">
                   {instructor.name}
                 </h3>
-                <span className="text-xs text-foreground-muted ml-auto">
+                <span className="text-[10px] sm:text-xs text-foreground-muted ml-auto whitespace-nowrap flex-shrink-0">
                   {instructorEvents.length} {instructorEvents.length === 1 ? 'turno' : 'turnos'}
                 </span>
               </div>
@@ -591,11 +591,11 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                   return (
                     <div
                       key={slot.id}
-                      className="relative flex items-start gap-2 py-2 min-h-[60px]"
+                      className="relative flex items-start gap-1.5 sm:gap-2 py-1.5 sm:py-2 min-h-[55px] sm:min-h-[60px]"
                     >
                       {/* Hora */}
-                      <div className="flex flex-col items-center flex-shrink-0 w-12">
-                        <div className={`text-[10px] font-bold ${
+                      <div className="flex flex-col items-center flex-shrink-0 w-10 sm:w-12">
+                        <div className={`text-[9px] sm:text-[10px] font-bold ${
                           hasAppointments ? 'text-foreground' : 'text-foreground-muted'
                         }`}>
                           {slot.time}
@@ -620,7 +620,7 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                         onDrop={(e) => handleDrop(e, slot.time, instructor.id)}
                       >
                         {hasAppointments ? (
-                          <div className="space-y-1.5">
+                          <div className="space-y-1 sm:space-y-1.5">
                             {slotEvents.map((item) => {
                               const ep = item.extendedProps || {};
                               const status = ep.status;
@@ -647,7 +647,7 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                                       onEventClick(item);
                                     }
                                   }}
-                                  className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-2 transition-all hover:shadow-md hover:scale-[1.01] ${
+                                  className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-1.5 sm:p-2 transition-all hover:shadow-md hover:scale-[1.01] ${
                                     isDragging ? 'opacity-50' : ''
                                   } ${status === 'cancelled' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                   style={{
@@ -655,11 +655,11 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                                     backgroundColor: `${instructorColor}15`
                                   }}
                                 >
-                                  <div className="text-xs font-semibold text-foreground truncate mb-1">
+                                  <div className="text-[11px] sm:text-xs font-semibold text-foreground truncate mb-0.5 sm:mb-1">
                                     {item.title}
                                   </div>
                                   {ep.customer_name && (
-                                    <div className="text-[10px] text-foreground-muted truncate">
+                                    <div className="text-[9px] sm:text-[10px] text-foreground-muted truncate">
                                       {ep.customer_name}
                                     </div>
                                   )}
@@ -671,7 +671,7 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                             })}
                           </div>
                         ) : (
-                          <div className="text-[9px] text-foreground-muted/50 italic py-1">
+                          <div className="text-[8px] sm:text-[9px] text-foreground-muted/50 italic py-1">
                             Libre
                           </div>
                         )}
@@ -967,37 +967,37 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 overflow-x-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl p-4 border border-blue-500/20 mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-xl">
-              <CalendarRange className="w-5 h-5 text-blue-400" />
+      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-blue-500/20 mb-3 sm:mb-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg sm:rounded-xl flex-shrink-0">
+              <CalendarRange className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
             </div>
-            <div>
-              <p className="text-xs text-blue-300 font-semibold">Semana</p>
-              <p className="text-sm text-blue-200">{formattedWeek}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-xs text-blue-300 font-semibold">Semana</p>
+              <p className="text-xs sm:text-sm text-blue-200 truncate">{formattedWeek}</p>
             </div>
           </div>
           
           {onDateChange && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => {
                   const prev = new Date(selectedDate);
                   prev.setDate(prev.getDate() - 7);
                   onDateChange(prev);
                 }}
-                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors flex-shrink-0"
                 title="Semana anterior"
               >
-                <ChevronLeft className="w-4 h-4 text-blue-400" />
+                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
               </button>
               
               <button
                 onClick={() => onDateChange(new Date())}
-                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-xs text-blue-300 font-medium"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-[10px] sm:text-xs text-blue-300 font-medium whitespace-nowrap"
               >
                 Hoy
               </button>
@@ -1008,10 +1008,10 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                   next.setDate(next.getDate() + 7);
                   onDateChange(next);
                 }}
-                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors flex-shrink-0"
                 title="Semana siguiente"
               >
-                <ChevronRight className="w-4 h-4 text-blue-400" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
               </button>
             </div>
           )}
@@ -1019,22 +1019,22 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
       </div>
 
       {/* Grid de días e instructores */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
         <div className="min-w-full">
           {/* Header de días */}
-          <div className="grid grid-cols-8 gap-2 mb-2 sticky top-0 bg-background-secondary z-10 pb-2">
-            <div className="w-16"></div> {/* Columna de horas */}
+          <div className="grid grid-cols-8 gap-1.5 sm:gap-2 mb-2 sticky top-0 bg-background-secondary z-10 pb-2 min-w-[640px]">
+            <div className="w-12 sm:w-14 md:w-16"></div> {/* Columna de horas */}
             {weekRange.days.map((day) => {
               const isToday = day.toDateString() === new Date().toDateString();
               return (
                 <div
                   key={day.toISOString()}
-                  className={`text-center p-2 rounded-lg ${isToday ? 'bg-blue-500/20' : 'bg-background-secondary'}`}
+                  className={`text-center p-1.5 sm:p-2 rounded-lg ${isToday ? 'bg-blue-500/20' : 'bg-background-secondary'}`}
                 >
-                  <div className="text-xs font-semibold text-foreground-muted uppercase">
+                  <div className="text-[10px] sm:text-xs font-semibold text-foreground-muted uppercase">
                     {day.toLocaleDateString('es-AR', { weekday: 'short' })}
                   </div>
-                  <div className={`text-lg font-bold ${isToday ? 'text-blue-400' : 'text-foreground'}`}>
+                  <div className={`text-sm sm:text-base md:text-lg font-bold ${isToday ? 'text-blue-400' : 'text-foreground'}`}>
                     {day.getDate()}
                   </div>
                 </div>
@@ -1059,12 +1059,12 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                   </div>
 
                   {/* Grid de días - diseño compacto */}
-                  <div className="grid grid-cols-8 gap-1.5">
+                  <div className="grid grid-cols-8 gap-1.5 min-w-[640px]">
                     {/* Columna de horas */}
                     <div className="space-y-0 sticky left-0 bg-background-secondary z-5">
                       {timeSlots.map((slot) => (
-                        <div key={slot.id} className="h-[40px] flex items-center justify-end pr-2">
-                          <span className="text-[10px] text-foreground-muted font-semibold">
+                        <div key={slot.id} className="h-[35px] sm:h-[40px] flex items-center justify-end pr-1 sm:pr-2">
+                          <span className="text-[9px] sm:text-[10px] text-foreground-muted font-semibold">
                             {slot.time}
                           </span>
                         </div>
@@ -1399,39 +1399,39 @@ function QuickStats({ events, instructors }) {
   }, [events]);
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-6">
-      <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-2xl p-4 border border-purple-500/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-xl">
-            <CalendarRange className="w-5 h-5 text-purple-400" />
+    <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-5 md:mb-6">
+      <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 border border-purple-500/20">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+          <div className="p-1.5 sm:p-2 bg-purple-500/20 rounded-lg sm:rounded-xl flex-shrink-0">
+            <CalendarRange className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-purple-400" />
           </div>
-          <div>
-            <p className="text-xs text-purple-300">Esta semana</p>
-            <p className="text-2xl font-bold text-purple-100">{stats.weekCount}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 rounded-2xl p-4 border border-amber-500/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-500/20 rounded-xl">
-            <Activity className="w-5 h-5 text-amber-400" />
-          </div>
-          <div>
-            <p className="text-xs text-amber-300">Seña pendiente</p>
-            <p className="text-2xl font-bold text-amber-100">{stats.pendingCount}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-purple-300 truncate">Esta semana</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold text-purple-100">{stats.weekCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-2xl p-4 border border-red-500/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-500/20 rounded-xl">
-            <EyeOff className="w-5 h-5 text-red-400" />
+      <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 border border-amber-500/20">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+          <div className="p-1.5 sm:p-2 bg-amber-500/20 rounded-lg sm:rounded-xl flex-shrink-0">
+            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-amber-400" />
           </div>
-          <div>
-            <p className="text-xs text-red-300">Cancelados</p>
-            <p className="text-2xl font-bold text-red-100">{stats.cancelledCount}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-amber-300 truncate">Seña pendiente</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold text-amber-100">{stats.pendingCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 border border-red-500/20">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+          <div className="p-1.5 sm:p-2 bg-red-500/20 rounded-lg sm:rounded-xl flex-shrink-0">
+            <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-red-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-red-300 truncate">Cancelados</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-100">{stats.cancelledCount}</p>
           </div>
         </div>
       </div>
@@ -1623,22 +1623,22 @@ export default function CalendarView() {
   }, [selectedDate, currentView, setRange]);
 
   return (
-    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative w-full`}>
+    <div className={`${theme === "dark" ? "calendar-dark" : "calendar-light"} relative w-full overflow-x-hidden`}>
       <div className="relative z-10 w-full">
-        <div className="bg-background/95 backdrop-blur-xl border border-border rounded-3xl p-4 sm:p-6 transition-all duration-500 shadow-2xl w-full max-w-full">
+        <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-6 transition-all duration-500 shadow-2xl w-full max-w-full overflow-x-hidden">
           {/* Header mejorado */}
-          <div className="flex flex-col gap-4 sm:gap-6 mb-4 sm:mb-6 w-full">
+          <div className="flex flex-col gap-3 sm:gap-4 md:gap-6 mb-3 sm:mb-4 md:mb-6 w-full">
             {/* Título y controles principales */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 w-full min-w-0">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl">
-                  <Calendar className="w-8 h-8 text-blue-400" />
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 sm:gap-3 md:gap-4 w-full min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-1">
+                <div className="p-2 sm:p-2.5 md:p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl sm:rounded-2xl flex-shrink-0">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-blue-400" />
                 </div>
-                <div>
-                  <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 truncate">
                     Calendario General
                   </h2>
-                  <p className="text-sm text-foreground-muted mt-1">
+                  <p className="text-xs sm:text-sm text-foreground-muted mt-0.5 sm:mt-1 hidden sm:block">
                     Vista completa de turnos y clases
                   </p>
                 </div>
@@ -1675,9 +1675,9 @@ export default function CalendarView() {
             )}
 
             {/* Filtros y controles */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 w-full min-w-0">
               {/* Filtro estilista mejorado */}
-              <div className="relative flex-1 min-w-[180px] xs:min-w-[200px] max-w-full sm:max-w-xs">
+              <div className="relative flex-1 min-w-0 w-full sm:max-w-xs">
                 <Filter className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-foreground-muted/60 pointer-events-none" />
                 <select
                   value={instructorFilter}
@@ -1754,7 +1754,7 @@ export default function CalendarView() {
           )}
 
           {/* Vista de Agenda Personalizada */}
-          <div className="relative rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-2 sm:p-3 shadow-inner">
+          <div className="relative rounded-xl sm:rounded-2xl border border-border bg-background-secondary backdrop-blur-sm p-2 sm:p-3 shadow-inner overflow-x-hidden">
             {/* Loading overlay */}
             {eventsLoading && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
@@ -1769,46 +1769,46 @@ export default function CalendarView() {
             )}
             
             {/* Selector de vista */}
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 -mx-2 sm:mx-0 px-2 sm:px-0">
               <button
                 onClick={() => setCurrentView("day")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                   currentView === "day"
                     ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
                     : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4" />
-                  Día
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="whitespace-nowrap">Día</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setCurrentView("week")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                   currentView === "week"
                     ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
                     : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Columns className="w-4 h-4" />
-                  Semana
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Columns className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="whitespace-nowrap">Semana</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setCurrentView("month")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                   currentView === "month"
                     ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
                     : "bg-background-secondary text-foreground-muted hover:bg-background-secondary/80 border-2 border-transparent"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <LayoutGrid className="w-4 h-4" />
-                  Mes
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="whitespace-nowrap">Mes</span>
                 </div>
               </button>
             </div>
@@ -2176,7 +2176,7 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
   }
 
   const dialogContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ zIndex: 9999 }}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" style={{ zIndex: 9999 }}>
       {/* Overlay oscuro de fondo */}
       <div 
         className="absolute inset-0 bg-black/50" 
@@ -2184,8 +2184,8 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
         style={{ zIndex: 9998 }}
       />
       {/* Modal centrado */}
-      <div className="relative pointer-events-auto" style={{ zIndex: 10000 }}>
-        <div className="bg-background-secondary rounded-xl border border-border p-6 max-w-lg w-full shadow-2xl">
+      <div className="relative pointer-events-auto w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ zIndex: 10000 }}>
+        <div className="bg-background-secondary rounded-xl border border-border p-4 sm:p-6 w-full shadow-2xl">
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
