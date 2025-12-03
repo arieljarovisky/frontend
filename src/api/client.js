@@ -741,11 +741,12 @@ apiClient.updateAppointment = async function (id, updates) {
   return data;
 };
 
-apiClient.listAppointments = async function ({ from, to, instructorId } = {}) {
+apiClient.listAppointments = async function ({ from, to, instructorId, _t } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
   if (instructorId) params.instructorId = instructorId;
+  if (_t) params._t = _t; // Cache-busting parameter
   const { data } = await apiClient.get("/api/appointments", { params });
   return data;
 };
@@ -1116,13 +1117,14 @@ apiClient.updateClassTemplate = async function (id, payload) {
   return data;
 };
 
-apiClient.listClassSessions = async function ({ from, to, status, instructorId, activityType } = {}) {
+apiClient.listClassSessions = async function ({ from, to, status, instructorId, activityType, _t } = {}) {
   const params = {};
   if (from) params.from = from;
   if (to) params.to = to;
   if (status) params.status = status;
   if (instructorId) params.instructorId = instructorId;
   if (activityType) params.activityType = activityType;
+  if (_t) params._t = _t; // Cache-busting parameter
   const { data } = await apiClient.get("/api/classes/sessions", { params });
   if (Array.isArray(data)) return data;
   return data?.data ?? data ?? [];

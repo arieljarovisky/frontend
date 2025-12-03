@@ -1,5 +1,6 @@
 // src/components/CalendarView.jsx — Vista de Agenda Personalizada
-import { useMemo, useState, useCallback, useEffect, useContext } from "react";
+import { useMemo, useState, useCallback, useEffect, useContext, useRef } from "react";
+import { createPortal } from "react-dom";
 import "../calendar-dark.css";
 import "../calendar-light.css";
 import { 
@@ -14,7 +15,10 @@ import {
   CalendarRange,
   Activity,
   LayoutGrid,
-  Columns
+  Columns,
+  MessageSquare,
+  Mail,
+  X
 } from "lucide-react";
 import AppointmentModal from "./AppointmentModal";
 import { AppContext } from "../context/AppProvider";
@@ -41,26 +45,20 @@ function useIsMobile(bp = 768) {
    Vista de Slots de Tiempo (como Dashboard)
 ========================= */
 function TimeSlotListView({ events, onEventClick, instructorColors, timeRange }) {
-  // Crear slots de 30 minutos basado en el rango configurado
+  // Crear slots de 1 hora basado en el rango configurado
   const generateTimeSlots = () => {
     const slots = [];
     const minHour = parseInt(timeRange?.min?.split(':')[0] || 6);
     const maxHour = parseInt(timeRange?.max?.split(':')[0] || 23);
     
+    // Intervalos de 1 hora para mejor visualización
     for (let hour = minHour; hour <= maxHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        // Si es la última hora, solo agregar hasta el minuto máximo configurado
-        if (hour === maxHour) {
-          const maxMinute = parseInt(timeRange?.max?.split(':')[1] || 0);
-          if (minute > maxMinute) break;
-        }
-        const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-        slots.push({
-          time,
-          id: `slot-${time}`,
-          items: []
-        });
-      }
+      const time = `${String(hour).padStart(2, '0')}:00`;
+      slots.push({
+        time,
+        id: `slot-${time}`,
+        items: []
+      });
     }
     return slots;
   };
@@ -72,16 +70,10 @@ function TimeSlotListView({ events, onEventClick, instructorColors, timeRange })
     events.forEach(event => {
       const start = new Date(event.start);
       const hour = start.getHours();
-      const minute = start.getMinutes();
       
-      // Calcular el slot más cercano (redondeando a los 30 minutos más cercanos)
-      const totalMinutes = hour * 60 + minute;
-      const slotMinutes = Math.round(totalMinutes / 30) * 30;
-      const slotHour = Math.floor(slotMinutes / 60);
-      const slotMin = slotMinutes % 60;
-      
-      const slotTime = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
-      const slot = slots.find(s => s.time === slotTime);
+      // Calcular el slot más cercano (redondeando a la hora más cercana)
+      const eventSlotTime = `${String(hour).padStart(2, '0')}:00`;
+      const slot = slots.find(s => s.time === eventSlotTime);
       
       if (slot) {
         slot.items.push(event);
@@ -225,6 +217,28 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
   const [draggedEvent, setDraggedEvent] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null);
   const [dragOverInstructor, setDragOverInstructor] = useState(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // Forzar re-render cuando cambien los eventos
+  // Usamos un hash simple basado en los IDs y fechas de los eventos
+  const eventsHash = useMemo(() => {
+    if (!Array.isArray(events) || events.length === 0) return '';
+    return events
+      .map(e => {
+        const start = e.start ? new Date(e.start).toISOString() : '';
+        const end = e.end ? new Date(e.end).toISOString() : '';
+        return `${e.id}-${start}-${end}`;
+      })
+      .sort()
+      .join('|');
+  }, [events]);
+
+  useEffect(() => {
+    if (eventsHash) {
+      setForceUpdate(prev => prev + 1);
+      logger.info("[DayView] Eventos cambiaron, forzando re-render:", { hashLength: eventsHash.length, eventsCount: events.length });
+    }
+  }, [eventsHash, events.length]);
 
   // Filtrar eventos para la fecha seleccionada
   const dayEvents = useMemo(() => {
@@ -235,13 +249,16 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return events.filter(e => {
+    const filtered = events.filter(e => {
       if (!e.start) return false;
       const start = new Date(e.start);
       if (isNaN(start.getTime())) return false;
       return start >= startOfDay && start <= endOfDay && e.extendedProps?.status !== 'cancelled';
     });
-  }, [events, selectedDate]);
+    
+    logger.info("[DayView] dayEvents recalculado:", { count: filtered.length, forceUpdate, eventsCount: events.length, selectedDate: selectedDate.toISOString() });
+    return filtered;
+  }, [events, selectedDate, forceUpdate]);
 
   // Agrupar eventos por instructor
   const eventsByInstructor = useMemo(() => {
@@ -287,38 +304,29 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     return Object.values(grouped);
   }, [dayEvents, instructors]);
 
-  // Generar slots de tiempo
+  // Generar slots de tiempo (cada hora para mejor visualización)
   const generateTimeSlots = useCallback(() => {
     const slots = [];
     const minHour = parseInt(timeRange?.min?.split(':')[0] || 6);
     const maxHour = parseInt(timeRange?.max?.split(':')[0] || 23);
     
+    // Intervalos de 1 hora para mejor visualización
     for (let hour = minHour; hour <= maxHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        if (hour === maxHour) {
-          const maxMinute = parseInt(timeRange?.max?.split(':')[1] || 0);
-          if (minute > maxMinute) break;
-        }
-        const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-        slots.push({ time, id: `slot-${time}` });
-      }
+      const time = `${String(hour).padStart(2, '0')}:00`;
+      slots.push({ time, id: `slot-${time}` });
     }
     return slots;
   }, [timeRange]);
 
   const timeSlots = useMemo(() => generateTimeSlots(), [generateTimeSlots]);
 
-  // Asignar eventos a slots por instructor
+  // Asignar eventos a slots por instructor (redondeando a la hora más cercana)
   const getEventsForSlot = useCallback((slotTime, instructorEvents) => {
     return instructorEvents.filter(event => {
       const start = new Date(event.start);
       const hour = start.getHours();
-      const minute = start.getMinutes();
-      const totalMinutes = hour * 60 + minute;
-      const slotMinutes = Math.round(totalMinutes / 30) * 30;
-      const slotHour = Math.floor(slotMinutes / 60);
-      const slotMin = slotMinutes % 60;
-      const eventSlotTime = `${String(slotHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
+      // Redondear a la hora más cercana
+      const eventSlotTime = `${String(hour).padStart(2, '0')}:00`;
       return eventSlotTime === slotTime;
     });
   }, []);
@@ -328,8 +336,19 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     if (event.extendedProps?.status === 'cancelled') return;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', ''); // Necesario para algunos navegadores
+    logger.info("[DayView] Drag iniciado:", { eventId: event.id, instructorId });
     setDraggedEvent({ event, sourceInstructorId: instructorId });
   }, []);
+
+  const handleDragEnter = useCallback((e, slotTime, instructorId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedEvent) {
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverSlot(slotTime);
+      setDragOverInstructor(instructorId);
+    }
+  }, [draggedEvent]);
 
   const handleDragOver = useCallback((e, slotTime, instructorId) => {
     e.preventDefault();
@@ -341,6 +360,17 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     }
   }, [draggedEvent]);
 
+  const handleDragLeave = useCallback((e) => {
+    // Solo limpiar si realmente salimos del área de drop (no solo de un hijo)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverSlot(null);
+      setDragOverInstructor(null);
+    }
+  }, []);
+
   const handleDragEnd = useCallback(() => {
     setDraggedEvent(null);
     setDragOverSlot(null);
@@ -351,14 +381,17 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     e.preventDefault();
     e.stopPropagation();
     
+    logger.info("[DayView] Drop detectado:", { slotTime, targetInstructorId, draggedEvent: !!draggedEvent, onEventDrop: !!onEventDrop });
+    
     if (!draggedEvent || !onEventDrop) {
+      logger.warn("[DayView] Drop cancelado - falta draggedEvent o onEventDrop");
       handleDragEnd();
       return;
     }
 
     const { event, sourceInstructorId } = draggedEvent;
     
-    // Calcular nueva fecha/hora
+    // Calcular nueva fecha/hora en hora local (sin conversión a UTC)
     const [hour, minute] = slotTime.split(':').map(Number);
     const newDate = new Date(selectedDate);
     newDate.setHours(hour, minute || 0, 0, 0);
@@ -371,28 +404,48 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
     // Calcular nueva hora sin minutos para comparación más precisa
     const newDateRounded = new Date(newDate);
     newDateRounded.setSeconds(0, 0);
+    newDateRounded.setMilliseconds(0);
     const originalStartRounded = new Date(originalStart);
     originalStartRounded.setSeconds(0, 0);
+    originalStartRounded.setMilliseconds(0);
     
-    // Si cambió el instructor o el horario (comparar con tolerancia de 30 segundos)
+    // Si cambió el instructor o el horario (comparar con tolerancia de 1 minuto)
     const oldInstructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId || null;
     const instructorChanged = String(targetInstructorId) !== String(oldInstructorId || 'unassigned');
-    const timeChanged = Math.abs(newDateRounded.getTime() - originalStartRounded.getTime()) > 30000; // Más de 30 segundos de diferencia
+    const timeChanged = Math.abs(newDateRounded.getTime() - originalStartRounded.getTime()) > 60000; // Más de 1 minuto de diferencia
+    
+    // Función helper para convertir Date a formato MySQL local (sin UTC)
+    const toLocalMySQL = (date) => {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+    
+    logger.info("[DayView] Comparación de cambios:", {
+      originalStart: originalStartRounded.toISOString(),
+      newDate: newDateRounded.toISOString(),
+      newDateLocal: toLocalMySQL(newDateRounded),
+      timeDiff: Math.abs(newDateRounded.getTime() - originalStartRounded.getTime()),
+      timeChanged,
+      instructorChanged,
+      oldInstructorId,
+      targetInstructorId
+    });
 
-    // Verificar que sea un appointment (no una clase)
+    // Permitir mover tanto appointments como clases
     const eventType = event.extendedProps?.eventType;
-    if (eventType === 'class_session') {
-      logger.warn("[DayView] No se puede mover una clase con drag and drop");
-      handleDragEnd();
-      return;
-    }
 
     // Siempre actualizar si hay cambios
-    if (instructorChanged || timeChanged) {
+    // Forzar actualización si el slot es diferente (incluso si el tiempo parece igual)
+    const slotChanged = slotTime !== `${String(originalStart.getHours()).padStart(2, '0')}:${String(originalStart.getMinutes()).padStart(2, '0')}`;
+    
+    if (instructorChanged || timeChanged || slotChanged) {
       try {
+        // Convertir a formato MySQL local (YYYY-MM-DD HH:mm:ss) en hora local, no UTC
+        // El backend espera la hora en formato local de Argentina
+        const newEndDate = new Date(newDate.getTime() + duration);
         const updates = {
-          start_time: newDate.toISOString(),
-          end_time: new Date(newDate.getTime() + duration).toISOString(),
+          starts_at: toLocalMySQL(newDate),
+          ends_at: toLocalMySQL(newEndDate),
         };
 
         if (targetInstructorId && targetInstructorId !== 'unassigned') {
@@ -401,8 +454,18 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
           updates.instructor_id = null;
         }
 
-        // Llamar a onEventDrop antes de limpiar el estado
-        await onEventDrop(event.id, updates);
+        logger.info("[DayView] Actualizando evento:", { 
+          eventId: event.id, 
+          updates, 
+          instructorChanged, 
+          timeChanged, 
+          slotChanged,
+          originalSlot: `${String(originalStart.getHours()).padStart(2, '0')}:${String(originalStart.getMinutes()).padStart(2, '0')}`,
+          newSlot: slotTime
+        });
+        
+        // Llamar a onEventDrop con el tipo de evento para mostrar diálogo de notificación
+        await onEventDrop(event.id, updates, eventType);
         
         // Limpiar el estado de drag después de la actualización
         handleDragEnd();
@@ -413,6 +476,12 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
       }
     } else {
       // Si no hay cambios, solo limpiar el estado
+      logger.info("[DayView] No hay cambios, cancelando drop", {
+        originalSlot: `${String(originalStart.getHours()).padStart(2, '0')}:${String(originalStart.getMinutes()).padStart(2, '0')}`,
+        newSlot: slotTime,
+        instructorChanged,
+        timeChanged
+      });
       handleDragEnd();
     }
   }, [draggedEvent, selectedDate, onEventDrop, handleDragEnd]);
@@ -513,16 +582,16 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                 </span>
               </div>
               
-              {/* Slots de tiempo */}
-              <div className="space-y-0 max-h-[600px] overflow-y-auto scrollbar-hide">
-                {timeSlots.map((slot) => {
+              {/* Slots de tiempo - sin scroll, altura automática según contenido */}
+              <div className="space-y-0">
+                  {timeSlots.map((slot) => {
                   const slotEvents = getEventsForSlot(slot.time, instructorEvents);
                   const hasAppointments = slotEvents.length > 0;
                   
                   return (
                     <div
                       key={slot.id}
-                      className="relative flex items-start gap-2 py-1 min-h-[50px]"
+                      className="relative flex items-start gap-2 py-2 min-h-[60px]"
                     >
                       {/* Hora */}
                       <div className="flex flex-col items-center flex-shrink-0 w-12">
@@ -545,7 +614,9 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                             ? 'bg-primary/10 rounded-lg border-2 border-primary/40 border-dashed'
                             : ''
                         }`}
+                        onDragEnter={(e) => handleDragEnter(e, slot.time, instructor.id)}
                         onDragOver={(e) => handleDragOver(e, slot.time, instructor.id)}
+                        onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, slot.time, instructor.id)}
                       >
                         {hasAppointments ? (
@@ -562,11 +633,20 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                                   draggable={status !== 'cancelled'}
                                   onDragStart={(e) => {
                                     if (status !== 'cancelled') {
+                                      e.stopPropagation(); // Evitar que se propague al contenedor
                                       handleDragStart(e, item, instructor.id);
                                     }
                                   }}
-                                  onDragEnd={handleDragEnd}
-                                  onClick={() => onEventClick(item)}
+                                  onDragEnd={(e) => {
+                                    e.stopPropagation();
+                                    handleDragEnd();
+                                  }}
+                                  onClick={(e) => {
+                                    // Solo hacer click si no se está arrastrando
+                                    if (!draggedEvent) {
+                                      onEventClick(item);
+                                    }
+                                  }}
                                   className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-2 transition-all hover:shadow-md hover:scale-[1.01] ${
                                     isDragging ? 'opacity-50' : ''
                                   } ${status === 'cancelled' ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -611,7 +691,7 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
 /* =========================
    Vista de Semana por Instructor
 ========================= */
-function WeekView({ events, instructors, instructorColors, timeRange, onEventClick, selectedDate, onDateChange, onEventDrop }) {
+function WeekView({ events, instructors, instructorColors, timeRange, onEventClick, selectedDate, onDateChange, onEventDrop, instructorFilter }) {
   const [draggedEvent, setDraggedEvent] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null);
   const [dragOverInstructor, setDragOverInstructor] = useState(null);
@@ -641,7 +721,7 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     return { start: weekStart, end: weekEnd, days };
   }, [selectedDate]);
 
-  // Filtrar eventos de la semana
+  // Filtrar eventos de la semana (ya vienen filtrados desde CalendarView)
   const weekEvents = useMemo(() => {
     if (!weekRange.start || !weekRange.end) return [];
     return events.filter(e => {
@@ -652,6 +732,20 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     });
   }, [events, weekRange]);
 
+  // Filtrar instructores si hay un filtro aplicado
+  const filteredInstructors = useMemo(() => {
+    if (!instructorFilter || instructorFilter === "") {
+      return instructors || [];
+    }
+    const filterId = Number(instructorFilter);
+    return (instructors || []).filter(instructor => {
+      if (!isNaN(filterId)) {
+        return Number(instructor.id) === filterId;
+      }
+      return String(instructor.id) === String(instructorFilter);
+    });
+  }, [instructors, instructorFilter]);
+
   // Agrupar eventos por día e instructor
   const eventsByDayAndInstructor = useMemo(() => {
     const grouped = {};
@@ -660,8 +754,8 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
       const dayKey = day.toISOString().split('T')[0];
       grouped[dayKey] = {};
       
-      // Inicializar con todos los instructores
-      (instructors || []).forEach(instructor => {
+      // Inicializar solo con los instructores filtrados
+      filteredInstructors.forEach(instructor => {
         grouped[dayKey][instructor.id] = {
           instructor,
           events: []
@@ -695,7 +789,7 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     });
     
     return grouped;
-  }, [weekEvents, weekRange.days, instructors]);
+  }, [weekEvents, weekRange.days, filteredInstructors]);
 
   // Generar slots de tiempo (cada hora para semana, más compacto)
   const generateTimeSlots = useCallback(() => {
@@ -733,6 +827,17 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     setDraggedEvent(event);
   }, []);
 
+  const handleDragEnter = useCallback((e, slotTime, instructorId, day) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedEvent) {
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverSlot(slotTime);
+      setDragOverInstructor(instructorId);
+      setDragOverDay(day);
+    }
+  }, [draggedEvent]);
+
   const handleDragOver = useCallback((e, slotTime, instructorId, day) => {
     e.preventDefault();
     e.stopPropagation();
@@ -743,6 +848,18 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
       setDragOverDay(day);
     }
   }, [draggedEvent]);
+
+  const handleDragLeave = useCallback((e) => {
+    // Solo limpiar si realmente salimos del área de drop (no solo de un hijo)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverSlot(null);
+      setDragOverInstructor(null);
+      setDragOverDay(null);
+    }
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     setDraggedEvent(null);
@@ -783,6 +900,12 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     const originalEnd = new Date(draggedEvent.end || new Date(originalStart.getTime() + 30 * 60 * 1000));
     const duration = originalEnd.getTime() - originalStart.getTime();
     
+    // Función helper para convertir Date a formato MySQL local (sin UTC)
+    const toLocalMySQL = (date) => {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
     const oldInstructorId = draggedEvent.extendedProps?.instructor_id || draggedEvent.extendedProps?.instructorId || null;
     const instructorChanged = String(targetInstructorId) !== String(oldInstructorId || 'unassigned');
     const timeChanged = Math.abs(newDate.getTime() - originalStart.getTime()) > 60000; // Más de 1 minuto de diferencia
@@ -798,9 +921,11 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
     // Siempre actualizar si hay cambios
     if (instructorChanged || timeChanged) {
       try {
+        // Convertir a formato MySQL local (YYYY-MM-DD HH:mm:ss) en hora local, no UTC
+        const newEndDate = new Date(newDate.getTime() + duration);
         const updates = {
-          start_time: newDate.toISOString(),
-          end_time: new Date(newDate.getTime() + duration).toISOString(),
+          starts_at: toLocalMySQL(newDate),
+          ends_at: toLocalMySQL(newEndDate),
         };
 
         if (targetInstructorId && targetInstructorId !== 'unassigned') {
@@ -809,8 +934,8 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
           updates.instructor_id = null;
         }
 
-        // Llamar a onEventDrop antes de limpiar el estado
-        await onEventDrop(draggedEvent.id, updates);
+        // Llamar a onEventDrop con el tipo de evento para mostrar diálogo de notificación
+        await onEventDrop(draggedEvent.id, updates, eventType);
         
         // Limpiar el estado de drag después de la actualización
         handleDragEnd();
@@ -919,7 +1044,7 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
 
           {/* Grid principal: horas x días x instructores */}
           <div className="space-y-4">
-            {(instructors || []).map((instructor) => {
+            {filteredInstructors.map((instructor) => {
               const instructorColor = instructorColors[instructor.id] || instructor.color_hex || "#3b82f6";
               
               return (
@@ -970,7 +1095,9 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                                 className={`h-[40px] border-b border-border/10 relative transition-all ${
                                   isDragOver ? 'bg-primary/10 border-primary/40 border-2 border-dashed' : ''
                                 }`}
+                                onDragEnter={(e) => handleDragEnter(e, slot.time, instructor.id, dayKey)}
                                 onDragOver={(e) => handleDragOver(e, slot.time, instructor.id, dayKey)}
+                                onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, slot.time, instructor.id, dayKey)}
                               >
                                 {hasAppointments && (
@@ -985,11 +1112,20 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                                           draggable={ep.status !== 'cancelled'}
                                           onDragStart={(e) => {
                                             if (ep.status !== 'cancelled') {
+                                              e.stopPropagation(); // Evitar que se propague al contenedor
                                               handleDragStart(e, item);
                                             }
                                           }}
-                                          onDragEnd={handleDragEnd}
-                                          onClick={() => onEventClick(item)}
+                                          onDragEnd={(e) => {
+                                            e.stopPropagation();
+                                            handleDragEnd();
+                                          }}
+                                          onClick={(e) => {
+                                            // Solo hacer click si no se está arrastrando
+                                            if (!draggedEvent) {
+                                              onEventClick(item);
+                                            }
+                                          }}
                                           className={`cursor-grab active:cursor-grabbing rounded text-[8px] px-1 py-0.5 truncate transition-all hover:scale-[1.02] ${
                                             isDragging ? 'opacity-50' : ''
                                           } ${ep.status === 'cancelled' ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1032,7 +1168,7 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
 /* =========================
    Vista de Mes
 ========================= */
-function MonthView({ events, instructors, instructorColors, onEventClick, selectedDate, onDateChange }) {
+function MonthView({ events, instructors, instructorColors, onEventClick, selectedDate, onDateChange, instructorFilter }) {
   // Calcular inicio y fin del mes
   const monthRange = useMemo(() => {
     if (!selectedDate) return { start: null, end: null, days: [] };
@@ -1070,6 +1206,7 @@ function MonthView({ events, instructors, instructorColors, onEventClick, select
   }, [selectedDate]);
 
   // Filtrar eventos del mes
+  // Filtrar eventos del mes (ya vienen filtrados desde CalendarView)
   const monthEvents = useMemo(() => {
     if (!monthRange.start || !monthRange.end) return [];
     return events.filter(e => {
@@ -1315,10 +1452,11 @@ export default function CalendarView() {
     );
   }
 
-  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors, deleteAppointment } = appCtx;
+  const { events, eventsLoading, eventsError, setRange, loadEvents, instructors, deleteAppointment, updateAppointment, setEvents } = appCtx;
   const [instructorFilter, setInstructorFilter] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [notificationDialog, setNotificationDialog] = useState(null); // { eventId, updates, eventType, pending: boolean }
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
   const [showStats, setShowStats] = useState(true);
@@ -1380,14 +1518,43 @@ export default function CalendarView() {
 
   const filtered = useMemo(() => {
     let list = Array.isArray(events) ? events : [];
-    if (instructorFilter) {
-      list = list.filter(
-        (ev) => String(ev?.extendedProps?.instructor_id ?? ev?.extendedProps?.instructorId) === String(instructorFilter)
-      );
+    
+    // Aplicar filtro de instructor
+    if (instructorFilter && instructorFilter !== "") {
+      const beforeCount = list.length;
+      list = list.filter((ev) => {
+        const evInstructorId = ev?.extendedProps?.instructor_id ?? ev?.extendedProps?.instructorId ?? null;
+        // Comparar como números si ambos son numéricos, sino como strings
+        const filterId = Number(instructorFilter);
+        const evId = evInstructorId !== null ? Number(evInstructorId) : null;
+        
+        if (!isNaN(filterId) && evId !== null && !isNaN(evId)) {
+          return filterId === evId;
+        }
+        // Fallback a comparación de strings
+        return String(evInstructorId) === String(instructorFilter);
+      });
+      logger.info("[CalendarView] Filtro de instructor aplicado:", {
+        filterId: instructorFilter,
+        antes: beforeCount,
+        despues: list.length,
+        eventosFiltrados: list.map(e => ({
+          id: e.id,
+          instructor_id: e.extendedProps?.instructor_id ?? e.extendedProps?.instructorId
+        }))
+      });
     }
+    
+    // Aplicar filtro de cancelados
     if (hideCancelled) {
+      const beforeCount = list.length;
       list = list.filter((ev) => (ev?.extendedProps?.status || "") !== "cancelled");
+      logger.info("[CalendarView] Filtro de cancelados aplicado:", {
+        antes: beforeCount,
+        despues: list.length
+      });
     }
+    
     return list;
   }, [events, instructorFilter, hideCancelled]);
 
@@ -1396,7 +1563,7 @@ export default function CalendarView() {
   const eventsHash = useMemo(() => {
     if (!Array.isArray(events) || events.length === 0) return '';
     // Incluir más información para detectar cambios: ID, start, end, instructor_id
-    return events
+    const hash = events
       .map(e => {
         const start = e.start ? new Date(e.start).toISOString() : '';
         const end = e.end ? new Date(e.end).toISOString() : '';
@@ -1405,6 +1572,8 @@ export default function CalendarView() {
       })
       .sort()
       .join('|');
+    logger.info("[CalendarView] Hash de eventos calculado:", { hashLength: hash.length, eventsCount: events.length, sample: hash.substring(0, 150) });
+    return hash;
   }, [events]);
 
   useEffect(() => {
@@ -1647,7 +1816,7 @@ export default function CalendarView() {
             {/* Vista según selección */}
             {currentView === "day" && (
               <DayView
-                key={`day-${refreshKey}-${lastUpdateTime}-${eventsHash.length > 0 ? eventsHash.substring(0, 100) : 'empty'}-${filtered.length}-${selectedDate.toISOString()}`}
+                key={`day-${lastUpdateTime}-${filtered.length}-${selectedDate.toISOString()}`}
                 events={filtered}
                 instructors={instructors}
                 instructorColors={instructorColors}
@@ -1660,86 +1829,28 @@ export default function CalendarView() {
                   setSelectedEvent(event);
                   setModalOpen(true);
                 }}
-                onEventDrop={async (eventId, updates) => {
-                  try {
-                    logger.info("[CalendarView] Actualizando turno:", { eventId, updates });
-                    const result = await apiClient.updateAppointment(eventId, updates);
-                    logger.info("[CalendarView] Respuesta del backend:", result);
-                    
-                    // Actualizar el rango ANTES de recargar eventos para asegurar que se carguen los datos correctos
-                    // Esto es crítico porque loadEvents usa rangeRef.current que se actualiza en un useEffect
-                    if (updates.start_time) {
-                      const newDate = new Date(updates.start_time);
-                      const newDateOnly = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-                      const currentDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-                      
-                      if (newDateOnly.getTime() !== currentDateOnly.getTime()) {
-                        setSelectedDate(newDateOnly);
-                      }
-                      
-                      // Actualizar el rango para asegurar que loadEvents cargue los datos correctos
-                      const startOfDay = new Date(newDateOnly);
-                      startOfDay.setHours(0, 0, 0, 0);
-                      const endOfDay = new Date(newDateOnly);
-                      endOfDay.setHours(23, 59, 59, 999);
-                      setRange({ fromIso: startOfDay.toISOString(), toIso: endOfDay.toISOString() });
-                      
-                      // Esperar a que el rango se actualice en el ref antes de recargar eventos
-                      // El useEffect que actualiza rangeRef.current necesita tiempo para ejecutarse
-                      await new Promise(resolve => setTimeout(resolve, 150));
-                    }
-                    
-                    // Recargar eventos inmediatamente
-                    logger.info("[CalendarView] Recargando eventos (primera vez)...");
-                    await loadEvents();
-                    
-                    // Esperar un poco para que React procese la actualización
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    
-                    // Recargar eventos una segunda vez para asegurar que se actualicen
-                    logger.info("[CalendarView] Recargando eventos (segunda vez)...");
-                    await loadEvents();
-                    
-                    // Esperar un poco más para que el estado se actualice completamente
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    
-                    // Forzar actualización del componente después de recargar eventos
-                    // Esto asegura que el componente se re-renderice con los datos actualizados
-                    const updateTime = Date.now();
-                    setRefreshKey(prev => {
-                      const newKey = prev + 1;
-                      logger.info("[CalendarView] Actualización completada, refreshKey:", newKey, "updateTime:", updateTime);
-                      return newKey;
-                    });
-                    
-                    // Actualizar lastUpdateTime para forzar re-render
-                    setLastUpdateTime(updateTime);
-                    
-                    // Forzar un re-render adicional después de un pequeño delay para asegurar que los eventos se hayan actualizado
-                    setTimeout(() => {
-                      const newUpdateTime = Date.now();
-                      setLastUpdateTime(newUpdateTime);
-                      logger.info("[CalendarView] Re-render forzado, nuevo updateTime:", newUpdateTime);
-                    }, 150);
-                    
-                    toast.success("Turno actualizado correctamente");
-                  } catch (error) {
-                    logger.error("[CalendarView] Error al actualizar turno:", error);
-                    const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el turno";
-                    toast.error(errorMessage);
-                  }
+                onEventDrop={(eventId, updates, eventType = 'appointment') => {
+                  // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
+                  logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
+                  setNotificationDialog({
+                    eventId,
+                    updates: updates, // Guardar los updates para aplicar después de confirmar
+                    eventType: eventType || 'appointment',
+                    pending: true // Marcar como pendiente de confirmación
+                  });
                 }}
               />
             )}
             
             {currentView === "week" && (
               <WeekView
-                key={`week-${refreshKey}-${lastUpdateTime}-${eventsHash.length > 0 ? eventsHash.substring(0, 100) : 'empty'}-${filtered.length}-${selectedDate.toISOString()}`}
+                key={`week-${lastUpdateTime}-${filtered.length}-${selectedDate.toISOString()}`}
                 events={filtered}
                 instructors={instructors}
                 instructorColors={instructorColors}
                 timeRange={calendarTimeRange}
                 selectedDate={selectedDate}
+                instructorFilter={instructorFilter}
                 onDateChange={(date) => {
                   setSelectedDate(date);
                 }}
@@ -1747,85 +1858,15 @@ export default function CalendarView() {
                   setSelectedEvent(event);
                   setModalOpen(true);
                 }}
-                onEventDrop={async (eventId, updates) => {
-                  try {
-                    await apiClient.updateAppointment(eventId, updates);
-                    
-                    // Si el evento cambió de día, actualizar la fecha seleccionada y el rango si es necesario
-                    if (updates.start_time) {
-                      const newDate = new Date(updates.start_time);
-                      const newDateOnly = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-                      const currentDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-                      
-                      // Calcular semana actual
-                      const weekStart = new Date(selectedDate);
-                      const day = weekStart.getDay();
-                      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
-                      weekStart.setDate(diff);
-                      weekStart.setHours(0, 0, 0, 0);
-                      
-                      const weekEnd = new Date(weekStart);
-                      weekEnd.setDate(weekStart.getDate() + 6);
-                      weekEnd.setHours(23, 59, 59, 999);
-                      
-                      // Si el nuevo día está fuera de la semana actual, actualizar fecha y rango
-                      if (newDateOnly < weekStart || newDateOnly > weekEnd) {
-                        setSelectedDate(newDateOnly);
-                        // Calcular nueva semana
-                        const newWeekStart = new Date(newDateOnly);
-                        const newDay = newWeekStart.getDay();
-                        const newDiff = newWeekStart.getDate() - newDay + (newDay === 0 ? -6 : 1);
-                        newWeekStart.setDate(newDiff);
-                        newWeekStart.setHours(0, 0, 0, 0);
-                        
-                        const newWeekEnd = new Date(newWeekStart);
-                        newWeekEnd.setDate(newWeekStart.getDate() + 6);
-                        newWeekEnd.setHours(23, 59, 59, 999);
-                        setRange({ fromIso: newWeekStart.toISOString(), toIso: newWeekEnd.toISOString() });
-                      } else {
-                        // Asegurar que el rango esté actualizado
-                        setRange({ fromIso: weekStart.toISOString(), toIso: weekEnd.toISOString() });
-                      }
-                    }
-                    
-                    // Recargar eventos inmediatamente
-                    logger.info("[CalendarView] Recargando eventos (primera vez - semana)...");
-                    await loadEvents();
-                    
-                    // Esperar un poco para que React procese la actualización
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    
-                    // Recargar eventos una segunda vez para asegurar que se actualicen
-                    logger.info("[CalendarView] Recargando eventos (segunda vez - semana)...");
-                    await loadEvents();
-                    
-                    // Esperar un poco más para que el estado se actualice completamente
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    
-                    // Forzar actualización del componente después de recargar eventos
-                    const updateTime = Date.now();
-                    setRefreshKey(prev => {
-                      const newKey = prev + 1;
-                      logger.info("[CalendarView] Actualización completada (semana), refreshKey:", newKey, "updateTime:", updateTime);
-                      return newKey;
-                    });
-                    
-                    // Actualizar lastUpdateTime para forzar re-render
-                    setLastUpdateTime(updateTime);
-                    
-                    // Forzar un re-render adicional después de un pequeño delay para asegurar que los eventos se hayan actualizado
-                    setTimeout(() => {
-                      const newUpdateTime = Date.now();
-                      setLastUpdateTime(newUpdateTime);
-                      logger.info("[CalendarView] Re-render forzado (semana), nuevo updateTime:", newUpdateTime);
-                    }, 150);
-                    
-                    toast.success("Turno actualizado correctamente");
-                  } catch (error) {
-                    logger.error("[CalendarView] Error al actualizar turno (semana):", error);
-                    const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el turno";
-                    toast.error(errorMessage);
-                  }
+                onEventDrop={(eventId, updates, eventType = 'appointment') => {
+                  // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
+                  logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
+                  setNotificationDialog({
+                    eventId,
+                    updates: updates, // Guardar los updates para aplicar después de confirmar
+                    eventType: eventType || 'appointment',
+                    pending: true // Marcar como pendiente de confirmación
+                  });
                 }}
               />
             )}
@@ -1836,6 +1877,7 @@ export default function CalendarView() {
                 instructors={instructors}
                 instructorColors={instructorColors}
                 selectedDate={selectedDate}
+                instructorFilter={instructorFilter}
                 onDateChange={(date) => {
                   setSelectedDate(date);
                 }}
@@ -1855,8 +1897,417 @@ export default function CalendarView() {
               setSelectedEvent(null);
             }}
           />
+
+          {/* Diálogo de notificación */}
+          {notificationDialog && (
+            <NotificationDialog
+              key={`notification-${notificationDialog.eventId}-${Date.now()}`}
+              open={true}
+              eventType={notificationDialog.eventType}
+              event={events.find(e => String(e.id) === String(notificationDialog.eventId))}
+              updates={notificationDialog.updates}
+              onClose={() => {
+                logger.info("[CalendarView] Cerrando diálogo de notificación");
+                setNotificationDialog(null);
+              }}
+              onConfirm={async (notifyWhatsApp, notifyEmail, templateId, message) => {
+                try {
+                  const { eventId, updates, eventType } = notificationDialog;
+                  const isClassSession = eventType === 'class_session';
+                  
+                  // Primero actualizar el turno/clase
+                  let result;
+                  
+                  if (isClassSession) {
+                    // Extraer el ID real de la clase
+                    const classId = String(eventId).startsWith('class-') 
+                      ? String(eventId).replace('class-', '') 
+                      : eventId;
+                    
+                    // Preparar body para clase
+                    const formatToMySQL = (dateValue) => {
+                      if (!dateValue) return null;
+                      if (dateValue instanceof Date) {
+                        const pad = (n) => String(n).padStart(2, '0');
+                        return `${dateValue.getFullYear()}-${pad(dateValue.getMonth() + 1)}-${pad(dateValue.getDate())} ${pad(dateValue.getHours())}:${pad(dateValue.getMinutes())}:${pad(dateValue.getSeconds())}`;
+                      }
+                      if (typeof dateValue === 'string') {
+                        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateValue)) {
+                          return dateValue;
+                        }
+                        if (dateValue.includes('T')) {
+                          return dateValue.replace('T', ' ').slice(0, 19);
+                        }
+                        return dateValue;
+                      }
+                      return null;
+                    };
+                    
+                    const classBody = {};
+                    if (updates.starts_at || updates.startsAt) {
+                      classBody.startsAt = formatToMySQL(updates.starts_at || updates.startsAt);
+                    }
+                    if (updates.ends_at || updates.endsAt) {
+                      classBody.endsAt = formatToMySQL(updates.ends_at || updates.endsAt);
+                    }
+                    if (updates.instructor_id !== undefined) {
+                      classBody.instructorId = updates.instructor_id;
+                    }
+                    
+                    // Agregar notificaciones si se solicitaron
+                    if (notifyWhatsApp || notifyEmail) {
+                      classBody.notifyWhatsApp = notifyWhatsApp || false;
+                      classBody.notifyEmail = notifyEmail || false;
+                      classBody.messageTemplate = templateId || null;
+                      classBody.customMessage = message || null;
+                    }
+                    
+                    logger.info("[CalendarView] Actualizando clase:", { classId, classBody });
+                    result = await apiClient.updateClassSession(classId, classBody);
+                    
+                    // Actualización optimista para clases
+                    setEvents(prevEvents => {
+                      return prevEvents.map(event => {
+                        const eventIdStr = String(event.id);
+                        if (eventIdStr === String(eventId) || eventIdStr === `class-${classId}`) {
+                          const updated = { ...event };
+                          if (classBody.startsAt) {
+                            updated.start = typeof classBody.startsAt === 'string' 
+                              ? classBody.startsAt.replace(' ', 'T') 
+                              : classBody.startsAt.toISOString();
+                          }
+                          if (classBody.endsAt) {
+                            updated.end = typeof classBody.endsAt === 'string' 
+                              ? classBody.endsAt.replace(' ', 'T') 
+                              : classBody.endsAt.toISOString();
+                          }
+                          if (classBody.instructorId !== undefined && updated.extendedProps) {
+                            updated.extendedProps.instructor_id = classBody.instructorId;
+                            updated.extendedProps.instructorId = classBody.instructorId;
+                          }
+                          return updated;
+                        }
+                        return event;
+                      });
+                    });
+                  } else {
+                    // Preparar updates para appointment
+                    const appointmentUpdates = { ...updates };
+                    
+                    // Agregar notificaciones si se solicitaron
+                    if (notifyWhatsApp || notifyEmail) {
+                      appointmentUpdates.notifyWhatsApp = notifyWhatsApp || false;
+                      appointmentUpdates.notifyEmail = notifyEmail || false;
+                      appointmentUpdates.messageTemplate = templateId || null;
+                      appointmentUpdates.customMessage = message || null;
+                    }
+                    
+                    // Actualizar appointment
+                    result = await updateAppointment(eventId, appointmentUpdates, true);
+                  }
+                  
+                  if (!result || !result.ok) {
+                    logger.error("[CalendarView] La actualización no fue exitosa:", result);
+                    toast.error(result?.error || `Error al actualizar ${isClassSession ? 'la clase' : 'el turno'}`);
+                    setNotificationDialog(null);
+                    return;
+                  }
+                  
+                  // Si el evento cambió de día, actualizar la fecha seleccionada
+                  if (updates.starts_at) {
+                    const dateStr = typeof updates.starts_at === 'string' ? updates.starts_at.replace(' ', 'T') : updates.starts_at.toISOString();
+                    const newDate = new Date(dateStr);
+                    if (!isNaN(newDate.getTime())) {
+                      const newDateOnly = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+                      const currentDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                      
+                      if (newDateOnly.getTime() !== currentDateOnly.getTime()) {
+                        setSelectedDate(newDateOnly);
+                      }
+                    }
+                  }
+                  
+                  // Actualizar el hash para forzar re-render
+                  setLastUpdateTime(Date.now());
+                  
+                  // Recargar eventos en background
+                  setTimeout(() => {
+                    loadEvents(true).catch(err => {
+                      console.error("Error al sincronizar eventos:", err);
+                    });
+                  }, 500);
+                  
+                  if (notifyWhatsApp) {
+                    toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación WhatsApp enviada`);
+                  } else if (notifyEmail) {
+                    toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación Email enviada`);
+                  } else {
+                    toast.success(isClassSession ? "Clase actualizada" : "Turno actualizado");
+                  }
+                  
+                  setNotificationDialog(null);
+                } catch (error) {
+                  logger.error("[CalendarView] Error al actualizar:", error);
+                  toast.error(error?.response?.data?.error || error?.message || "Error al actualizar");
+                  setNotificationDialog(null);
+                }
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+// Componente de diálogo de notificación
+function NotificationDialog({ open, eventType, onClose, onConfirm, event, updates }) {
+  // Debug inicial
+  console.log("[NotificationDialog] Componente renderizado:", { open, eventType });
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
+  const isClassSession = eventType === 'class_session';
+
+  // Plantillas predeterminadas - diferentes para turnos y clases
+  const templates = isClassSession ? [
+    {
+      id: 'reprogramar_profesional_no_disponible',
+      name: 'Instructor no disponible',
+      message: 'Hola! Te contactamos para informarte que la clase necesita ser reprogramada porque el instructor no está disponible en ese horario. ¿Podrías indicarnos un horario alternativo?'
+    },
+    {
+      id: 'cambiar_profesional',
+      name: 'Cambiar a otro instructor',
+      message: 'Hola! Te contactamos para informarte que la clase ha sido reasignada a otro instructor. El horario se mantiene igual. ¿Te parece bien?'
+    },
+    {
+      id: 'reprogramar_horario',
+      name: 'Reprogramar horario de clase',
+      message: 'Hola! Te contactamos para informarte que el horario de la clase ha sido reprogramado. ¿Podrías confirmar si el nuevo horario te funciona?'
+    },
+    {
+      id: 'cancelar_clase',
+      name: 'Cancelar clase',
+      message: 'Hola! Te contactamos para informarte que la clase ha sido cancelada. Si necesitas reagendar, por favor contáctanos.'
+    },
+    {
+      id: 'personalizado',
+      name: 'Mensaje personalizado',
+      message: ''
+    }
+  ] : [
+    {
+      id: 'reprogramar_profesional_no_disponible',
+      name: 'Profesional no disponible',
+      message: 'Hola! Te contactamos para informarte que tu turno necesita ser reprogramado porque el profesional no está disponible en ese horario. ¿Podrías indicarnos un horario alternativo?'
+    },
+    {
+      id: 'cambiar_profesional',
+      name: 'Cambiar a otro profesional',
+      message: 'Hola! Te contactamos para informarte que tu turno ha sido reasignado a otro profesional. El horario se mantiene igual. ¿Te parece bien?'
+    },
+    {
+      id: 'reprogramar_horario',
+      name: 'Reprogramar horario',
+      message: 'Hola! Te contactamos para informarte que tu turno ha sido reprogramado. ¿Podrías confirmar si el nuevo horario te funciona?'
+    },
+    {
+      id: 'cancelar_turno',
+      name: 'Cancelar turno',
+      message: 'Hola! Te contactamos para informarte que tu turno ha sido cancelado. Si necesitas reagendar, por favor contáctanos.'
+    },
+    {
+      id: 'personalizado',
+      name: 'Mensaje personalizado',
+      message: ''
+    }
+  ];
+
+  // Detectar tipo de cambio para sugerir plantilla
+  useEffect(() => {
+    if (!updates || !event) return;
+    
+    const instructorChanged = updates.instructor_id !== undefined && 
+      updates.instructor_id !== (event.extendedProps?.instructor_id || event.extendedProps?.instructorId);
+    const timeChanged = updates.starts_at || updates.ends_at;
+    
+    if (instructorChanged && timeChanged) {
+      const template = templates.find(t => t.id === 'reprogramar_profesional_no_disponible');
+      if (template) {
+        setSelectedTemplate('reprogramar_profesional_no_disponible');
+        setCustomMessage(template.message);
+      }
+    } else if (instructorChanged) {
+      const template = templates.find(t => t.id === 'cambiar_profesional');
+      if (template) {
+        setSelectedTemplate('cambiar_profesional');
+        setCustomMessage(template.message);
+      }
+    } else if (timeChanged) {
+      const template = templates.find(t => t.id === 'reprogramar_horario');
+      if (template) {
+        setSelectedTemplate('reprogramar_horario');
+        setCustomMessage(template.message);
+      }
+    }
+  }, [updates, event]);
+
+  // Actualizar mensaje cuando se selecciona una plantilla
+  useEffect(() => {
+    if (selectedTemplate && selectedTemplate !== 'personalizado') {
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (template) {
+        setCustomMessage(template.message);
+      }
+    } else if (selectedTemplate === 'personalizado') {
+      setCustomMessage('');
+    }
+  }, [selectedTemplate]);
+
+  // Debug: verificar si el diálogo debería mostrarse
+  useEffect(() => {
+    logger.info("[NotificationDialog] Estado:", { open, eventType, hasEvent: !!event, hasUpdates: !!updates });
+  }, [open, eventType, event, updates]);
+
+  if (!open) {
+    return null;
+  }
+
+  const dialogContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ zIndex: 9999 }}>
+      {/* Overlay oscuro de fondo */}
+      <div 
+        className="absolute inset-0 bg-black/50" 
+        onClick={onClose}
+        style={{ zIndex: 9998 }}
+      />
+      {/* Modal centrado */}
+      <div className="relative pointer-events-auto" style={{ zIndex: 10000 }}>
+        <div className="bg-background-secondary rounded-xl border border-border p-6 max-w-lg w-full shadow-2xl">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {isClassSession ? 'Confirmar cambio de clase' : 'Confirmar cambio de turno'}
+              </h3>
+              <p className="text-sm text-foreground-muted">
+                {isClassSession 
+                  ? 'Se actualizará el horario de la clase. ¿Deseas notificar a los alumnos inscritos?'
+                  : 'Se actualizará el horario del turno. ¿Deseas notificar al cliente?'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="ml-2 p-1 rounded-lg hover:bg-background transition-colors text-foreground-muted hover:text-foreground"
+              aria-label="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Selector de plantillas */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Plantilla de mensaje
+            </label>
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              className="w-full px-4 py-2.5 text-sm rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Seleccionar plantilla...</option>
+              {templates.map(template => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Campo de mensaje personalizado */}
+          {selectedTemplate && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Mensaje {isClassSession ? 'para los alumnos' : 'para el cliente'}
+              </label>
+              <textarea
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                placeholder={isClassSession 
+                  ? "Escribe el mensaje que se enviará a los alumnos inscritos..." 
+                  : "Escribe el mensaje que se enviará al cliente..."}
+                rows={5}
+                className="w-full px-4 py-3 text-sm rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+          )}
+
+          {/* Opciones de notificación */}
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              {isClassSession ? 'Notificar a los alumnos por:' : 'Notificar al cliente por:'}
+            </label>
+            {isClassSession ? (
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-border">
+                  <input
+                    type="checkbox"
+                    checked={notifyWhatsApp}
+                    onChange={(e) => setNotifyWhatsApp(e.target.checked)}
+                    className="w-5 h-5 text-primary rounded focus:ring-primary"
+                  />
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-foreground">WhatsApp</span>
+                </label>
+                
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-border">
+                  <input
+                    type="checkbox"
+                    checked={notifyEmail}
+                    onChange={(e) => setNotifyEmail(e.target.checked)}
+                    className="w-5 h-5 text-primary rounded focus:ring-primary"
+                  />
+                  <Mail className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Email</span>
+                </label>
+              </div>
+            ) : (
+              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-border">
+                <input
+                  type="checkbox"
+                  checked={notifyWhatsApp}
+                  onChange={(e) => setNotifyWhatsApp(e.target.checked)}
+                  className="w-5 h-5 text-primary rounded focus:ring-primary"
+                />
+                <MessageSquare className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-foreground">Notificar vía WhatsApp</span>
+              </label>
+            )}
+          </div>
+
+          <div className="flex gap-3 justify-end pt-2 border-t border-border">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 text-sm font-medium text-foreground-muted hover:text-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => onConfirm(notifyWhatsApp, notifyEmail, selectedTemplate, customMessage)}
+              disabled={(notifyWhatsApp || notifyEmail) && (!selectedTemplate || !customMessage.trim())}
+              className="px-5 py-2.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {notifyWhatsApp || notifyEmail ? 'Confirmar y Enviar' : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Usar portal para renderizar fuera del árbol DOM
+  return typeof document !== 'undefined' 
+    ? createPortal(dialogContent, document.body)
+    : null;
 }

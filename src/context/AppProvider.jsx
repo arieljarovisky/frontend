@@ -264,7 +264,7 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
   // ============================================
   // 📅 Cargar eventos — función ESTABLE
   // ============================================
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (forceRefresh = false) => {
     const { fromIso, toIso } = rangeRef.current || {};
     if (!fromIso || !toIso) return;
     try {
@@ -272,9 +272,13 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
       setEventsError("");
 
       const params = { from: fromIso, to: toIso };
+      // Agregar cache-busting si se fuerza la recarga
+      if (forceRefresh) {
+        params._t = Date.now();
+      }
     const appointmentsPromise = apiClient.listAppointments(params);
     const classesPromise = classesEnabled
-      ? apiClient.listClassSessions(params)
+      ? apiClient.listClassSessions({ ...params })
       : Promise.resolve([]);
 
       const [appointmentsData, sessionsData] = await Promise.all([appointmentsPromise, classesPromise]);
@@ -533,13 +537,85 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
   );
 
   const updateAppointment = useCallback(
-    async (id, patch) => {
+    async (id, patch, optimistic = true) => {
       try {
+        // Actualización optimista: actualizar el estado local inmediatamente
+        if (optimistic) {
+          setEvents(prevEvents => {
+            return prevEvents.map(event => {
+              if (String(event.id) === String(id)) {
+                const updated = { ...event };
+                
+                // Actualizar fechas si se proporcionan
+                if (patch.starts_at || patch.startsAt) {
+                  const newStart = patch.starts_at || patch.startsAt;
+                  // Si es formato MySQL (YYYY-MM-DD HH:mm:ss), convertir a ISO
+                  if (typeof newStart === 'string') {
+                    if (newStart.includes('T')) {
+                      // Ya es ISO
+                      updated.start = newStart;
+                    } else {
+                      // Es formato MySQL, convertir a ISO
+                      updated.start = newStart.replace(' ', 'T') + (newStart.includes('Z') ? '' : 'Z');
+                    }
+                  } else {
+                    updated.start = newStart.toISOString();
+                  }
+                  if (updated.extendedProps) {
+                    updated.extendedProps.starts_at = updated.start;
+                  }
+                }
+                
+                if (patch.ends_at || patch.endsAt) {
+                  const newEnd = patch.ends_at || patch.endsAt;
+                  // Si es formato MySQL (YYYY-MM-DD HH:mm:ss), convertir a ISO
+                  if (typeof newEnd === 'string') {
+                    if (newEnd.includes('T')) {
+                      // Ya es ISO
+                      updated.end = newEnd;
+                    } else {
+                      // Es formato MySQL, convertir a ISO
+                      updated.end = newEnd.replace(' ', 'T') + (newEnd.includes('Z') ? '' : 'Z');
+                    }
+                  } else {
+                    updated.end = newEnd.toISOString();
+                  }
+                  if (updated.extendedProps) {
+                    updated.extendedProps.ends_at = updated.end;
+                  }
+                }
+                
+                // Actualizar instructor_id si se proporciona
+                if (patch.instructor_id !== undefined) {
+                  if (!updated.extendedProps) {
+                    updated.extendedProps = {};
+                  }
+                  updated.extendedProps.instructor_id = patch.instructor_id;
+                  updated.extendedProps.instructorId = patch.instructor_id;
+                }
+                
+                return updated;
+              }
+              return event;
+            });
+          });
+        }
+        
+        // Preparar body para el backend
         const body = {
           ...patch,
-          startsAt: patch.startsAt ? toLocalMySQL(patch.startsAt) : undefined,
-          endsAt: patch.endsAt ? toLocalMySQL(patch.endsAt) : undefined,
+          startsAt: patch.startsAt || patch.starts_at,
+          endsAt: patch.endsAt || patch.ends_at,
         };
+        
+        // Convertir fechas a formato MySQL si son strings ISO
+        if (body.startsAt && typeof body.startsAt === 'string' && body.startsAt.includes('T')) {
+          body.startsAt = toLocalMySQL(body.startsAt);
+        }
+        if (body.endsAt && typeof body.endsAt === 'string' && body.endsAt.includes('T')) {
+          body.endsAt = toLocalMySQL(body.endsAt);
+        }
+        
         if (patch.branchId !== undefined) {
           body.branchId =
             patch.branchId === null || patch.branchId === ""
@@ -549,10 +625,30 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
         if (patch.applySeries) {
           body.applySeries = patch.applySeries;
         }
-        await apiClient.updateAppointment(id, body);
-        await loadEvents();
+        
+        // Actualizar en el backend de forma completamente asíncrona sin bloquear
+        // No esperamos la respuesta para que la UI sea instantánea
+        apiClient.updateAppointment(id, body)
+          .then(() => {
+            // Sincronizar en background inmediatamente después de actualizar
+            // Sin delays para mantener la fluidez
+            loadEvents(true).catch(err => {
+              console.error("Error al sincronizar eventos:", err);
+            });
+          })
+          .catch(err => {
+            console.error("Error al actualizar en backend:", err);
+            // Si falla, revertir la actualización optimista recargando eventos
+            loadEvents(true).catch(() => {});
+          });
+        
+        // Retornar inmediatamente sin esperar - la actualización optimista ya se hizo
         return { ok: true };
       } catch (e) {
+        // Si falla, revertir la actualización optimista recargando eventos
+        if (optimistic) {
+          loadEvents(true).catch(() => {});
+        }
         const message = e?.response?.data?.error || String(e.message || e);
         return { ok: false, error: message };
       }
@@ -611,6 +707,7 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
       reloadBranches: loadBranches,
       // Calendar
       events,
+      setEvents,
       eventsLoading,
       eventsError,
       range,
