@@ -2283,46 +2283,159 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
     }
   ];
 
-  // Detectar tipo de cambio para sugerir plantilla
+  // Función para formatear fecha y hora
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const fecha = date.toLocaleDateString('es-AR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+    });
+    const hora = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    return `${fecha} ${hora}`;
+  };
+
+  // Función para construir el mensaje con los cambios detectados
+  const buildMessageWithChanges = (baseMessage, changes) => {
+    if (!baseMessage) return '';
+    
+    const changesText = [];
+    if (changes.horarioCambio) {
+      changesText.push(`📅 *Horario:* ${changes.oldHorario} → ${changes.newHorario}`);
+    }
+    if (changes.profesionalCambio) {
+      changesText.push(`👤 *Profesional:* ${changes.oldProfesional} → ${changes.newProfesional}`);
+    }
+    if (changes.servicioCambio) {
+      changesText.push(`💇 *Servicio:* ${changes.oldServicio} → ${changes.newServicio}`);
+    }
+    
+    if (changesText.length > 0) {
+      return `${baseMessage}\n\n${changesText.join('\n')}`;
+    }
+    
+    return baseMessage;
+  };
+
+  // Detectar tipo de cambio para sugerir plantilla y agregar cambios al mensaje
   useEffect(() => {
     if (!updates || !event) return;
     
-    const instructorChanged = updates.instructor_id !== undefined && 
-      updates.instructor_id !== (event.extendedProps?.instructor_id || event.extendedProps?.instructorId);
-    const timeChanged = updates.starts_at || updates.ends_at;
+    const oldInstructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId;
+    const newInstructorId = updates.instructor_id;
+    const instructorChanged = newInstructorId !== undefined && 
+      String(newInstructorId) !== String(oldInstructorId || '');
+    
+    const oldStart = event.start;
+    const newStart = updates.starts_at;
+    const timeChanged = newStart && oldStart && newStart !== oldStart;
+    
+    const oldServiceId = event.extendedProps?.service_id || event.extendedProps?.serviceId;
+    const newServiceId = updates.service_id;
+    const servicioCambio = newServiceId !== undefined && 
+      String(newServiceId) !== String(oldServiceId || '');
+    
+    // Obtener nombres de profesionales y servicios
+    const oldInstructorName = event.extendedProps?.instructor_name || event.extendedProps?.instructorName || 'Nuestro equipo';
+    const newInstructorName = updates.instructor_name || oldInstructorName;
+    const oldServiceName = event.extendedProps?.service_name || event.extendedProps?.serviceName || 'Servicio';
+    const newServiceName = updates.service_name || oldServiceName;
+    
+    // Construir información de cambios
+    const changes = {
+      horarioCambio: timeChanged,
+      oldHorario: oldStart ? formatDateTime(oldStart) : '',
+      newHorario: newStart ? formatDateTime(newStart) : '',
+      profesionalCambio: instructorChanged,
+      oldProfesional: oldInstructorName,
+      newProfesional: newInstructorName,
+      servicioCambio: servicioCambio,
+      oldServicio: oldServiceName,
+      newServicio: newServiceName,
+    };
+    
+    let templateId = '';
+    let baseMessage = '';
     
     if (instructorChanged && timeChanged) {
       const template = templates.find(t => t.id === 'reprogramar_profesional_no_disponible');
       if (template) {
-        setSelectedTemplate('reprogramar_profesional_no_disponible');
-        setCustomMessage(template.message);
+        templateId = 'reprogramar_profesional_no_disponible';
+        baseMessage = template.message;
       }
     } else if (instructorChanged) {
       const template = templates.find(t => t.id === 'cambiar_profesional');
       if (template) {
-        setSelectedTemplate('cambiar_profesional');
-        setCustomMessage(template.message);
+        templateId = 'cambiar_profesional';
+        baseMessage = template.message;
       }
     } else if (timeChanged) {
       const template = templates.find(t => t.id === 'reprogramar_horario');
       if (template) {
-        setSelectedTemplate('reprogramar_horario');
-        setCustomMessage(template.message);
+        templateId = 'reprogramar_horario';
+        baseMessage = template.message;
       }
+    }
+    
+    if (templateId && baseMessage) {
+      setSelectedTemplate(templateId);
+      const messageWithChanges = buildMessageWithChanges(baseMessage, changes);
+      setCustomMessage(messageWithChanges);
     }
   }, [updates, event]);
 
-  // Actualizar mensaje cuando se selecciona una plantilla
+  // Actualizar mensaje cuando se selecciona una plantilla, manteniendo los cambios detectados
   useEffect(() => {
-    if (selectedTemplate && selectedTemplate !== 'personalizado') {
-      const template = templates.find(t => t.id === selectedTemplate);
-      if (template) {
-        setCustomMessage(template.message);
+    if (!updates || !event) return;
+    if (!selectedTemplate || selectedTemplate === 'personalizado') {
+      if (selectedTemplate === 'personalizado') {
+        setCustomMessage('');
       }
-    } else if (selectedTemplate === 'personalizado') {
-      setCustomMessage('');
+      return;
     }
-  }, [selectedTemplate]);
+    
+    const template = templates.find(t => t.id === selectedTemplate);
+    if (!template) return;
+    
+    // Detectar cambios nuevamente para incluirlos en el mensaje
+    const oldInstructorId = event.extendedProps?.instructor_id || event.extendedProps?.instructorId;
+    const newInstructorId = updates.instructor_id;
+    const instructorChanged = newInstructorId !== undefined && 
+      String(newInstructorId) !== String(oldInstructorId || '');
+    
+    const oldStart = event.start;
+    const newStart = updates.starts_at;
+    const timeChanged = newStart && oldStart && newStart !== oldStart;
+    
+    const oldServiceId = event.extendedProps?.service_id || event.extendedProps?.serviceId;
+    const newServiceId = updates.service_id;
+    const servicioCambio = newServiceId !== undefined && 
+      String(newServiceId) !== String(oldServiceId || '');
+    
+    // Obtener nombres
+    const oldInstructorName = event.extendedProps?.instructor_name || event.extendedProps?.instructorName || 'Nuestro equipo';
+    const newInstructorName = updates.instructor_name || oldInstructorName;
+    const oldServiceName = event.extendedProps?.service_name || event.extendedProps?.serviceName || 'Servicio';
+    const newServiceName = updates.service_name || oldServiceName;
+    
+    // Construir información de cambios
+    const changes = {
+      horarioCambio: timeChanged,
+      oldHorario: oldStart ? formatDateTime(oldStart) : '',
+      newHorario: newStart ? formatDateTime(newStart) : '',
+      profesionalCambio: instructorChanged,
+      oldProfesional: oldInstructorName,
+      newProfesional: newInstructorName,
+      servicioCambio: servicioCambio,
+      oldServicio: oldServiceName,
+      newServicio: newServiceName,
+    };
+    
+    // Agregar cambios al mensaje de la plantilla
+    const messageWithChanges = buildMessageWithChanges(template.message, changes);
+    setCustomMessage(messageWithChanges);
+  }, [selectedTemplate, updates, event]);
 
   // Debug: verificar si el diálogo debería mostrarse
   useEffect(() => {
