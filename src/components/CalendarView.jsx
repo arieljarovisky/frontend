@@ -1457,6 +1457,7 @@ export default function CalendarView() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [notificationDialog, setNotificationDialog] = useState(null); // { eventId, updates, eventType, pending: boolean }
+  const [supportAgentEnabled, setSupportAgentEnabled] = useState(true); // Por defecto true para no romper la funcionalidad existente
   const isMobile = useIsMobile(768);
   const [hideCancelled, setHideCancelled] = useState(false);
   const [showStats, setShowStats] = useState(true);
@@ -1466,6 +1467,118 @@ export default function CalendarView() {
   const [lastUpdateTime, setLastUpdateTime] = useState(Date.now()); // Timestamp de última actualización
 
   const instructorColors = useMemo(() => buildInstructorColorMap(instructors), [instructors]);
+
+  // Cargar configuración de WhatsApp para verificar si el botón de ayuda está habilitado
+  useEffect(() => {
+    const loadWhatsAppConfig = async () => {
+      try {
+        const config = await apiClient.getWhatsAppConfig();
+        setSupportAgentEnabled(config?.supportAgentEnabled ?? true);
+      } catch (error) {
+        logger.warn("[CalendarView] Error cargando configuración de WhatsApp, usando valor por defecto:", error);
+        setSupportAgentEnabled(true); // Por defecto permitir notificaciones
+      }
+    };
+    loadWhatsAppConfig();
+  }, []);
+
+  // Función helper para actualizar turno/clase sin mostrar modal
+  const handleDirectUpdate = useCallback(async (eventId, updates, eventType = 'appointment') => {
+    try {
+      const isClassSession = eventType === 'class_session';
+      
+      if (isClassSession) {
+        // Extraer el ID real de la clase
+        const classId = String(eventId).startsWith('class-') 
+          ? String(eventId).replace('class-', '') 
+          : eventId;
+        
+        // Preparar body para clase
+        const formatToMySQL = (dateValue) => {
+          if (!dateValue) return null;
+          if (dateValue instanceof Date) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${dateValue.getFullYear()}-${pad(dateValue.getMonth() + 1)}-${pad(dateValue.getDate())} ${pad(dateValue.getHours())}:${pad(dateValue.getMinutes())}:${pad(dateValue.getSeconds())}`;
+          }
+          if (typeof dateValue === 'string') {
+            if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateValue)) {
+              return dateValue;
+            }
+            if (dateValue.includes('T')) {
+              return dateValue.replace('T', ' ').slice(0, 19);
+            }
+            return dateValue;
+          }
+          return null;
+        };
+        
+        const classBody = {};
+        if (updates.starts_at || updates.startsAt) {
+          classBody.startsAt = formatToMySQL(updates.starts_at || updates.startsAt);
+        }
+        if (updates.ends_at || updates.endsAt) {
+          classBody.endsAt = formatToMySQL(updates.ends_at || updates.endsAt);
+        }
+        if (updates.instructor_id !== undefined) {
+          classBody.instructorId = updates.instructor_id;
+        }
+        
+        logger.info("[CalendarView] Actualizando clase directamente:", { classId, classBody });
+        const result = await apiClient.updateClassSession(classId, classBody);
+        
+        // Actualización optimista para clases
+        setEvents(prevEvents => {
+          return prevEvents.map(event => {
+            const eventIdStr = String(event.id);
+            if (eventIdStr === String(eventId) || eventIdStr === `class-${classId}`) {
+              const updated = { ...event };
+              if (classBody.startsAt) {
+                updated.start = typeof classBody.startsAt === 'string' 
+                  ? classBody.startsAt.replace(' ', 'T') 
+                  : classBody.startsAt.toISOString();
+              }
+              if (classBody.endsAt) {
+                updated.end = typeof classBody.endsAt === 'string' 
+                  ? classBody.endsAt.replace(' ', 'T') 
+                  : classBody.endsAt.toISOString();
+              }
+              if (classBody.instructorId !== undefined && updated.extendedProps) {
+                updated.extendedProps.instructor_id = classBody.instructorId;
+                updated.extendedProps.instructorId = classBody.instructorId;
+              }
+              return updated;
+            }
+            return event;
+          });
+        });
+        
+        if (!result || !result.ok) {
+          logger.error("[CalendarView] La actualización de clase no fue exitosa:", result);
+          toast.error(result?.error || 'Error al actualizar la clase');
+          return;
+        }
+        
+        toast.success('Clase actualizada correctamente');
+        await loadEvents();
+      } else {
+        // Actualizar appointment directamente
+        logger.info("[CalendarView] Actualizando turno directamente:", { eventId, updates });
+        const result = await updateAppointment(eventId, updates, true);
+        
+        if (!result || !result.ok) {
+          logger.error("[CalendarView] La actualización de turno no fue exitosa:", result);
+          toast.error(result?.error || 'Error al actualizar el turno');
+          return;
+        }
+        
+        toast.success('Turno actualizado correctamente');
+        await loadEvents();
+      }
+    } catch (error) {
+      logger.error("[CalendarView] Error al actualizar directamente:", error);
+      toast.error(error?.message || 'Error al actualizar');
+    }
+  }, [updateAppointment, loadEvents, setEvents]);
 
   // Calcular rango de horarios dinámicamente basado en los horarios de las sucursales
   const [calendarTimeRange, setCalendarTimeRange] = useState({ min: "06:00:00", max: "23:00:00" });
@@ -1830,6 +1943,13 @@ export default function CalendarView() {
                   setModalOpen(true);
                 }}
                 onEventDrop={(eventId, updates, eventType = 'appointment') => {
+                  // Si el botón de ayuda no está habilitado, actualizar directamente sin mostrar la modal
+                  if (!supportAgentEnabled) {
+                    logger.info("[CalendarView] Botón de ayuda deshabilitado, actualizando directamente:", { eventId, eventType, updates });
+                    handleDirectUpdate(eventId, updates, eventType || 'appointment');
+                    return;
+                  }
+                  
                   // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
                   logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
                   setNotificationDialog({
@@ -1859,6 +1979,13 @@ export default function CalendarView() {
                   setModalOpen(true);
                 }}
                 onEventDrop={(eventId, updates, eventType = 'appointment') => {
+                  // Si el botón de ayuda no está habilitado, actualizar directamente sin mostrar la modal
+                  if (!supportAgentEnabled) {
+                    logger.info("[CalendarView] Botón de ayuda deshabilitado, actualizando directamente:", { eventId, eventType, updates });
+                    handleDirectUpdate(eventId, updates, eventType || 'appointment');
+                    return;
+                  }
+                  
                   // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
                   logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
                   setNotificationDialog({
