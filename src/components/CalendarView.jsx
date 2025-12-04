@@ -2013,6 +2013,59 @@ export default function CalendarView() {
                     return;
                   }
                   
+                  // Verificar estado de notificaciones
+                  const notificationStatus = result?.notificationStatus;
+                  if (notificationStatus) {
+                    const whatsAppStatus = notificationStatus.whatsApp;
+                    const emailStatus = notificationStatus.email;
+                    
+                    // Verificar si hubo errores en las notificaciones
+                    if (whatsAppStatus?.requested && !whatsAppStatus?.sent && whatsAppStatus?.error) {
+                      toast.error(`⚠️ ${isClassSession ? 'Clase' : 'Turno'} actualizado, pero la notificación WhatsApp no se pudo enviar: ${whatsAppStatus.error}`);
+                    } else if (emailStatus?.requested && !emailStatus?.sent && emailStatus?.error) {
+                      toast.warning(`⚠️ ${isClassSession ? 'Clase' : 'Turno'} actualizado, pero la notificación Email no se pudo enviar: ${emailStatus.error}`);
+                    } else if (whatsAppStatus?.requested && whatsAppStatus?.sent) {
+                      toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación WhatsApp enviada`);
+                    } else if (emailStatus?.requested && emailStatus?.sent) {
+                      toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación Email enviada`);
+                    } else if (whatsAppStatus?.requested || emailStatus?.requested) {
+                      // Para clases, puede haber múltiples alumnos
+                      if (isClassSession) {
+                        const waSent = whatsAppStatus?.sent || 0;
+                        const waFailed = whatsAppStatus?.failed || 0;
+                        const emailSent = emailStatus?.sent || 0;
+                        const emailFailed = emailStatus?.failed || 0;
+                        
+                        let message = `${isClassSession ? 'Clase' : 'Turno'} actualizado. `;
+                        if (waSent > 0 || emailSent > 0) {
+                          message += `Notificaciones enviadas: `;
+                          if (waSent > 0) message += `${waSent} WhatsApp`;
+                          if (waSent > 0 && emailSent > 0) message += `, `;
+                          if (emailSent > 0) message += `${emailSent} Email`;
+                        }
+                        if (waFailed > 0 || emailFailed > 0) {
+                          message += `. Fallos: `;
+                          if (waFailed > 0) message += `${waFailed} WhatsApp`;
+                          if (waFailed > 0 && emailFailed > 0) message += `, `;
+                          if (emailFailed > 0) message += `${emailFailed} Email`;
+                        }
+                        
+                        if (waFailed > 0 || emailFailed > 0) {
+                          toast.warning(message);
+                        } else {
+                          toast.success(message);
+                        }
+                      } else {
+                        toast.warning(`${isClassSession ? 'Clase' : 'Turno'} actualizado, pero las notificaciones no se pudieron enviar`);
+                      }
+                    } else {
+                      toast.success(isClassSession ? "Clase actualizada" : "Turno actualizado");
+                    }
+                  } else {
+                    // Sin notificaciones solicitadas
+                    toast.success(isClassSession ? "Clase actualizada" : "Turno actualizado");
+                  }
+                  
                   // Si el evento cambió de día, actualizar la fecha seleccionada
                   if (updates.starts_at) {
                     const dateStr = typeof updates.starts_at === 'string' ? updates.starts_at.replace(' ', 'T') : updates.starts_at.toISOString();
@@ -2036,14 +2089,6 @@ export default function CalendarView() {
                       console.error("Error al sincronizar eventos:", err);
                     });
                   }, 500);
-                  
-                  if (notifyWhatsApp) {
-                    toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación WhatsApp enviada`);
-                  } else if (notifyEmail) {
-                    toast.success(`${isClassSession ? 'Clase' : 'Turno'} actualizado y notificación Email enviada`);
-                  } else {
-                    toast.success(isClassSession ? "Clase actualizada" : "Turno actualizado");
-                  }
                   
                   setNotificationDialog(null);
                 } catch (error) {
