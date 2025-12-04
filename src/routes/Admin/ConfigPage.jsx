@@ -1134,14 +1134,28 @@ export default function ConfigPage() {
         currentPhone !== initialPhone
       );
       
-      if (hasWhatsAppChanges) {
+      // IMPORTANTE: Si hay un número de agente configurado, siempre guardar para asegurar que se persista
+      const hasSupportAgentPhone = currentPhone && currentPhone.length > 0;
+      const shouldSaveWhatsApp = hasWhatsAppChanges || (hasSupportAgentPhone && !initialWhatsappConfig);
+      
+      if (shouldSaveWhatsApp) {
         console.log("[handleSaveAll] Guardando configuración de WhatsApp:", {
           currentPhone,
           initialPhone,
           supportAgentEnabled: whatsappConfig.supportAgentEnabled,
-          hasChanges: true,
+          hasChanges: hasWhatsAppChanges,
+          hasSupportAgentPhone,
+          shouldSaveWhatsApp,
         });
         savePromises.push(handleSaveWhatsApp(false)); // false = no mostrar toast individual
+      } else {
+        console.log("[handleSaveAll] No se guardará configuración de WhatsApp:", {
+          currentPhone,
+          initialPhone,
+          hasWhatsAppChanges,
+          hasSupportAgentPhone,
+          hasInitialConfig: !!initialWhatsappConfig,
+        });
       }
 
       await Promise.all(savePromises);
