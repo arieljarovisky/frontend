@@ -805,15 +805,21 @@ export default function ConfigPage() {
       // El phoneNumberId se obtiene automáticamente por el sistema, no se envía manualmente
       // Incluir configuración del agente de soporte (siempre enviar, incluso si está vacío para poder limpiarlo)
       payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled;
-      payload.supportAgentPhone = whatsappConfig.supportAgentPhone ? whatsappConfig.supportAgentPhone.trim() : "";
+      // Asegurarse de que el número se envíe correctamente (trim y validar)
+      const phoneToSend = whatsappConfig.supportAgentPhone 
+        ? String(whatsappConfig.supportAgentPhone).trim() 
+        : "";
+      payload.supportAgentPhone = phoneToSend;
       
       logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
       logger.log("[WhatsApp Config] Payload completo:", JSON.stringify(payload, null, 2));
       logger.log("[WhatsApp Config] Valores de agente:", {
         supportAgentEnabled: payload.supportAgentEnabled,
         supportAgentPhone: payload.supportAgentPhone,
+        supportAgentPhoneOriginal: whatsappConfig.supportAgentPhone,
         tipo: typeof payload.supportAgentPhone,
         longitud: payload.supportAgentPhone?.length,
+        isEmpty: !payload.supportAgentPhone || payload.supportAgentPhone.length === 0,
       });
       
       const response = await apiClient.saveWhatsAppConfig(payload);
@@ -1098,13 +1104,30 @@ export default function ConfigPage() {
         savePayments(),
       ];
 
-      // Guardar WhatsApp si hay cambios
-      if (initialWhatsappConfig && (
+      // Guardar WhatsApp si hay cambios o si no se ha inicializado
+      // Normalizar valores para comparación (null, undefined, "" se tratan como equivalentes)
+      const normalizePhone = (phone) => {
+        if (!phone) return "";
+        return String(phone).trim();
+      };
+      
+      const currentPhone = normalizePhone(whatsappConfig.supportAgentPhone);
+      const initialPhone = initialWhatsappConfig ? normalizePhone(initialWhatsappConfig.supportAgentPhone) : "";
+      
+      const hasWhatsAppChanges = !initialWhatsappConfig || (
         whatsappConfig.phoneDisplay !== initialWhatsappConfig.phoneDisplay ||
         whatsappConfig.phoneNumberId !== initialWhatsappConfig.phoneNumberId ||
         whatsappConfig.supportAgentEnabled !== initialWhatsappConfig.supportAgentEnabled ||
-        whatsappConfig.supportAgentPhone !== initialWhatsappConfig.supportAgentPhone
-      )) {
+        currentPhone !== initialPhone
+      );
+      
+      if (hasWhatsAppChanges) {
+        console.log("[handleSaveAll] Guardando configuración de WhatsApp:", {
+          currentPhone,
+          initialPhone,
+          supportAgentEnabled: whatsappConfig.supportAgentEnabled,
+          hasChanges: true,
+        });
         savePromises.push(handleSaveWhatsApp(false)); // false = no mostrar toast individual
       }
 
