@@ -2019,6 +2019,7 @@ export default function CalendarView() {
               eventType={notificationDialog.eventType}
               event={events.find(e => String(e.id) === String(notificationDialog.eventId))}
               updates={notificationDialog.updates}
+              instructors={instructors}
               onClose={() => {
                 logger.info("[CalendarView] Cerrando diálogo de notificación");
                 setNotificationDialog(null);
@@ -2219,7 +2220,7 @@ export default function CalendarView() {
 }
 
 // Componente de diálogo de notificación
-function NotificationDialog({ open, eventType, onClose, onConfirm, event, updates }) {
+function NotificationDialog({ open, eventType, onClose, onConfirm, event, updates, instructors = [] }) {
   // Debug inicial
   console.log("[NotificationDialog] Componente renderizado:", { open, eventType });
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
@@ -2304,10 +2305,10 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
     if (changes.horarioCambio) {
       changesText.push(`📅 *Horario:* ${changes.oldHorario} → ${changes.newHorario}`);
     }
-    if (changes.profesionalCambio) {
+    if (changes.profesionalCambio && changes.oldProfesional && changes.newProfesional && changes.oldProfesional !== changes.newProfesional) {
       changesText.push(`👤 *Profesional:* ${changes.oldProfesional} → ${changes.newProfesional}`);
     }
-    if (changes.servicioCambio) {
+    if (changes.servicioCambio && changes.oldServicio && changes.newServicio && changes.oldServicio !== changes.newServicio) {
       changesText.push(`💇 *Servicio:* ${changes.oldServicio} → ${changes.newServicio}`);
     }
     
@@ -2338,19 +2339,29 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
     
     // Obtener nombres de profesionales y servicios
     const oldInstructorName = event.extendedProps?.instructor_name || event.extendedProps?.instructorName || 'Nuestro equipo';
-    const newInstructorName = updates.instructor_name || oldInstructorName;
+    // Si cambió el instructor, buscar el nombre del nuevo instructor en la lista
+    let newInstructorName = oldInstructorName;
+    if (instructorChanged && newInstructorId) {
+      const newInstructor = (instructors || []).find(inst => String(inst.id) === String(newInstructorId));
+      newInstructorName = newInstructor?.name || 'Nuestro equipo';
+    } else if (updates.instructor_name) {
+      newInstructorName = updates.instructor_name;
+    }
+    
     const oldServiceName = event.extendedProps?.service_name || event.extendedProps?.serviceName || 'Servicio';
     const newServiceName = updates.service_name || oldServiceName;
     
-    // Construir información de cambios
+    // Construir información de cambios - solo incluir cambios reales (verificar que los nombres sean diferentes)
     const changes = {
       horarioCambio: timeChanged,
       oldHorario: oldStart ? formatDateTime(oldStart) : '',
       newHorario: newStart ? formatDateTime(newStart) : '',
-      profesionalCambio: instructorChanged,
+      // Solo mostrar cambio de profesional si realmente cambió Y los nombres son diferentes
+      profesionalCambio: instructorChanged && oldInstructorName !== newInstructorName,
       oldProfesional: oldInstructorName,
       newProfesional: newInstructorName,
-      servicioCambio: servicioCambio,
+      // Solo mostrar cambio de servicio si realmente cambió Y los nombres son diferentes
+      servicioCambio: servicioCambio && oldServiceName !== newServiceName,
       oldServicio: oldServiceName,
       newServicio: newServiceName,
     };
@@ -2358,19 +2369,23 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
     let templateId = '';
     let baseMessage = '';
     
-    if (instructorChanged && timeChanged) {
+    // Solo seleccionar plantilla si realmente cambió algo
+    const realmenteCambioProfesional = instructorChanged && oldInstructorName !== newInstructorName;
+    const realmenteCambioHorario = timeChanged;
+    
+    if (realmenteCambioProfesional && realmenteCambioHorario) {
       const template = templates.find(t => t.id === 'reprogramar_profesional_no_disponible');
       if (template) {
         templateId = 'reprogramar_profesional_no_disponible';
         baseMessage = template.message;
       }
-    } else if (instructorChanged) {
+    } else if (realmenteCambioProfesional) {
       const template = templates.find(t => t.id === 'cambiar_profesional');
       if (template) {
         templateId = 'cambiar_profesional';
         baseMessage = template.message;
       }
-    } else if (timeChanged) {
+    } else if (realmenteCambioHorario) {
       const template = templates.find(t => t.id === 'reprogramar_horario');
       if (template) {
         templateId = 'reprogramar_horario';
@@ -2383,7 +2398,7 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
       const messageWithChanges = buildMessageWithChanges(baseMessage, changes);
       setCustomMessage(messageWithChanges);
     }
-  }, [updates, event]);
+  }, [updates, event, instructors]);
 
   // Actualizar mensaje cuando se selecciona una plantilla, manteniendo los cambios detectados
   useEffect(() => {
@@ -2415,19 +2430,29 @@ function NotificationDialog({ open, eventType, onClose, onConfirm, event, update
     
     // Obtener nombres
     const oldInstructorName = event.extendedProps?.instructor_name || event.extendedProps?.instructorName || 'Nuestro equipo';
-    const newInstructorName = updates.instructor_name || oldInstructorName;
+    // Si cambió el instructor, buscar el nombre del nuevo instructor en la lista
+    let newInstructorName = oldInstructorName;
+    if (instructorChanged && newInstructorId) {
+      const newInstructor = (instructors || []).find(inst => String(inst.id) === String(newInstructorId));
+      newInstructorName = newInstructor?.name || 'Nuestro equipo';
+    } else if (updates.instructor_name) {
+      newInstructorName = updates.instructor_name;
+    }
+    
     const oldServiceName = event.extendedProps?.service_name || event.extendedProps?.serviceName || 'Servicio';
     const newServiceName = updates.service_name || oldServiceName;
     
-    // Construir información de cambios
+    // Construir información de cambios - solo incluir cambios reales (verificar que los nombres sean diferentes)
     const changes = {
       horarioCambio: timeChanged,
       oldHorario: oldStart ? formatDateTime(oldStart) : '',
       newHorario: newStart ? formatDateTime(newStart) : '',
-      profesionalCambio: instructorChanged,
+      // Solo mostrar cambio de profesional si realmente cambió Y los nombres son diferentes
+      profesionalCambio: instructorChanged && oldInstructorName !== newInstructorName,
       oldProfesional: oldInstructorName,
       newProfesional: newInstructorName,
-      servicioCambio: servicioCambio,
+      // Solo mostrar cambio de servicio si realmente cambió Y los nombres son diferentes
+      servicioCambio: servicioCambio && oldServiceName !== newServiceName,
       oldServicio: oldServiceName,
       newServicio: newServiceName,
     };
