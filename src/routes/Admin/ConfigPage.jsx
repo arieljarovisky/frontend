@@ -804,12 +804,25 @@ export default function ConfigPage() {
       const payload = { phoneDisplay };
       // El phoneNumberId se obtiene automáticamente por el sistema, no se envía manualmente
       // Incluir configuración del agente de soporte (siempre enviar, incluso si está vacío para poder limpiarlo)
-      payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled;
+      payload.supportAgentEnabled = whatsappConfig.supportAgentEnabled ?? false;
       // Asegurarse de que el número se envíe correctamente (trim y validar)
+      // IMPORTANTE: Siempre enviar supportAgentPhone, incluso si está vacío, para que el backend pueda actualizarlo
       const phoneToSend = whatsappConfig.supportAgentPhone 
         ? String(whatsappConfig.supportAgentPhone).trim() 
         : "";
       payload.supportAgentPhone = phoneToSend;
+      
+      // Log detallado para debugging
+      logger.log("[WhatsApp Config] Preparando payload:", {
+        phoneDisplay,
+        supportAgentEnabled: payload.supportAgentEnabled,
+        supportAgentPhone: payload.supportAgentPhone,
+        supportAgentPhoneOriginal: whatsappConfig.supportAgentPhone,
+        supportAgentPhoneType: typeof whatsappConfig.supportAgentPhone,
+        phoneToSend,
+        phoneToSendType: typeof phoneToSend,
+        phoneToSendLength: phoneToSend.length,
+      });
       
       logger.log("[WhatsApp Config] Guardando número:", phoneDisplay);
       logger.log("[WhatsApp Config] Payload completo:", JSON.stringify(payload, null, 2));
