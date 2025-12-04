@@ -1943,13 +1943,6 @@ export default function CalendarView() {
                   setModalOpen(true);
                 }}
                 onEventDrop={(eventId, updates, eventType = 'appointment') => {
-                  // Si el botón de ayuda no está habilitado, actualizar directamente sin mostrar la modal
-                  if (!supportAgentEnabled) {
-                    logger.info("[CalendarView] Botón de ayuda deshabilitado, actualizando directamente:", { eventId, eventType, updates });
-                    handleDirectUpdate(eventId, updates, eventType || 'appointment');
-                    return;
-                  }
-                  
                   // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
                   logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
                   setNotificationDialog({
@@ -1979,13 +1972,6 @@ export default function CalendarView() {
                   setModalOpen(true);
                 }}
                 onEventDrop={(eventId, updates, eventType = 'appointment') => {
-                  // Si el botón de ayuda no está habilitado, actualizar directamente sin mostrar la modal
-                  if (!supportAgentEnabled) {
-                    logger.info("[CalendarView] Botón de ayuda deshabilitado, actualizando directamente:", { eventId, eventType, updates });
-                    handleDirectUpdate(eventId, updates, eventType || 'appointment');
-                    return;
-                  }
-                  
                   // Mostrar diálogo ANTES de actualizar - solo actualizar cuando el usuario confirme
                   logger.info("[CalendarView] Mostrando diálogo de confirmación:", { eventId, eventType, updates });
                   setNotificationDialog({
