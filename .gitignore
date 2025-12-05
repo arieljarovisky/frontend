@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+# Archivos de documentación Markdown
+*.md
 
 # Editor directories and files
 .vscode/*
