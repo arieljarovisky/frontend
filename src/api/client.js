@@ -1049,6 +1049,19 @@ apiClient.listMembershipPlans = async function () {
   return data?.data ?? data ?? [];
 };
 
+apiClient.getMyMembership = async function () {
+  try {
+    const { data } = await apiClient.get("/api/memberships/my");
+    return data?.data ?? data ?? null;
+  } catch (error) {
+    // Si no hay suscripción (404), devolver null en lugar de lanzar error
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+};
+
 apiClient.createMembershipPlan = async function (payload = {}) {
   const { data } = await apiClient.post("/api/memberships/plans", payload);
   return data?.data ?? data ?? {};

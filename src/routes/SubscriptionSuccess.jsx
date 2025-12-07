@@ -3,24 +3,80 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Logo from "../components/Logo";
+import { apiClient } from "../api/client";
 
 export default function SubscriptionSuccess() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
   const [countdown, setCountdown] = useState(10);
+  const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [checkingCount, setCheckingCount] = useState(0);
+  const maxChecks = 10; // Intentar verificar hasta 10 veces (10 segundos)
 
   // Verificar el estado del pago desde los query params
   const status = searchParams.get("status");
   const preapprovalId = searchParams.get("preapproval_id");
 
+  // Función para obtener la suscripción del cliente
+  const fetchSubscription = async () => {
+    try {
+      const subscriptionData = await apiClient.getMyMembership();
+      if (subscriptionData) {
+        setSubscription(subscriptionData);
+        setLoading(false);
+        return subscriptionData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error obteniendo suscripción:", error);
+      // Si no hay suscripción, no es un error crítico
+      setLoading(false);
+      return null;
+    }
+  };
+
   useEffect(() => {
     // Si el estado no es autorizado, redirigir a la página de fallo
-    if (status && status !== "authorized" && status !== "approved") {
+    if (status && status !== "authorized" && status !== "approved" && status !== "pending") {
       navigate(`/${tenantSlug || ""}/subscription/failure?status=${status}`);
       return;
     }
 
+    // Verificar la suscripción inmediatamente
+    fetchSubscription();
+
+    // Si el estado es pending, verificar periódicamente hasta que se active
+    // (el webhook puede tardar unos segundos en procesar)
+    if (status === "pending" || !status) {
+      const checkInterval = setInterval(async () => {
+        setCheckingCount((prev) => {
+          if (prev >= maxChecks) {
+            clearInterval(checkInterval);
+            setLoading(false);
+            return prev;
+          }
+          
+          fetchSubscription().then((sub) => {
+            // Si encontramos una suscripción activa, detener las verificaciones
+            if (sub && sub.status === "authorized") {
+              clearInterval(checkInterval);
+              setLoading(false);
+            }
+          });
+          
+          return prev + 1;
+        });
+      }, 1000); // Verificar cada segundo
+
+      return () => clearInterval(checkInterval);
+    } else {
+      setLoading(false);
+    }
+  }, [navigate, tenantSlug, status]);
+
+  useEffect(() => {
     // Redirigir automáticamente después de 10 segundos solo si el pago fue exitoso
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -38,7 +94,7 @@ export default function SubscriptionSuccess() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigate, tenantSlug, status]);
+  }, [navigate, tenantSlug]);
 
   const handleGoToDashboard = () => {
     if (tenantSlug) {
@@ -67,15 +123,61 @@ export default function SubscriptionSuccess() {
             <h1 className="text-3xl font-bold text-foreground mb-3">
               ¡Pago realizado correctamente!
             </h1>
-            <p className="text-lg text-foreground-secondary">
-              Tu suscripción ha sido activada exitosamente.
-            </p>
+            {loading ? (
+              <div className="flex items-center justify-center gap-2 text-foreground-secondary">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <p className="text-lg">Verificando tu suscripción...</p>
+              </div>
+            ) : subscription && subscription.status === "authorized" ? (
+              <div className="space-y-3">
+                <p className="text-lg text-foreground-secondary">
+                  Tu suscripción ha sido activada exitosamente.
+                </p>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-left">
+                  <h3 className="font-semibold text-foreground mb-2">Detalles de tu suscripción:</h3>
+                  <div className="space-y-1 text-sm">
+                    <p className="text-foreground-secondary">
+                      <span className="font-medium">Plan:</span> {subscription.plan_name}
+                    </p>
+                    <p className="text-foreground-secondary">
+                      <span className="font-medium">Estado:</span>{" "}
+                      <span className="text-green-600 dark:text-green-400 font-semibold">Activa</span>
+                    </p>
+                    {subscription.last_payment_at && (
+                      <p className="text-foreground-secondary">
+                        <span className="font-medium">Último pago:</span>{" "}
+                        {new Date(subscription.last_payment_at).toLocaleDateString("es-AR", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric"
+                        })}
+                      </p>
+                    )}
+                    {subscription.next_charge_at && (
+                      <p className="text-foreground-secondary">
+                        <span className="font-medium">Próxima renovación:</span>{" "}
+                        {new Date(subscription.next_charge_at).toLocaleDateString("es-AR", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric"
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-lg text-foreground-secondary">
+                Tu suscripción está siendo procesada. Podés cerrar esta ventana y te notificaremos cuando esté activa.
+              </p>
+            )}
           </div>
 
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <p className="text-sm text-foreground-secondary">
-              Ya podés usar todas las funcionalidades de ARJA ERP. 
-              Serás redirigido al dashboard en {countdown} segundos...
+              {subscription && subscription.status === "authorized" 
+                ? "Ya podés usar todas las funcionalidades de ARJA ERP. Serás redirigido al dashboard en " + countdown + " segundos..."
+                : "Serás redirigido al dashboard en " + countdown + " segundos..."}
             </p>
           </div>
 
