@@ -6,7 +6,16 @@ import { logger } from "../../utils/logger";
 
 const EMPTY_SETTINGS = {
   theme: { primary: "", secondary: "", text: "", background: "" },
-  notifications: { push: true, inApp: true },
+  notifications: {
+    push: true,
+    inApp: true,
+    features: {
+      routines: false,
+      classes: false,
+      qr: false,
+      notifications: false,
+    },
+  },
   pricing: null,
   schedule: null,
   logoUrl: "",
@@ -106,6 +115,12 @@ export default function MobileAppPage() {
           notifications: {
             push: data?.notifications?.push ?? true,
             inApp: data?.notifications?.inApp ?? true,
+            features: {
+              routines: data?.notifications?.features?.routines ?? false,
+              classes: data?.notifications?.features?.classes ?? false,
+              qr: data?.notifications?.features?.qr ?? false,
+              notifications: data?.notifications?.features?.notifications ?? false,
+            },
           },
           pricing: data?.pricing || null,
           schedule: data?.schedule || null,
@@ -147,6 +162,12 @@ export default function MobileAppPage() {
         notifications: {
           push: settings.notifications?.push ?? true,
           inApp: settings.notifications?.inApp ?? true,
+          features: {
+            routines: settings.notifications?.features?.routines ?? false,
+            classes: settings.notifications?.features?.classes ?? false,
+            qr: settings.notifications?.features?.qr ?? false,
+            notifications: settings.notifications?.features?.notifications ?? false,
+          },
         },
         pricing: settings.pricing || null,
         schedule: settings.schedule || null,
@@ -299,39 +320,65 @@ export default function MobileAppPage() {
           </div>
 
           <div className="card p-4 space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">Precios (JSON opcional)</h2>
-            <textarea
-              className="input h-32 font-mono text-xs"
-              placeholder='{"plans":[{"name":"Mensual","price":10000}]}'
-              value={settings.pricing ? JSON.stringify(settings.pricing, null, 2) : ""}
-              onChange={(e) => {
-                try {
-                  const parsed = e.target.value ? JSON.parse(e.target.value) : null;
-                  setSettings((s) => ({ ...s, pricing: parsed }));
-                } catch {
-                  // ignorar parse hasta que sea válido
+            <h2 className="text-lg font-semibold text-foreground">Funcionalidades de la app</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <Checkbox
+                label="Rutinas"
+                checked={settings.notifications?.features?.routines}
+                onChange={(v) =>
+                  setSettings((s) => ({
+                    ...s,
+                    notifications: {
+                      ...s.notifications,
+                      features: { ...s.notifications.features, routines: v },
+                    },
+                  }))
                 }
-              }}
-              disabled={!mobileAppEnabled}
-            />
-          </div>
-
-          <div className="card p-4 space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">Horarios (JSON opcional)</h2>
-            <textarea
-              className="input h-32 font-mono text-xs"
-              placeholder='{"slots":[{"day":"monday","from":"09:00","to":"18:00"}]}'
-              value={settings.schedule ? JSON.stringify(settings.schedule, null, 2) : ""}
-              onChange={(e) => {
-                try {
-                  const parsed = e.target.value ? JSON.parse(e.target.value) : null;
-                  setSettings((s) => ({ ...s, schedule: parsed }));
-                } catch {
-                  // ignorar parse
+                disabled={!mobileAppEnabled}
+              />
+              <Checkbox
+                label="Clases"
+                checked={settings.notifications?.features?.classes}
+                onChange={(v) =>
+                  setSettings((s) => ({
+                    ...s,
+                    notifications: {
+                      ...s.notifications,
+                      features: { ...s.notifications.features, classes: v },
+                    },
+                  }))
                 }
-              }}
-              disabled={!mobileAppEnabled}
-            />
+                disabled={!mobileAppEnabled}
+              />
+              <Checkbox
+                label="QR"
+                checked={settings.notifications?.features?.qr}
+                onChange={(v) =>
+                  setSettings((s) => ({
+                    ...s,
+                    notifications: {
+                      ...s.notifications,
+                      features: { ...s.notifications.features, qr: v },
+                    },
+                  }))
+                }
+                disabled={!mobileAppEnabled}
+              />
+              <Checkbox
+                label="Notificaciones in-app"
+                checked={settings.notifications?.features?.notifications}
+                onChange={(v) =>
+                  setSettings((s) => ({
+                    ...s,
+                    notifications: {
+                      ...s.notifications,
+                      features: { ...s.notifications.features, notifications: v },
+                    },
+                  }))
+                }
+                disabled={!mobileAppEnabled}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
