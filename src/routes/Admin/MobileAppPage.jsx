@@ -65,6 +65,7 @@ export default function MobileAppPage() {
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
   const [message, setMessage] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const mobileAppEnabled = useMemo(() => features?.mobile_app !== false, [features]);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function MobileAppPage() {
         setCustomers(data || pagination?.data || data || []);
       } catch (error) {
         logger.error("❌ [MobileAppPage] Error cargando clientes:", error);
+        setErrorMsg(error?.response?.data?.error || "No se pudieron cargar clientes");
       } finally {
         setLoadingCustomers(false);
       }
@@ -87,6 +89,7 @@ export default function MobileAppPage() {
     const loadSettings = async () => {
       try {
         setLoadingSettings(true);
+        setErrorMsg("");
         const data = await apiClient.getCustomerAppSettings(selectedCustomerId);
         setSettings({
           theme: {
@@ -105,6 +108,14 @@ export default function MobileAppPage() {
         });
       } catch (error) {
         logger.error("❌ [MobileAppPage] Error cargando settings:", error);
+        const status = error?.response?.status;
+        if (status === 403) {
+          setErrorMsg("Tu plan no incluye la app móvil. Necesitás plan Pro o habilitación del super admin.");
+        } else if (status === 404) {
+          setErrorMsg("El cliente no pertenece a este negocio o no existe.");
+        } else {
+          setErrorMsg(error?.response?.data?.error || "No se pudo cargar la configuración.");
+        }
       } finally {
         setLoadingSettings(false);
       }
@@ -120,6 +131,7 @@ export default function MobileAppPage() {
     try {
       setSaving(true);
       setMessage("");
+      setErrorMsg("");
       const payload = {
         theme: {
           primary: settings.theme.primary || undefined,
@@ -139,7 +151,14 @@ export default function MobileAppPage() {
       setMessage("Configuración guardada.");
     } catch (error) {
       logger.error("❌ [MobileAppPage] Error guardando settings:", error);
-      setMessage(error?.response?.data?.error || "No se pudo guardar la configuración.");
+      const status = error?.response?.status;
+      if (status === 403) {
+        setErrorMsg("Tu plan no incluye la app móvil. Necesitás plan Pro o habilitación del super admin.");
+      } else if (status === 404) {
+        setErrorMsg("El cliente no pertenece a este negocio o no existe.");
+      } else {
+        setErrorMsg(error?.response?.data?.error || "No se pudo guardar la configuración.");
+      }
     } finally {
       setSaving(false);
     }
@@ -162,6 +181,11 @@ export default function MobileAppPage() {
             Tu plan no incluye la app móvil. Actualizá al plan Pro para habilitarla.
           </div>
         )}
+        {errorMsg && (
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-900">
+            {errorMsg}
+          </div>
+        )}
       </header>
 
       <div className="card p-4 space-y-4">
@@ -171,7 +195,7 @@ export default function MobileAppPage() {
             className="input"
             value={selectedCustomerId}
             onChange={(e) => setSelectedCustomerId(e.target.value)}
-            disabled={loadingCustomers}
+            disabled={loadingCustomers || !mobileAppEnabled}
           >
             <option value="">Elegí un cliente…</option>
             {customers.map((c) => (
@@ -196,24 +220,28 @@ export default function MobileAppPage() {
                 name="primary"
                 value={settings.theme?.primary}
                 onChange={(v) => setSettings((s) => ({ ...s, theme: { ...s.theme, primary: v } }))}
+                disabled={!mobileAppEnabled}
               />
               <ColorField
                 label="Color secundario"
                 name="secondary"
                 value={settings.theme?.secondary}
                 onChange={(v) => setSettings((s) => ({ ...s, theme: { ...s.theme, secondary: v } }))}
+                disabled={!mobileAppEnabled}
               />
               <ColorField
                 label="Texto"
                 name="text"
                 value={settings.theme?.text}
                 onChange={(v) => setSettings((s) => ({ ...s, theme: { ...s.theme, text: v } }))}
+                disabled={!mobileAppEnabled}
               />
               <ColorField
                 label="Fondo"
                 name="background"
                 value={settings.theme?.background}
                 onChange={(v) => setSettings((s) => ({ ...s, theme: { ...s.theme, background: v } }))}
+                disabled={!mobileAppEnabled}
               />
             </div>
             <TextInput
@@ -221,6 +249,7 @@ export default function MobileAppPage() {
               value={settings.logoUrl}
               onChange={(v) => setSettings((s) => ({ ...s, logoUrl: v }))}
               placeholder="https://tusitio.com/logo.png"
+              disabled={!mobileAppEnabled}
             />
 
             <div className="p-4 border border-border rounded-lg space-y-2" style={{ backgroundColor: background }}>
@@ -256,11 +285,13 @@ export default function MobileAppPage() {
                 label="Push"
                 checked={settings.notifications?.push}
                 onChange={(v) => setSettings((s) => ({ ...s, notifications: { ...s.notifications, push: v } }))}
+                disabled={!mobileAppEnabled}
               />
               <Checkbox
                 label="In-app"
                 checked={settings.notifications?.inApp}
                 onChange={(v) => setSettings((s) => ({ ...s, notifications: { ...s.notifications, inApp: v } }))}
+                disabled={!mobileAppEnabled}
               />
             </div>
           </div>
@@ -279,6 +310,7 @@ export default function MobileAppPage() {
                   // ignorar parse hasta que sea válido
                 }
               }}
+              disabled={!mobileAppEnabled}
             />
           </div>
 
@@ -296,6 +328,7 @@ export default function MobileAppPage() {
                   // ignorar parse
                 }
               }}
+              disabled={!mobileAppEnabled}
             />
           </div>
 
