@@ -73,7 +73,12 @@ export default function MobileAppPage() {
       try {
         setLoadingCustomers(true);
         const { data, pagination } = await apiClient.listCustomers("", undefined, { limit: 50 });
-        setCustomers(data || pagination?.data || data || []);
+        const list = data || pagination?.data || data || [];
+        setCustomers(list);
+        // Autoseleccionar el primer cliente del negocio (sin permitir cambiar)
+        if (list.length > 0) {
+          setSelectedCustomerId(String(list[0].id));
+        }
       } catch (error) {
         logger.error("❌ [MobileAppPage] Error cargando clientes:", error);
         setErrorMsg(error?.response?.data?.error || "No se pudieron cargar clientes");
@@ -188,23 +193,20 @@ export default function MobileAppPage() {
         )}
       </header>
 
-      <div className="card p-4 space-y-4">
-        <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span className="text-foreground-secondary">Seleccioná cliente</span>
-          <select
-            className="input"
-            value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-            disabled={loadingCustomers || !mobileAppEnabled}
-          >
-            <option value="">Elegí un cliente…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name || c.full_name || c.phone || `Cliente ${c.id}`}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="card p-4 space-y-2">
+        <p className="text-sm text-foreground">
+          Configurando la app del negocio actual.
+        </p>
+        {selectedCustomerId && (
+          <p className="text-xs text-foreground-secondary">
+            Cliente base usado para guardar la configuración:{" "}
+            <strong>
+              {customers.find((c) => String(c.id) === String(selectedCustomerId))?.name ||
+                customers.find((c) => String(c.id) === String(selectedCustomerId))?.full_name ||
+                `ID ${selectedCustomerId}`}
+            </strong>
+          </p>
+        )}
         {loadingSettings && selectedCustomerId ? (
           <div className="text-sm text-foreground-secondary">Cargando configuración…</div>
         ) : null}
