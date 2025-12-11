@@ -32,6 +32,7 @@ import {
   BookOpen,
   ShoppingCart,
   PlugZap,
+  Smartphone,
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -303,6 +304,14 @@ export default function AppLayout() {
       active: pathname.startsWith(`${base}/admin/integraciones`),
       adminOnly: true,
       featureKey: "ecommerce_integrations",
+    },
+    {
+      to: `${base}/admin/mobile-app`,
+      label: "App móvil",
+      icon: Smartphone,
+      active: pathname.startsWith(`${base}/admin/mobile-app`),
+      adminOnly: true,
+      featureKey: "mobile_app",
     },
     { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
     { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },

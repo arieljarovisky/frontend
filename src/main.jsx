@@ -76,6 +76,7 @@ import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
 import FeatureRequestPage from "./routes/FeatureRequestPage.jsx";
 import TwoFactorAuthPage from "./routes/TwoFactorAuthPage.jsx";
 import GoogleOAuthCallback from "./routes/GoogleOAuthCallback.jsx";
+import MobileAppPage from "./routes/Admin/MobileAppPage.jsx";
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -196,6 +197,16 @@ const router = createBrowserRouter([
           <PrivateRoute>
             <FeatureGate featureKey="stock">
               <ProductsPage />
+            </FeatureGate>
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "admin/mobile-app",
+        element: (
+          <PrivateRoute roles={["admin"]}>
+            <FeatureGate featureKey="mobile_app">
+              <MobileAppPage />
             </FeatureGate>
           </PrivateRoute>
         ),

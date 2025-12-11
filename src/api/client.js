@@ -842,6 +842,21 @@ apiClient.customerDetail = async function (customerId, signal) {
   return data?.data || data || null;
 };
 
+// =========================
+//   MOBILE APP SETTINGS
+// =========================
+apiClient.getCustomerAppSettings = async function (customerId) {
+  if (!customerId) throw new Error("customerId es requerido");
+  const { data } = await apiClient.get(`/api/customers/${customerId}/app-settings`);
+  return data?.data ?? data ?? null;
+};
+
+apiClient.updateCustomerAppSettings = async function (customerId, payload) {
+  if (!customerId) throw new Error("customerId es requerido");
+  const { data } = await apiClient.put(`/api/customers/${customerId}/app-settings`, payload);
+  return data?.data ?? data ?? null;
+};
+
 apiClient.updateCustomer = async function (customerId, payload) {
   if (!customerId) throw new Error("customerId es requerido");
   const { data } = await apiClient.put(`/api/customers/${customerId}`, payload);
