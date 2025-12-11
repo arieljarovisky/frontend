@@ -10,13 +10,14 @@ import {
 } from "lucide-react";
 import { apiClient } from "../../api/client.js";
 
-const FEATURE_KEYS = ["appointments", "stock", "invoicing", "classes", "multiBranch"];
+const FEATURE_KEYS = ["appointments", "stock", "invoicing", "classes", "multiBranch", "mobile_app"];
 const FEATURE_LABELS = {
   appointments: "Turnos",
   stock: "Gestión de stock",
   invoicing: "Facturación",
   classes: "Clases grupales",
   multiBranch: "Operación multi-sucursal",
+  mobile_app: "App móvil",
 };
 
 const BASE_FEATURE_DEFAULTS = {
@@ -25,6 +26,7 @@ const BASE_FEATURE_DEFAULTS = {
   invoicing: false,
   classes: false,
   multiBranch: false,
+  mobile_app: false,
 };
 
 function formatDateTimeForInput(value) {

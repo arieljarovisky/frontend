@@ -1292,6 +1292,12 @@ apiClient.superAdmin = {
     return data;
   },
 
+  async updateTenantFeatures(id, payload) {
+    if (!id) throw new Error("tenantId es requerido");
+    const { data } = await apiClient.patch(`/api/super-admin/tenants/${id}/features`, payload);
+    return data;
+  },
+
   async getTenantWhatsApp(id) {
     if (!id) throw new Error("tenantId es requerido");
     const { data } = await apiClient.get(`/api/super-admin/tenants/${id}/whatsapp`);
