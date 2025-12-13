@@ -82,13 +82,27 @@ export default function AccountingPage() {
   const closures = closuresData?.data || [];
   const invoices = invoicesData?.data || [];
 
+  // Función auxiliar para validar y normalizar fechas
+  const normalizeDate = (dateValue) => {
+    if (!dateValue) return new Date().toISOString();
+    const date = new Date(dateValue);
+    return isNaN(date.getTime()) ? new Date().toISOString() : dateValue;
+  };
+
+  // Función auxiliar para obtener timestamp válido para ordenamiento
+  const getDateTimestamp = (dateValue) => {
+    if (!dateValue) return 0;
+    const date = new Date(dateValue);
+    return isNaN(date.getTime()) ? 0 : date.getTime();
+  };
+
   // Combinar todos los registros
   const allRecords = [
     ...deposits.map(d => ({
       id: `deposit-${d.id}`,
       type: "deposit",
       typeLabel: "Seña",
-      date: d.created_at || d.createdAt,
+      date: normalizeDate(d.created_at || d.createdAt),
       amount: parseFloat(d.deposit_decimal || d.amount || 0),
       customer: d.customer_name || d.customer?.name || "Sin cliente",
       description: `Seña para turno ${d.appointment_id || ""}`,
@@ -104,7 +118,7 @@ export default function AccountingPage() {
           id: `cash-${c.id}-cash`,
           type: "cash",
           typeLabel: "Efectivo",
-          date: c.closure_date || c.created_at,
+          date: normalizeDate(c.closure_date || c.created_at),
           amount: parseFloat(c.cash_total || 0),
           customer: "Caja",
           description: `Cierre de caja - ${c.branch_name || ""}`,
@@ -119,7 +133,7 @@ export default function AccountingPage() {
           id: `cash-${c.id}-card`,
           type: "cash",
           typeLabel: "Tarjeta",
-          date: c.closure_date || c.created_at,
+          date: normalizeDate(c.closure_date || c.created_at),
           amount: parseFloat(c.card_total || 0),
           customer: "Caja",
           description: `Cierre de caja - ${c.branch_name || ""}`,
@@ -135,7 +149,7 @@ export default function AccountingPage() {
       id: `invoice-${i.id}`,
       type: "invoice",
       typeLabel: "Factura",
-      date: i.fecha_emision || i.fecha || i.created_at,
+      date: normalizeDate(i.fecha_emision || i.fecha || i.created_at),
       amount: parseFloat(i.importe_total || i.total || 0),
       customer: i.customer_name || i.customer?.name || i.razon_social || "Consumidor Final",
       description: `Factura ${i.numero_comprobante || i.numero || ""}`,
@@ -144,7 +158,7 @@ export default function AccountingPage() {
       paymentMethod: "Facturación",
       data: i,
     })),
-  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+  ].sort((a, b) => getDateTimestamp(b.date) - getDateTimestamp(a.date));
 
   // Filtrar registros
   const filteredRecords = allRecords.filter(record => {
@@ -369,10 +383,17 @@ export default function AccountingPage() {
                   </td>
                 </tr>
               ) : (
-                paginatedRecords.map((record) => (
+                paginatedRecords.map((record) => {
+                  // Validar fecha antes de formatear
+                  const recordDate = record.date ? new Date(record.date) : new Date();
+                  const isValidDate = !isNaN(recordDate.getTime());
+                  
+                  return (
                   <tr key={record.id} className="border-b border-border hover:bg-background-secondary">
                     <td className="p-4 text-sm text-foreground">
-                      {format(new Date(record.date), "dd/MM/yyyy HH:mm", { locale: es })}
+                      {isValidDate 
+                        ? format(recordDate, "dd/MM/yyyy HH:mm", { locale: es })
+                        : "Fecha inválida"}
                     </td>
                     <td className="p-4">
                       <span className={`badge ${
@@ -412,7 +433,8 @@ export default function AccountingPage() {
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
