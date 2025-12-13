@@ -2,9 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../api/client";
 import { useApp } from "../../context/UseApp";
-import { useAuth } from "../../context/AuthContext";
 import { logger } from "../../utils/logger";
-import { toast } from "sonner";
 
 const EMPTY_SETTINGS = {
   theme: { primary: "", secondary: "", text: "", background: "" },
@@ -69,7 +67,6 @@ function Checkbox({ label, checked, onChange }) {
 
 export default function MobileAppPage() {
   const { features } = useApp();
-  const { tenant } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -78,8 +75,6 @@ export default function MobileAppPage() {
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
   const [message, setMessage] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [tenantCode, setTenantCode] = useState("");
-  const [savingTenantCode, setSavingTenantCode] = useState(false);
   const mobileAppEnabled = useMemo(() => features?.mobile_app !== false, [features]);
 
   useEffect(() => {
@@ -102,13 +97,6 @@ export default function MobileAppPage() {
     };
     load();
   }, []);
-
-  // Cargar el código del negocio
-  useEffect(() => {
-    if (tenant?.subdomain) {
-      setTenantCode(tenant.subdomain);
-    }
-  }, [tenant]);
 
   useEffect(() => {
     if (!selectedCustomerId) return;
@@ -225,64 +213,6 @@ export default function MobileAppPage() {
           </div>
         )}
       </header>
-
-      {/* Código del negocio */}
-      <div className="card p-4 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Código del negocio</h2>
-        <p className="text-sm text-foreground-secondary">
-          Este código se usa para acceder a tu negocio desde la app móvil. Solo letras, números y guiones.
-        </p>
-        <div className="flex gap-2">
-          <TextInput
-            label=""
-            value={tenantCode}
-            onChange={(value) => {
-              // Solo permitir letras, números y guiones
-              const normalized = value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
-              setTenantCode(normalized);
-            }}
-            placeholder="codigo-negocio"
-          />
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={async () => {
-                if (!tenantCode.trim()) {
-                  toast.error("El código del negocio no puede estar vacío");
-                  return;
-                }
-                if (tenantCode === (tenant?.subdomain || "")) {
-                  toast.info("El código no ha cambiado");
-                  return;
-                }
-                setSavingTenantCode(true);
-                try {
-                  await apiClient.put("/api/tenant/subdomain", { subdomain: tenantCode.trim() });
-                  toast.success("Código del negocio actualizado correctamente");
-                  // Recargar la página para actualizar el tenant en el contexto
-                  window.location.reload();
-                } catch (error) {
-                  logger.error("Error actualizando código del negocio:", error);
-                  const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el código";
-                  toast.error("Error al actualizar el código", {
-                    description: errorMessage,
-                  });
-                  // Restaurar el valor anterior en caso de error
-                  if (tenant?.subdomain) {
-                    setTenantCode(tenant.subdomain);
-                  }
-                } finally {
-                  setSavingTenantCode(false);
-                }
-              }}
-              disabled={savingTenantCode || !mobileAppEnabled}
-              className="btn-primary whitespace-nowrap"
-            >
-              {savingTenantCode ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="card p-4 space-y-2">
         <p className="text-sm text-foreground">

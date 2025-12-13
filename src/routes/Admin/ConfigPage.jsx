@@ -1524,7 +1524,7 @@ export default function ConfigPage() {
     <div className="space-y-6">
       {/* Botón flotante para guardar cambios */}
       {hasUnsavedChanges && (
-        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-top-2">
+        <div className="fixed top-24 right-6 z-40 animate-in slide-in-from-top-2">
           <button
             onClick={handleSaveAll}
             disabled={saving}
@@ -1647,7 +1647,7 @@ export default function ConfigPage() {
                     }
                     setSavingBusinessCode(true);
                     try {
-                      await apiClient.put("/api/tenant/subdomain", { subdomain: businessCode.trim() });
+                      await apiClient.put("/api/config/tenant/subdomain", { subdomain: businessCode.trim() });
                       toast.success("Código del negocio actualizado correctamente");
                       // Recargar la página para actualizar el tenant en el contexto
                       window.location.reload();
