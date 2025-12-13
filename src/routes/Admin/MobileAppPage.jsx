@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../api/client";
 import { useApp } from "../../context/UseApp";
 import { logger } from "../../utils/logger";
+import { toast } from "sonner";
 
 const EMPTY_SETTINGS = {
   theme: { primary: "", secondary: "", text: "", background: "" },
@@ -75,6 +76,9 @@ export default function MobileAppPage() {
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
   const [message, setMessage] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [businessCode, setBusinessCode] = useState("");
+  const [loadingBusinessCode, setLoadingBusinessCode] = useState(false);
+  const [savingBusinessCode, setSavingBusinessCode] = useState(false);
   const mobileAppEnabled = useMemo(() => features?.mobile_app !== false, [features]);
 
   useEffect(() => {
@@ -96,7 +100,43 @@ export default function MobileAppPage() {
       }
     };
     load();
+    loadBusinessCode();
   }, []);
+
+  const loadBusinessCode = async () => {
+    try {
+      setLoadingBusinessCode(true);
+      const response = await apiClient.get("/api/config/tenant/business-code");
+      if (response.data?.ok && response.data?.data?.business_code) {
+        setBusinessCode(response.data.data.business_code);
+      }
+    } catch (error) {
+      logger.error("❌ [MobileAppPage] Error cargando código del negocio:", error);
+      // Si el campo no existe aún, no es un error crítico
+    } finally {
+      setLoadingBusinessCode(false);
+    }
+  };
+
+  const handleSaveBusinessCode = async () => {
+    if (!businessCode.trim()) {
+      toast.error("El código del negocio no puede estar vacío");
+      return;
+    }
+    setSavingBusinessCode(true);
+    try {
+      await apiClient.put("/api/config/tenant/business-code", { business_code: businessCode.trim() });
+      toast.success("Código del negocio actualizado correctamente");
+    } catch (error) {
+      logger.error("❌ [MobileAppPage] Error guardando código del negocio:", error);
+      const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el código";
+      toast.error("Error al actualizar el código", {
+        description: errorMessage,
+      });
+    } finally {
+      setSavingBusinessCode(false);
+    }
+  };
 
   useEffect(() => {
     if (!selectedCustomerId) return;
@@ -213,6 +253,37 @@ export default function MobileAppPage() {
           </div>
         )}
       </header>
+
+      {/* Código del negocio */}
+      <div className="card p-4 space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Código del negocio</h2>
+        <p className="text-sm text-foreground-secondary">
+          Este código se usa para acceder a tu negocio desde la app móvil. Solo letras, números y guiones.
+        </p>
+        <div className="flex gap-2">
+          <TextInput
+            label=""
+            value={businessCode}
+            onChange={(value) => {
+              // Solo permitir letras, números y guiones
+              const normalized = value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+              setBusinessCode(normalized);
+            }}
+            placeholder="codigo-negocio"
+            disabled={loadingBusinessCode || savingBusinessCode}
+          />
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={handleSaveBusinessCode}
+              disabled={savingBusinessCode || loadingBusinessCode || !mobileAppEnabled}
+              className="btn-primary whitespace-nowrap"
+            >
+              {savingBusinessCode ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="card p-4 space-y-2">
         <p className="text-sm text-foreground">

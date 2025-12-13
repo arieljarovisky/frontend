@@ -169,8 +169,6 @@ export default function ConfigPage() {
     timeFormat: "24h",
   });
   const [generalHydrated, setGeneralHydrated] = useState(false);
-  const [businessCode, setBusinessCode] = useState("");
-  const [savingBusinessCode, setSavingBusinessCode] = useState(false);
 
   // Sincronizar el nombre real del tenant al cargar la página (solo una vez)
   useEffect(() => {
@@ -192,17 +190,6 @@ export default function ConfigPage() {
       setGeneralHydrated(true);
     }
   }, [tenant, tenantInfo, generalHydrated]);
-
-  // Cargar el código del negocio (subdomain) del tenant
-  useEffect(() => {
-    if (tenant?.subdomain) {
-      setBusinessCode(tenant.subdomain);
-    } else if (tenantInfo?.tenant?.subdomain) {
-      setBusinessCode(tenantInfo.tenant.subdomain);
-    } else if (tenantInfo?.subdomain) {
-      setBusinessCode(tenantInfo.subdomain);
-    }
-  }, [tenant, tenantInfo]);
 
 
   const [contact, setContact] = useState({
@@ -1524,7 +1511,12 @@ export default function ConfigPage() {
     <div className="space-y-6">
       {/* Botón flotante para guardar cambios */}
       {hasUnsavedChanges && (
-        <div className="fixed top-24 right-6 z-40 animate-in slide-in-from-top-2">
+        <div 
+          className="fixed right-6 z-40 animate-in slide-in-from-top-2"
+          style={{ 
+            top: floating ? `${topOffset + navHeight + 16}px` : '96px'
+          }}
+        >
           <button
             onClick={handleSaveAll}
             disabled={saving}
@@ -1616,75 +1608,6 @@ export default function ConfigPage() {
                 disabled
                 title="El nombre del negocio no se puede cambiar"
               />
-            </FieldGroup>
-
-            <FieldGroup 
-              label="Código del negocio" 
-              hint="Este código se usa para acceder a tu negocio desde la app móvil. Solo letras, números y guiones."
-            >
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={businessCode}
-                  onChange={(e) => {
-                    // Solo permitir letras, números y guiones
-                    const value = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
-                    setBusinessCode(value);
-                  }}
-                  className="input w-full"
-                  placeholder="codigo-negocio"
-                  disabled={savingBusinessCode}
-                />
-                <Button
-                  onClick={async () => {
-                    if (!businessCode.trim()) {
-                      toast.error("El código del negocio no puede estar vacío");
-                      return;
-                    }
-                    if (businessCode === (tenant?.subdomain || tenantInfo?.tenant?.subdomain || tenantInfo?.subdomain || "")) {
-                      toast.info("El código no ha cambiado");
-                      return;
-                    }
-                    setSavingBusinessCode(true);
-                    try {
-                      await apiClient.put("/api/config/tenant/subdomain", { subdomain: businessCode.trim() });
-                      toast.success("Código del negocio actualizado correctamente");
-                      // Recargar la página para actualizar el tenant en el contexto
-                      window.location.reload();
-                    } catch (error) {
-                      logger.error("Error actualizando código del negocio:", error);
-                      const errorMessage = error?.response?.data?.error || error?.message || "Error al actualizar el código";
-                      toast.error("Error al actualizar el código", {
-                        description: errorMessage,
-                      });
-                      // Restaurar el valor anterior en caso de error
-                      if (tenant?.subdomain) {
-                        setBusinessCode(tenant.subdomain);
-                      } else if (tenantInfo?.tenant?.subdomain) {
-                        setBusinessCode(tenantInfo.tenant.subdomain);
-                      } else if (tenantInfo?.subdomain) {
-                        setBusinessCode(tenantInfo.subdomain);
-                      }
-                    } finally {
-                      setSavingBusinessCode(false);
-                    }
-                  }}
-                  disabled={savingBusinessCode}
-                  className="whitespace-nowrap"
-                >
-                  {savingBusinessCode ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Guardar
-                    </>
-                  )}
-                </Button>
-              </div>
             </FieldGroup>
 
             <FieldGroup label="Zona horaria">
