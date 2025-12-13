@@ -240,7 +240,20 @@ export default function CustomerDetailPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="size-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-base">
+          {customer.picture ? (
+            <img 
+              src={customer.picture} 
+              alt={customer.name || "Cliente"} 
+              className="size-12 rounded-full object-cover border border-border"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div 
+            className={`size-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-base ${customer.picture ? 'hidden' : ''}`}
+          >
             {initials(customer.name || "?")}
           </div>
           <div>
@@ -665,6 +678,170 @@ export default function CustomerDetailPage() {
         </section>
       ) : null}
 
+      {/* Sección de Rutinas */}
+      <section className="space-y-3">
+        <div className="text-sm font-medium flex items-center justify-between">
+          <span>Rutinas de ejercicios</span>
+        </div>
+        <CustomerRoutinesSection customerId={id} />
+      </section>
+
+    </div>
+  );
+}
+
+// Componente para la sección de rutinas
+function CustomerRoutinesSection({ customerId }) {
+  const [assignedRoutines, setAssignedRoutines] = useState([]);
+  const [availableRoutines, setAvailableRoutines] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+
+  useEffect(() => {
+    loadRoutines();
+  }, [customerId]);
+
+  const loadRoutines = async () => {
+    try {
+      setLoading(true);
+      const [assigned, available] = await Promise.all([
+        apiClient.getCustomerRoutines(customerId),
+        apiClient.getAvailableRoutines(),
+      ]);
+      setAssignedRoutines(Array.isArray(assigned) ? assigned : []);
+      setAvailableRoutines(Array.isArray(available) ? available : []);
+    } catch (error) {
+      console.error("Error cargando rutinas:", error);
+      toast.error("Error al cargar las rutinas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignRoutine = async (routineId) => {
+    try {
+      setAssigning(true);
+      await apiClient.assignRoutineToCustomer(routineId, customerId);
+      toast.success("Rutina asignada correctamente");
+      setShowAssignModal(false);
+      await loadRoutines();
+    } catch (error) {
+      console.error("Error asignando rutina:", error);
+      toast.error(error?.response?.data?.error || "Error al asignar la rutina");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const unassignedRoutines = availableRoutines.filter(
+    (r) => !assignedRoutines.some((ar) => ar.id === r.id)
+  );
+
+  if (loading) {
+    return (
+      <div className="card p-5">
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-5 space-y-4">
+      {/* Rutinas asignadas */}
+      <div>
+        <div className="text-xs font-medium text-foreground-secondary uppercase tracking-wide mb-3">
+          Rutinas asignadas ({assignedRoutines.length})
+        </div>
+        {assignedRoutines.length > 0 ? (
+          <div className="space-y-2">
+            {assignedRoutines.map((routine) => (
+              <div
+                key={routine.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border bg-background-secondary/40"
+              >
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-foreground">{routine.name}</div>
+                  {routine.description && (
+                    <div className="text-xs text-foreground-muted mt-1">{routine.description}</div>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-foreground-secondary">
+                    {routine.duration_minutes && (
+                      <span>⏱️ {routine.duration_minutes} min</span>
+                    )}
+                    {routine.difficulty && (
+                      <span>💪 {routine.difficulty}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-foreground-muted py-4 text-center">
+            No hay rutinas asignadas a este cliente
+          </div>
+        )}
+      </div>
+
+      {/* Botón para asignar rutinas */}
+      <div className="flex items-center justify-between pt-3 border-t border-border">
+        <div className="text-xs text-foreground-muted">
+          {unassignedRoutines.length > 0
+            ? `${unassignedRoutines.length} rutina${unassignedRoutines.length !== 1 ? "s" : ""} disponible${unassignedRoutines.length !== 1 ? "s" : ""}`
+            : "No hay rutinas disponibles para asignar"}
+        </div>
+        {unassignedRoutines.length > 0 && (
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
+          >
+            Asignar rutina
+          </button>
+        )}
+      </div>
+
+      {/* Modal para asignar rutinas */}
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAssignModal(false)}>
+          <div className="bg-background rounded-lg border border-border p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Asignar rutina</h3>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="text-foreground-muted hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {unassignedRoutines.map((routine) => (
+                <button
+                  key={routine.id}
+                  onClick={() => handleAssignRoutine(routine.id)}
+                  disabled={assigning}
+                  className="w-full text-left p-3 rounded-lg border border-border bg-background-secondary/40 hover:bg-background-secondary transition-colors disabled:opacity-50"
+                >
+                  <div className="text-sm font-semibold text-foreground">{routine.name}</div>
+                  {routine.description && (
+                    <div className="text-xs text-foreground-muted mt-1">{routine.description}</div>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-foreground-secondary">
+                    {routine.duration_minutes && (
+                      <span>⏱️ {routine.duration_minutes} min</span>
+                    )}
+                    {routine.difficulty && (
+                      <span>💪 {routine.difficulty}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

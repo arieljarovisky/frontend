@@ -864,6 +864,25 @@ apiClient.updateCustomer = async function (customerId, payload) {
 };
 
 /* =========================
+   WORKOUT ROUTINES API
+========================= */
+
+apiClient.getAvailableRoutines = async function () {
+  const { data } = await apiClient.get("/api/workout-routines/available");
+  return data?.data || data || [];
+};
+
+apiClient.getCustomerRoutines = async function (customerId) {
+  const { data } = await apiClient.get(`/api/workout-routines/customer/${customerId}`);
+  return data?.data || data || [];
+};
+
+apiClient.assignRoutineToCustomer = async function (routineId, customerId) {
+  const { data } = await apiClient.put(`/api/workout-routines/${routineId}/assign`, { customer_id: customerId });
+  return data;
+};
+
+/* =========================
    CALENDAR API
 ========================= */
 
