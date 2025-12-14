@@ -409,6 +409,15 @@ export default function WorkoutRoutinesPage() {
 
                     return filteredCustomers.map((customer) => {
                       const isAssigned = selectedRoutine.assigned_to_customer_id === customer.id;
+                      const initials = customer.name
+                        ? customer.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)
+                        : "??";
+                      
                       return (
                         <button
                           key={customer.id}
@@ -420,16 +429,40 @@ export default function WorkoutRoutinesPage() {
                               : "border-border bg-background-secondary/40 hover:bg-background-secondary"
                           } disabled:opacity-50`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-foreground truncate">
-                                {customer.name || "(Sin nombre)"}
-                              </div>
-                              {customer.phone && (
-                                <div className="text-xs text-foreground-muted mt-1 truncate">
-                                  {customer.phone}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {/* Foto del cliente */}
+                              <div className="relative flex-shrink-0">
+                                {customer.picture ? (
+                                  <img
+                                    src={customer.picture}
+                                    alt={customer.name || "Cliente"}
+                                    className="w-10 h-10 rounded-full object-cover border border-border"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div
+                                  className={`w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-semibold text-primary ${
+                                    customer.picture ? 'hidden' : 'flex'
+                                  }`}
+                                >
+                                  {initials}
                                 </div>
-                              )}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold text-foreground truncate">
+                                  {customer.name || "(Sin nombre)"}
+                                </div>
+                                {customer.phone && (
+                                  <div className="text-xs text-foreground-muted mt-1 truncate">
+                                    {customer.phone}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             {isAssigned && (
                               <span className="text-xs font-medium text-primary ml-2 flex-shrink-0">
