@@ -902,6 +902,32 @@ apiClient.updateWorkoutRoutine = async function (routineId, params) {
   return data;
 };
 
+apiClient.uploadWorkoutVideo = async function (file) {
+  const formData = new FormData();
+  formData.append('video', file);
+  const { data } = await apiClient.post("/api/workout-routines/upload/video", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    // Axios necesita que no establezcamos Content-Type manualmente para FormData
+    transformRequest: [(data) => data],
+  });
+  return data;
+};
+
+apiClient.uploadWorkoutImage = async function (file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  const { data } = await apiClient.post("/api/workout-routines/upload/image", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    // Axios necesita que no establezcamos Content-Type manualmente para FormData
+    transformRequest: [(data) => data],
+  });
+  return data;
+};
+
 apiClient.getBodyParts = async function () {
   const { data } = await apiClient.get("/api/workout-routines/body-parts");
   return data?.data || data || [];
