@@ -143,17 +143,9 @@ export default function CustomersPage() {
                 {planLabel ? (
                     <div className="text-xs font-medium text-foreground truncate w-full text-right">{planLabel}</div>
                 ) : null}
-                {(amountLabel || row?.primary_last_payment_at || row?.primary_next_charge_at) ? (
-                    <div className="text-[11px] leading-tight text-foreground-muted space-y-0.5 w-full">
-                        {amountLabel ? <div className="truncate text-right">{amountLabel}</div> : null}
-                        <div className="truncate text-right">
-                            Último pago:{" "}
-                            {row?.primary_last_payment_at ? formatDateTime(row.primary_last_payment_at) : "—"}
-                        </div>
-                        <div className="truncate text-right">
-                            Próximo:{" "}
-                            {row?.primary_next_charge_at ? formatDateTime(row.primary_next_charge_at) : "—"}
-                        </div>
+                {amountLabel ? (
+                    <div className="text-xs text-foreground-muted truncate w-full text-right">
+                        {amountLabel}
                     </div>
                 ) : null}
             </div>
