@@ -240,21 +240,35 @@ export default function CustomerDetailPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {customer.picture ? (
-            <img 
-              src={customer.picture} 
-              alt={customer.name || "Cliente"} 
-              className="size-12 rounded-full object-cover border border-border"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
+          <div className="relative size-12">
+            {customer.picture ? (
+              <img 
+                src={customer.picture} 
+                alt={customer.name || "Cliente"} 
+                className="size-12 rounded-full object-cover border border-border"
+                style={{ display: 'block' }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const fallback = e.target.nextElementSibling;
+                  if (fallback) {
+                    fallback.style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
+            <div 
+              className="size-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-base"
+              style={{ 
+                display: customer.picture ? 'none' : 'flex',
+                position: customer.picture ? 'absolute' : 'static',
+                top: customer.picture ? 0 : 'auto',
+                left: customer.picture ? 0 : 'auto',
+                right: customer.picture ? 0 : 'auto',
+                bottom: customer.picture ? 0 : 'auto'
               }}
-            />
-          ) : null}
-          <div 
-            className={`size-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-base ${customer.picture ? 'hidden' : ''}`}
-          >
-            {initials(customer.name || "?")}
+            >
+              {initials(customer.name || "?")}
+            </div>
           </div>
           <div>
             <div className="text-lg font-semibold">{customer.name || "(Sin nombre)"}</div>
@@ -570,13 +584,13 @@ export default function CustomerDetailPage() {
             )}
           </div>
           <div className="rounded-xl border border-border bg-background-secondary/30 p-5 space-y-4">
-            {subscriptionSummary?.hasSubscription || activeSubscription ? (
+            {subscriptionSummary?.hasActiveSubscription ? (
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <div className="text-xs uppercase text-foreground-muted tracking-wide">Estado principal</div>
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${primaryMembershipTone.tone}`}>
-                      {subscriptionSummary?.hasSubscription ? primaryMembershipTone.label : "Sin suscripción"}
+                      {primaryMembershipTone.label}
                     </span>
                     {activeSubscription && (activeSubscription.status === "authorized" || activeSubscription.status === "pending") && (
                       <button
@@ -594,16 +608,18 @@ export default function CustomerDetailPage() {
                 <div className="space-y-1 text-sm text-foreground">
                   <div className="text-xs uppercase text-foreground-muted tracking-wide">Plan actual</div>
                   <div className="font-semibold">
-                    {subscriptionSummary?.plan_name || subscriptions[0]?.plan_name || subscriptions[0]?.reason || "Sin plan asignado"}
+                    {subscriptionSummary?.plan_name || "Sin plan asignado"}
                   </div>
                   <div className="text-xs text-foreground-muted">
                     {subscriptionSummary?.amount_decimal != null
                       ? formatCurrency(subscriptionSummary.amount_decimal, subscriptionSummary.currency)
                       : "Sin monto definido"}
-                    {" • "}
-                    {subscriptionSummary?.plan_billing_day
-                      ? `Vence día ${subscriptionSummary.plan_billing_day}`
-                      : "Vence según fecha de pago"}
+                    {subscriptionSummary?.plan_billing_day && (
+                      <>
+                        {" • "}
+                        {`Vence día ${subscriptionSummary.plan_billing_day}`}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-6 text-sm text-foreground-secondary">

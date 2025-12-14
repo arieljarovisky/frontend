@@ -287,21 +287,35 @@ export default function CustomersPage() {
                                 }}
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    {r.picture ? (
-                                        <img 
-                                            src={r.picture} 
-                                            alt={r.name || "Cliente"} 
-                                            className="size-10 rounded-full object-cover flex-shrink-0 border border-border"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
+                                    <div className="relative size-10 flex-shrink-0">
+                                        {r.picture ? (
+                                            <img 
+                                                src={r.picture} 
+                                                alt={r.name || "Cliente"} 
+                                                className="size-10 rounded-full object-cover border border-border"
+                                                style={{ display: 'block' }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    const fallback = e.target.nextElementSibling;
+                                                    if (fallback) {
+                                                        fallback.style.display = 'flex';
+                                                    }
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div 
+                                            className="size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold group-hover:bg-primary-500/20 transition-colors"
+                                            style={{ 
+                                                display: r.picture ? 'none' : 'flex',
+                                                position: r.picture ? 'absolute' : 'static',
+                                                top: r.picture ? 0 : 'auto',
+                                                left: r.picture ? 0 : 'auto',
+                                                right: r.picture ? 0 : 'auto',
+                                                bottom: r.picture ? 0 : 'auto'
                                             }}
-                                        />
-                                    ) : null}
-                                    <div 
-                                        className={`size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold flex-shrink-0 group-hover:bg-primary-500/20 transition-colors ${r.picture ? 'hidden' : ''}`}
-                                    >
-                                        {initials(r.name || "?")}
+                                        >
+                                            {initials(r.name || "?")}
+                                        </div>
                                     </div>
                                     <div className="min-w-0 flex-1 overflow-hidden">
                                         <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
