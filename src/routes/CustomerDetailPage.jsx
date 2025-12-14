@@ -585,7 +585,7 @@ export default function CustomerDetailPage() {
           </div>
           <div className="rounded-xl border border-border bg-background-secondary/30 p-5 space-y-4">
             {subscriptionSummary?.hasActiveSubscription ? (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <div className="text-xs uppercase text-foreground-muted tracking-wide">Estado principal</div>
                   <div className="flex items-center gap-2">
@@ -620,20 +620,6 @@ export default function CustomerDetailPage() {
                         {`Vence día ${subscriptionSummary.plan_billing_day}`}
                       </>
                     )}
-                  </div>
-                </div>
-                <div className="flex gap-6 text-sm text-foreground-secondary">
-                  <div>
-                    <div className="text-xs uppercase text-foreground-muted tracking-wide">Último pago</div>
-                    <div className="font-medium text-foreground">
-                      {subscriptionSummary?.last_payment_at ? formatDateTime(subscriptionSummary.last_payment_at) : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase text-foreground-muted tracking-wide">Próximo cobro</div>
-                    <div className="font-medium text-foreground">
-                      {subscriptionSummary?.next_charge_at ? formatDateTime(subscriptionSummary.next_charge_at) : "—"}
-                    </div>
                   </div>
                 </div>
               </div>
