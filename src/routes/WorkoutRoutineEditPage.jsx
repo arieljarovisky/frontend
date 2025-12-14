@@ -3,7 +3,7 @@ import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery.js";
 import { toast } from "sonner";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Video, Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, X, Image as ImageIcon } from "lucide-react";
 
 export default function WorkoutRoutineEditPage() {
   const { id, tenantSlug } = useParams();
@@ -14,7 +14,6 @@ export default function WorkoutRoutineEditPage() {
   const [cooldown, setCooldown] = useState([]);
   const [saving, setSaving] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
-  const [uploadingVideo, setUploadingVideo] = useState({ section: null, index: null });
   const [uploadingImage, setUploadingImage] = useState({ section: null, index: null });
 
   const { data, loading, error, refetch } = useQuery(
@@ -287,65 +286,20 @@ export default function WorkoutRoutineEditPage() {
                 <input
                   type="url"
                   value={exercise.video_url || ""}
-                  onChange={(e) => updateExercise(section, index, "video_url", e.target.value)}
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    // Validar que sea YouTube o Vimeo
+                    if (url && !url.includes('youtube.com') && !url.includes('youtu.be') && !url.includes('vimeo.com')) {
+                      toast.error("Solo se permiten enlaces de YouTube o Vimeo");
+                      return;
+                    }
+                    updateExercise(section, index, "video_url", url);
+                  }}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                  placeholder="URL del video (YouTube, etc.) o sube un archivo"
-                  disabled={uploadingVideo.section === section && uploadingVideo.index === index}
+                  placeholder="URL de YouTube o Vimeo (ej: https://www.youtube.com/watch?v=...)"
                 />
-                <div className="flex items-center gap-2">
-                  <label className={`px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer flex items-center gap-2 ${
-                    (uploadingVideo.section === section && uploadingVideo.index === index) ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}>
-                    <input
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      disabled={uploadingVideo.section === section && uploadingVideo.index === index}
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        
-                        // Validar tamaño del archivo (500MB máximo)
-                        const maxSize = 500 * 1024 * 1024; // 500MB
-                        if (file.size > maxSize) {
-                          toast.error(`El archivo es demasiado grande. Tamaño máximo: 500MB`);
-                          e.target.value = '';
-                          return;
-                        }
-                        
-                        setUploadingVideo({ section, index });
-                        try {
-                          const result = await apiClient.uploadWorkoutVideo(file);
-                          if (result?.data?.url) {
-                            updateExercise(section, index, "video_url", result.data.url);
-                            toast.success("Video subido correctamente");
-                          }
-                        } catch (error) {
-                          console.error("Error subiendo video:", error);
-                          if (error?.response?.data?.error?.includes('too large') || error?.response?.data?.error?.includes('File too large')) {
-                            toast.error("El archivo es demasiado grande. Tamaño máximo: 500MB");
-                          } else {
-                            toast.error(error?.response?.data?.error || "Error al subir el video");
-                          }
-                        } finally {
-                          setUploadingVideo({ section: null, index: null });
-                        }
-                        e.target.value = ''; // Reset input
-                      }}
-                    />
-                    {uploadingVideo.section === section && uploadingVideo.index === index ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Cargando video...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span>Subir video</span>
-                      </>
-                    )}
-                  </label>
-                  {exercise.video_url && !(uploadingVideo.section === section && uploadingVideo.index === index) && (
+                {exercise.video_url && (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => updateExercise(section, index, "video_url", "")}
@@ -354,10 +308,10 @@ export default function WorkoutRoutineEditPage() {
                       <X className="w-3 h-3" />
                       Eliminar
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 <p className="text-xs text-foreground-secondary">
-                  Tamaño máximo: 500MB. Formatos: MP4, MOV, AVI, etc.
+                  Solo se permiten enlaces de YouTube o Vimeo
                 </p>
                 {exercise.video_url && (
                   <div className="mt-2">
