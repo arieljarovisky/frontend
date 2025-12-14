@@ -19,6 +19,7 @@ export default function WorkoutRoutinesPage() {
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [bodyParts, setBodyParts] = useState([]);
@@ -81,6 +82,7 @@ export default function WorkoutRoutinesPage() {
   const handleAssignClick = async (routine) => {
     setSelectedRoutine(routine);
     setShowAssignModal(true);
+    setCustomerSearchQuery(""); // Resetear búsqueda
     // Cargar lista de clientes
     setLoadingCustomers(true);
     try {
@@ -348,10 +350,10 @@ export default function WorkoutRoutinesPage() {
           }}
         >
           <div
-            className="bg-background rounded-lg border border-border p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
+            className="bg-background rounded-lg border border-border p-6 max-w-md w-full mx-4 max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-foreground">
                 Asignar rutina: {selectedRoutine.name}
               </h3>
@@ -359,6 +361,7 @@ export default function WorkoutRoutinesPage() {
                 onClick={() => {
                   setShowAssignModal(false);
                   setSelectedRoutine(null);
+                  setCustomerSearchQuery("");
                 }}
                 className="text-foreground-muted hover:text-foreground"
               >
@@ -366,48 +369,96 @@ export default function WorkoutRoutinesPage() {
               </button>
             </div>
 
+            {/* Campo de búsqueda */}
+            <div className="mb-4 flex-shrink-0">
+              <SearchInput
+                value={customerSearchQuery}
+                onChange={setCustomerSearchQuery}
+                placeholder="Buscar cliente por nombre o teléfono..."
+                width="100%"
+              />
+            </div>
+
             {loadingCustomers ? (
-              <div className="py-8 flex items-center justify-center">
+              <div className="py-8 flex items-center justify-center flex-1">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
               </div>
-            ) : customers.length === 0 ? (
-              <div className="text-sm text-foreground-secondary py-8 text-center">
-                No hay clientes disponibles
-              </div>
             ) : (
-              <div className="space-y-2">
-                {customers.map((customer) => {
-                  const isAssigned = selectedRoutine.assigned_to_customer_id === customer.id;
-                  return (
-                    <button
-                      key={customer.id}
-                      onClick={() => handleAssignToCustomer(customer.id)}
-                      disabled={assigning || isAssigned}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        isAssigned
-                          ? "border-primary bg-primary/10 cursor-not-allowed"
-                          : "border-border bg-background-secondary/40 hover:bg-background-secondary"
-                      } disabled:opacity-50`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-semibold text-foreground">
-                            {customer.name || "(Sin nombre)"}
-                          </div>
-                          {customer.phone && (
-                            <div className="text-xs text-foreground-muted mt-1">
-                              {customer.phone}
-                            </div>
-                          )}
+              <>
+                {/* Lista de clientes filtrados */}
+                <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+                  {(() => {
+                    // Filtrar clientes por búsqueda
+                    const filteredCustomers = customers.filter((customer) => {
+                      if (!customerSearchQuery.trim()) return true;
+                      const query = customerSearchQuery.toLowerCase();
+                      const name = (customer.name || "").toLowerCase();
+                      const phone = (customer.phone || "").toLowerCase();
+                      return name.includes(query) || phone.includes(query);
+                    });
+
+                    if (filteredCustomers.length === 0) {
+                      return (
+                        <div className="text-sm text-foreground-secondary py-8 text-center">
+                          {customerSearchQuery
+                            ? "No se encontraron clientes con ese criterio"
+                            : "No hay clientes disponibles"}
                         </div>
-                        {isAssigned && (
-                          <span className="text-xs font-medium text-primary">Asignada</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                      );
+                    }
+
+                    return filteredCustomers.map((customer) => {
+                      const isAssigned = selectedRoutine.assigned_to_customer_id === customer.id;
+                      return (
+                        <button
+                          key={customer.id}
+                          onClick={() => handleAssignToCustomer(customer.id)}
+                          disabled={assigning || isAssigned}
+                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                            isAssigned
+                              ? "border-primary bg-primary/10 cursor-not-allowed"
+                              : "border-border bg-background-secondary/40 hover:bg-background-secondary"
+                          } disabled:opacity-50`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-foreground truncate">
+                                {customer.name || "(Sin nombre)"}
+                              </div>
+                              {customer.phone && (
+                                <div className="text-xs text-foreground-muted mt-1 truncate">
+                                  {customer.phone}
+                                </div>
+                              )}
+                            </div>
+                            {isAssigned && (
+                              <span className="text-xs font-medium text-primary ml-2 flex-shrink-0">
+                                Asignada
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Contador de resultados */}
+                {customerSearchQuery && customers.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border text-xs text-foreground-muted text-center flex-shrink-0">
+                    {(() => {
+                      const filtered = customers.filter((customer) => {
+                        if (!customerSearchQuery.trim()) return true;
+                        const query = customerSearchQuery.toLowerCase();
+                        const name = (customer.name || "").toLowerCase();
+                        const phone = (customer.phone || "").toLowerCase();
+                        return name.includes(query) || phone.includes(query);
+                      });
+                      return `${filtered.length} de ${customers.length} clientes`;
+                    })()}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
