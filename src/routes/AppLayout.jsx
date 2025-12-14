@@ -33,6 +33,7 @@ import {
   ShoppingCart,
   PlugZap,
   Smartphone,
+  Activity,
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -253,92 +254,6 @@ export default function AppLayout() {
     );
   }
 
-  const navItems = [
-    { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
-    { to: `${base}/appointments`, label: navLabels.appointments, icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
-    { to: `${base}/classes`, label: navLabels.classes, icon: GraduationCap, active: pathname.startsWith(`${base}/classes`), featureKey: "classes" },
-    { to: `${base}/customers`, label: navLabels.customers, icon: Users, active: pathname.startsWith(`${base}/customers`) },
-    { to: `${base}/deposits`, label: navLabels.deposits, icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
-    {
-      to: `${base}/stock/products`,
-      label: "Stock",
-      icon: Package,
-      active: pathname.startsWith(`${base}/stock`),
-      module: "stock",
-      featureKey: "stock",
-    },
-    {
-      to: `${base}/invoicing`,
-      label: "Facturación",
-      icon: FileText,
-      active: pathname.startsWith(`${base}/invoicing`),
-      module: "invoicing",
-      featureKey: "invoicing",
-    },
-    {
-      to: `${base}/ecommerce-sales`,
-      label: "Ventas Online",
-      icon: ShoppingCart,
-      active: pathname.startsWith(`${base}/ecommerce-sales`),
-      module: "invoicing",
-      featureKey: "online_sales",
-    },
-    {
-      to: `${base}/cash-register`,
-      label: "Cierre de Caja",
-      icon: Receipt,
-      active: pathname.startsWith(`${base}/cash-register`),
-      adminOnly: true,
-    },
-    {
-      to: `${base}/accounting`,
-      label: "Registro Contable",
-      icon: BookOpen,
-      active: pathname.startsWith(`${base}/accounting`),
-      adminOnly: true,
-    },
-    {
-      to: `${base}/admin/integraciones`,
-      label: "Integraciones",
-      icon: PlugZap,
-      active: pathname.startsWith(`${base}/admin/integraciones`),
-      adminOnly: true,
-      featureKey: "ecommerce_integrations",
-    },
-    {
-      to: `${base}/admin/mobile-app`,
-      label: "App móvil",
-      icon: Smartphone,
-      active: pathname.startsWith(`${base}/admin/mobile-app`),
-      adminOnly: true,
-      featureKey: "mobile_app",
-    },
-    { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
-    { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
-    { to: `${base}/admin/instructores`, label: navLabels.professionals, icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
-    { to: `${base}/admin/branches`, label: "Sucursales", icon: Building2, active: pathname.startsWith(`${base}/admin/branches`), adminOnly: true },
-    { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
-  ];
-
-  const filteredNavItems = navItems.filter(item => {
-    if (item.adminOnly && user?.role !== "admin") return false;
-    
-    if (item.featureKey && featureFlags?.[item.featureKey] === false) {
-      return false;
-    }
-    
-    // Verificar permisos por módulo
-    if (item.module) {
-      const permissions = user?.permissions || {};
-      const modulePerms = permissions[item.module] || [];
-      if (user?.role !== "admin" && modulePerms.length === 0) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-
   return (
     <div className="arja-shell">
       {/* Overlay para mobile */}
@@ -386,13 +301,66 @@ export default function AppLayout() {
 
         {/* Navigation */}
         <nav className="arja-nav">
-          {filteredNavItems.map((item) => (
-            <SidebarNavButton
-              key={item.to}
-              {...item}
-              onClick={() => setSidebarOpen(false)}
-            />
-          ))}
+          {/* Sección Principal */}
+          {filteredMainNav.length > 0 && (
+            <>
+              {filteredMainNav.map((item) => (
+                <SidebarNavButton
+                  key={item.to}
+                  {...item}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Sección Gestión */}
+          {filteredManagementNav.length > 0 && (
+            <>
+              <div className="arja-nav-divider">
+                <span>Gestión</span>
+              </div>
+              {filteredManagementNav.map((item) => (
+                <SidebarNavButton
+                  key={item.to}
+                  {...item}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Sección Administración */}
+          {filteredAdminNav.length > 0 && (
+            <>
+              <div className="arja-nav-divider">
+                <span>Administración</span>
+              </div>
+              {filteredAdminNav.map((item) => (
+                <SidebarNavButton
+                  key={item.to}
+                  {...item}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Sección Configuración */}
+          {filteredConfigNav.length > 0 && (
+            <>
+              <div className="arja-nav-divider">
+                <span>Configuración</span>
+              </div>
+              {filteredConfigNav.map((item) => (
+                <SidebarNavButton
+                  key={item.to}
+                  {...item}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </>
+          )}
         </nav>
 
         {/* User Section */}
