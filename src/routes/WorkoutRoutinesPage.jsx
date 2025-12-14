@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { SearchInput } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { Link, useParams } from "react-router-dom";
-import { Plus, Upload, Trash2 } from "lucide-react";
+import { Plus, Upload, Trash2, Edit, UserPlus, UserCheck } from "lucide-react";
 
 export default function WorkoutRoutinesPage() {
   const { tenantSlug } = useParams();
@@ -293,15 +293,17 @@ export default function WorkoutRoutinesPage() {
                     <div className="flex items-center gap-2">
                       <Link
                         to={`/${tenantSlug}/workout-routines/${routine.id}/edit`}
-                        className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors"
+                        className="p-2 text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors"
+                        title="Editar rutina"
                       >
-                        Editar
+                        <Edit className="w-5 h-5" />
                       </Link>
                       <button
                         onClick={() => handleAssignClick(routine)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
+                        className="p-2 text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
+                        title={assignedCustomer ? "Reasignar rutina" : "Asignar rutina"}
                       >
-                        {assignedCustomer ? "Reasignar" : "Asignar"}
+                        {assignedCustomer ? <UserCheck className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
                       </button>
                       <button
                         onClick={async () => {
@@ -322,10 +324,10 @@ export default function WorkoutRoutinesPage() {
                           }
                         }}
                         disabled={deleting === routine.id}
-                        className="px-4 py-2 text-sm font-medium text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="p-2 text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Eliminar rutina"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        {deleting === routine.id ? "Eliminando..." : "Eliminar"}
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
