@@ -579,7 +579,7 @@ export default function WorkoutRoutinesPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-foreground-secondary mb-4">
-                  Puedes importar rutinas desde un archivo Word (.docx) o JSON. El sistema intentará extraer automáticamente la información de la rutina.
+                  Sube un archivo Word (.docx) con una rutina. El sistema intentará extraer automáticamente la información de la rutina.
                 </p>
                 
                 <div className="mb-4">
@@ -656,99 +656,6 @@ Estiramiento de cuádriceps
                     <p className="text-xs text-foreground-muted mt-2">
                       El sistema detectará automáticamente: nombre, ejercicios, series, repeticiones, descanso y secciones.
                     </p>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-foreground-secondary mb-2">
-                    O sube un archivo JSON con el formato:
-                  </p>
-                  <pre className="bg-background-secondary p-4 rounded-lg text-xs text-foreground-secondary overflow-x-auto mb-4">
-{`[
-  {
-    "name": "Rutina de ejemplo",
-    "description": "Descripción de la rutina",
-    "duration_minutes": 60,
-    "difficulty": "intermedio",
-    "body_parts": ["piernas", "brazos"],
-    "exercises": [
-      {
-        "name": "Sentadillas",
-        "body_part": "piernas",
-        "sets": 3,
-        "reps": "10-12",
-        "rest_seconds": 60,
-        "description": "Descripción del ejercicio",
-        "tips": "Consejos de técnica",
-        "video_url": "",
-        "image_url": ""
-      }
-    ],
-    "warmup": [],
-    "cooldown": []
-  }
-]`}
-                  </pre>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground-secondary mb-2">
-                      Archivo JSON
-                    </label>
-                    <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-
-                    try {
-                      setImporting(true);
-                      const text = await file.text();
-                      const jsonData = JSON.parse(text);
-
-                      // Validar que sea un array
-                      if (!Array.isArray(jsonData)) {
-                        toast.error("El archivo JSON debe contener un array de rutinas");
-                        return;
-                      }
-
-                      if (jsonData.length === 0) {
-                        toast.error("El archivo no contiene rutinas para importar");
-                        return;
-                      }
-
-                      // Importar las rutinas
-                      const result = await apiClient.importWorkoutRoutines(jsonData);
-
-                      if (result?.data) {
-                        const { imported, total, errors } = result.data;
-                        toast.success(
-                          `Se importaron ${imported} de ${total} rutinas${errors ? ` (${errors.length} errores)` : ""}`
-                        );
-                        
-                        if (errors && errors.length > 0) {
-                          console.error("Errores de importación:", errors);
-                          toast.error(`Algunas rutinas no se pudieron importar. Revisa la consola para más detalles.`);
-                        }
-
-                        // Recargar la lista
-                        await refetch();
-                        setShowImportModal(false);
-                      }
-                    } catch (error) {
-                      console.error("Error importando rutinas:", error);
-                      if (error instanceof SyntaxError) {
-                        toast.error("El archivo JSON no es válido. Verifica el formato.");
-                      } else {
-                        toast.error(error?.response?.data?.error || "Error al importar las rutinas");
-                      }
-                    } finally {
-                      setImporting(false);
-                      e.target.value = ''; // Reset input
-                    }
-                  }}
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                      disabled={importing}
-                    />
                   </div>
                 </div>
 
