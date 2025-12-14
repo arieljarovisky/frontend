@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { SearchInput } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { Link, useParams } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 export default function WorkoutRoutinesPage() {
   const { tenantSlug } = useParams();
@@ -12,14 +13,54 @@ export default function WorkoutRoutinesPage() {
   const qDebounced = useDebouncedValue(searchQuery, 300);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [bodyParts, setBodyParts] = useState([]);
+  const [selectedBodyParts, setSelectedBodyParts] = useState([]);
+  const [routineName, setRoutineName] = useState("");
+  const [routineDescription, setRoutineDescription] = useState("");
+  const [difficulty, setDifficulty] = useState("intermedio");
+  const [duration, setDuration] = useState(60);
+  const [assignToCustomerId, setAssignToCustomerId] = useState(null);
 
   const { data: routines, loading, error, refetch } = useQuery(
     (signal) => apiClient.getAvailableRoutines(),
     []
   );
+
+  // Cargar partes del cuerpo
+  useEffect(() => {
+    const loadBodyParts = async () => {
+      try {
+        const data = await apiClient.getBodyParts();
+        setBodyParts(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error cargando partes del cuerpo:", error);
+      }
+    };
+    loadBodyParts();
+  }, []);
+
+  // Cargar clientes cuando se abre el modal de crear
+  useEffect(() => {
+    if (showCreateModal) {
+      const loadCustomers = async () => {
+        setLoadingCustomers(true);
+        try {
+          const customersData = await apiClient.listCustomers("", null, { limit: 500 });
+          setCustomers(Array.isArray(customersData) ? customersData : customersData?.data || []);
+        } catch (error) {
+          console.error("Error cargando clientes:", error);
+        } finally {
+          setLoadingCustomers(false);
+        }
+      };
+      loadCustomers();
+    }
+  }, [showCreateModal]);
 
   const routinesList = Array.isArray(routines) ? routines : [];
 
@@ -81,6 +122,58 @@ export default function WorkoutRoutinesPage() {
     return null;
   };
 
+  const handleCreateRoutine = async () => {
+    if (!routineName.trim()) {
+      toast.error("El nombre de la rutina es requerido");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const params = {
+        name: routineName.trim(),
+        description: routineDescription.trim() || '',
+        duration_minutes: duration,
+        difficulty,
+        body_parts: selectedBodyParts,
+        exercises_data: {
+          exercises: [],
+          warmup: [],
+          cooldown: [],
+        },
+      };
+      
+      if (assignToCustomerId) {
+        params.assigned_to_customer_id = assignToCustomerId;
+      }
+
+      await apiClient.createWorkoutRoutine(params);
+      toast.success("Rutina creada exitosamente");
+      setShowCreateModal(false);
+      // Resetear formulario
+      setRoutineName("");
+      setRoutineDescription("");
+      setSelectedBodyParts([]);
+      setDifficulty("intermedio");
+      setDuration(60);
+      setAssignToCustomerId(null);
+      await refetch();
+    } catch (error) {
+      console.error("Error creando rutina:", error);
+      toast.error(error?.response?.data?.error || "Error al crear la rutina");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggleBodyPart = (bodyPartId) => {
+    setSelectedBodyParts((prev) =>
+      prev.includes(bodyPartId)
+        ? prev.filter((id) => id !== bodyPartId)
+        : [...prev, bodyPartId]
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -91,6 +184,13 @@ export default function WorkoutRoutinesPage() {
             Gestiona y asigna rutinas de ejercicios a tus clientes
           </p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Crear rutina
+        </button>
       </div>
 
       {/* Búsqueda */}
@@ -179,6 +279,12 @@ export default function WorkoutRoutinesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Link
+                        to={`/${tenantSlug}/workout-routines/${routine.id}/edit`}
+                        className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors"
+                      >
+                        Editar
+                      </Link>
                       <button
                         onClick={() => handleAssignClick(routine)}
                         className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
@@ -265,6 +371,182 @@ export default function WorkoutRoutinesPage() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal para crear rutina */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => {
+            setShowCreateModal(false);
+            setRoutineName("");
+            setRoutineDescription("");
+            setSelectedBodyParts([]);
+            setDifficulty("intermedio");
+            setDuration(60);
+            setAssignToCustomerId(null);
+          }}
+        >
+          <div
+            className="bg-background rounded-lg border border-border p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Crear nueva rutina</h3>
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setRoutineName("");
+                  setRoutineDescription("");
+                  setSelectedBodyParts([]);
+                  setDifficulty("intermedio");
+                  setDuration(60);
+                  setAssignToCustomerId(null);
+                }}
+                className="text-foreground-muted hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Nombre de la rutina */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Nombre de la rutina <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={routineName}
+                  onChange={(e) => setRoutineName(e.target.value)}
+                  placeholder="Ej: Rutina de fuerza para principiantes"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                />
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  value={routineDescription}
+                  onChange={(e) => setRoutineDescription(e.target.value)}
+                  placeholder="Describe la rutina, objetivos, etc..."
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background min-h-24"
+                />
+              </div>
+
+              {/* Partes del cuerpo */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-3">
+                  Partes del cuerpo (opcional)
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {bodyParts.map((part) => (
+                    <button
+                      key={part.id}
+                      type="button"
+                      onClick={() => toggleBodyPart(part.id)}
+                      className={`p-3 rounded-lg border text-left transition-colors ${
+                        selectedBodyParts.includes(part.id)
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-background-secondary/40 hover:bg-background-secondary"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedBodyParts.includes(part.id)}
+                          onChange={() => toggleBodyPart(part.id)}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-foreground">{part.name}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dificultad y duración */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Dificultad
+                  </label>
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                  >
+                    <option value="principiante">Principiante</option>
+                    <option value="intermedio">Intermedio</option>
+                    <option value="avanzado">Avanzado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Duración (minutos)
+                  </label>
+                  <input
+                    type="number"
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                    min="15"
+                    max="180"
+                    step="15"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                  />
+                </div>
+              </div>
+
+              {/* Asignar a cliente (opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Asignar directamente a un cliente (opcional)
+                </label>
+                <select
+                  value={assignToCustomerId || ""}
+                  onChange={(e) => setAssignToCustomerId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                >
+                  <option value="">No asignar ahora</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name || "(Sin nombre)"} {customer.phone ? `- ${customer.phone}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Botones */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setRoutineName("");
+                    setRoutineDescription("");
+                    setSelectedBodyParts([]);
+                    setDifficulty("intermedio");
+                    setDuration(60);
+                    setAssignToCustomerId(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground"
+                  disabled={creating}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateRoutine}
+                  disabled={creating || !routineName.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {creating ? "Creando..." : "Crear rutina"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -882,6 +882,31 @@ apiClient.assignRoutineToCustomer = async function (routineId, customerId) {
   return data;
 };
 
+apiClient.generateWorkoutRoutine = async function (params) {
+  const { data } = await apiClient.post("/api/workout-routines/generate", params);
+  return data;
+};
+
+apiClient.createWorkoutRoutine = async function (params) {
+  const { data } = await apiClient.post("/api/workout-routines", params);
+  return data;
+};
+
+apiClient.getWorkoutRoutine = async function (routineId) {
+  const { data } = await apiClient.get(`/api/workout-routines/${routineId}`);
+  return data?.data || data || null;
+};
+
+apiClient.updateWorkoutRoutine = async function (routineId, params) {
+  const { data } = await apiClient.put(`/api/workout-routines/${routineId}`, params);
+  return data;
+};
+
+apiClient.getBodyParts = async function () {
+  const { data } = await apiClient.get("/api/workout-routines/body-parts");
+  return data?.data || data || [];
+};
+
 /* =========================
    CALENDAR API
 ========================= */
