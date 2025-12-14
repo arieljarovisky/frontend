@@ -14,6 +14,8 @@ export default function WorkoutRoutineEditPage() {
   const [cooldown, setCooldown] = useState([]);
   const [saving, setSaving] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
+  const [uploadingVideo, setUploadingVideo] = useState({ section: null, index: null });
+  const [uploadingImage, setUploadingImage] = useState({ section: null, index: null });
 
   const { data, loading, error, refetch } = useQuery(
     (signal) => apiClient.getWorkoutRoutine(id),
