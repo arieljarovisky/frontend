@@ -14,6 +14,7 @@ import DashboardPage from "./routes/DashboardPage.jsx";
 import CustomersPage from "./routes/CustomersPage.jsx";
 import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
 import CustomerMembershipHistoryPage from "./routes/CustomerMembershipHistoryPage.jsx";
+import WorkoutRoutinesPage from "./routes/WorkoutRoutinesPage.jsx";
 import BookingPage from "./routes/BookingPage.jsx";
 import DepositsPage from "./routes/Depositspage.jsx";
 import LoginPage from "./routes/LoginPage.jsx";
@@ -157,6 +158,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <DepositsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "workout-routines",
+        element: (
+          <PrivateRoute roles={["admin", "staff", "user"]}>
+            <WorkoutRoutinesPage />
           </PrivateRoute>
         ),
       },
