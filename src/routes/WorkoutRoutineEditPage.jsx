@@ -127,14 +127,29 @@ export default function WorkoutRoutineEditPage() {
                 <p className="text-sm text-foreground-secondary mt-2">{exercise.description}</p>
               )}
               {exercise.video_url && (
-                <a
-                  href={exercise.video_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline mt-2 inline-block"
-                >
-                  Ver video →
-                </a>
+                <div className="mt-2">
+                  {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+                    <a
+                      href={exercise.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Ver video en YouTube →
+                    </a>
+                  ) : (
+                    <video
+                      src={exercise.video_url}
+                      controls
+                      className="max-w-md rounded-lg border border-border"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    >
+                      Tu navegador no soporta la reproducción de video.
+                    </video>
+                  )}
+                </div>
               )}
               {exercise.image_url && (
                 <div className="mt-2">
@@ -261,30 +276,130 @@ export default function WorkoutRoutineEditPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-foreground-secondary mb-1">
-                URL del video (YouTube, etc.)
+              <label className="block text-xs font-medium text-foreground-secondary mb-2">
+                Video del ejercicio
               </label>
-              <input
-                type="url"
-                value={exercise.video_url || ""}
-                onChange={(e) => updateExercise(section, index, "video_url", e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                placeholder="https://youtube.com/watch?v=..."
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={exercise.video_url || ""}
+                  onChange={(e) => updateExercise(section, index, "video_url", e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                  placeholder="URL del video (YouTube, etc.) o sube un archivo"
+                />
+                <div className="flex items-center gap-2">
+                  <label className="px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        try {
+                          const result = await apiClient.uploadWorkoutVideo(file);
+                          if (result?.data?.url) {
+                            updateExercise(section, index, "video_url", result.data.url);
+                            toast.success("Video subido correctamente");
+                          }
+                        } catch (error) {
+                          console.error("Error subiendo video:", error);
+                          toast.error(error?.response?.data?.error || "Error al subir el video");
+                        }
+                        e.target.value = ''; // Reset input
+                      }}
+                    />
+                    📹 Subir video
+                  </label>
+                  {exercise.video_url && (
+                    <button
+                      type="button"
+                      onClick={() => updateExercise(section, index, "video_url", "")}
+                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+                {exercise.video_url && (
+                  <div className="mt-2">
+                    {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+                      <a
+                        href={exercise.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Ver video en YouTube →
+                      </a>
+                    ) : (
+                      <video
+                        src={exercise.video_url}
+                        controls
+                        className="max-w-md rounded-lg border border-border"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      >
+                        Tu navegador no soporta la reproducción de video.
+                      </video>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-foreground-secondary mb-1">
-                URL de la imagen
+              <label className="block text-xs font-medium text-foreground-secondary mb-2">
+                Imagen del ejercicio
               </label>
-              <input
-                type="url"
-                value={exercise.image_url || ""}
-                onChange={(e) => updateExercise(section, index, "image_url", e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                placeholder="https://ejemplo.com/imagen.jpg"
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={exercise.image_url || ""}
+                  onChange={(e) => updateExercise(section, index, "image_url", e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                  placeholder="URL de la imagen o sube un archivo"
+                />
+                <div className="flex items-center gap-2">
+                  <label className="px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        try {
+                          const result = await apiClient.uploadWorkoutImage(file);
+                          if (result?.data?.url) {
+                            updateExercise(section, index, "image_url", result.data.url);
+                            toast.success("Imagen subida correctamente");
+                          }
+                        } catch (error) {
+                          console.error("Error subiendo imagen:", error);
+                          toast.error(error?.response?.data?.error || "Error al subir la imagen");
+                        }
+                        e.target.value = ''; // Reset input
+                      }}
+                    />
+                    🖼️ Subir imagen
+                  </label>
+                  {exercise.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => updateExercise(section, index, "image_url", "")}
+                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
