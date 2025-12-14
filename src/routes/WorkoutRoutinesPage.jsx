@@ -663,7 +663,7 @@ Estiramiento de cuádriceps
                   <p className="text-sm text-foreground-secondary mb-2">
                     O sube un archivo JSON con el formato:
                   </p>
-                <pre className="bg-background-secondary p-4 rounded-lg text-xs text-foreground-secondary overflow-x-auto mb-4">
+                  <pre className="bg-background-secondary p-4 rounded-lg text-xs text-foreground-secondary overflow-x-auto mb-4">
 {`[
   {
     "name": "Rutina de ejemplo",
@@ -688,14 +688,12 @@ Estiramiento de cuádriceps
     "cooldown": []
   }
 ]`}
-                </pre>
-              </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground-secondary mb-2">
-                    Archivo JSON
-                  </label>
-                <input
+                  </pre>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                      Archivo JSON
+                    </label>
+                    <input
                   type="file"
                   accept=".json,application/json"
                   onChange={async (e) => {
@@ -748,10 +746,11 @@ Estiramiento de cuádriceps
                       e.target.value = ''; // Reset input
                     }
                   }}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                  disabled={importing}
-                />
-              </div>
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                      disabled={importing}
+                    />
+                  </div>
+                </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
                 <button
