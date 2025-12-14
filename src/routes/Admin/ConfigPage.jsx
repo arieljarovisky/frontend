@@ -1512,9 +1512,10 @@ export default function ConfigPage() {
       {/* Botón flotante para guardar cambios */}
       {hasUnsavedChanges && (
         <div 
-          className="fixed right-6 z-40 animate-in slide-in-from-top-2"
+          className="fixed right-6 animate-in slide-in-from-top-2"
           style={{ 
-            top: floating ? `${topOffset + navHeight + 16}px` : '96px'
+            top: floating ? `${topOffset + navHeight + 16}px` : '96px',
+            zIndex: 100
           }}
         >
           <button
