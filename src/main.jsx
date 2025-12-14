@@ -13,6 +13,7 @@ import AppLayout from "./routes/AppLayout.jsx";
 import DashboardPage from "./routes/DashboardPage.jsx";
 import CustomersPage from "./routes/CustomersPage.jsx";
 import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
+import CustomerMembershipHistoryPage from "./routes/CustomerMembershipHistoryPage.jsx";
 import BookingPage from "./routes/BookingPage.jsx";
 import DepositsPage from "./routes/Depositspage.jsx";
 import LoginPage from "./routes/LoginPage.jsx";
@@ -139,6 +140,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <CustomerDetailPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "customers/:id/membership-history",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <CustomerMembershipHistoryPage />
           </PrivateRoute>
         ),
       },
