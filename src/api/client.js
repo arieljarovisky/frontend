@@ -945,6 +945,11 @@ apiClient.importWorkoutRoutineFromWord = async function (file) {
   return data;
 };
 
+apiClient.deleteWorkoutRoutine = async function (routineId) {
+  const { data } = await apiClient.delete(`/api/workout-routines/${routineId}`);
+  return data;
+};
+
 apiClient.getBodyParts = async function () {
   const { data } = await apiClient.get("/api/workout-routines/body-parts");
   return data?.data || data || [];

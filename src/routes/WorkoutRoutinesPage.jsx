@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { SearchInput } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { Link, useParams } from "react-router-dom";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 
 export default function WorkoutRoutinesPage() {
   const { tenantSlug } = useParams();
@@ -18,6 +18,7 @@ export default function WorkoutRoutinesPage() {
   const [assigning, setAssigning] = useState(false);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [bodyParts, setBodyParts] = useState([]);
@@ -301,6 +302,30 @@ export default function WorkoutRoutinesPage() {
                         className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
                       >
                         {assignedCustomer ? "Reasignar" : "Asignar"}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`¿Estás seguro de que deseas eliminar la rutina "${routine.name}"? Esta acción no se puede deshacer.`)) {
+                            return;
+                          }
+                          
+                          try {
+                            setDeleting(routine.id);
+                            await apiClient.deleteWorkoutRoutine(routine.id);
+                            toast.success("Rutina eliminada correctamente");
+                            await refetch();
+                          } catch (error) {
+                            console.error("Error eliminando rutina:", error);
+                            toast.error(error?.response?.data?.error || "Error al eliminar la rutina");
+                          } finally {
+                            setDeleting(null);
+                          }
+                        }}
+                        disabled={deleting === routine.id}
+                        className="px-4 py-2 text-sm font-medium text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {deleting === routine.id ? "Eliminando..." : "Eliminar"}
                       </button>
                     </div>
                   </div>
