@@ -3,7 +3,7 @@ import { apiClient } from "../api";
 import { useQuery } from "../shared/useQuery.js";
 import { toast } from "sonner";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Video, Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
 
 export default function WorkoutRoutineEditPage() {
   const { id, tenantSlug } = useParams();
@@ -288,17 +288,30 @@ export default function WorkoutRoutineEditPage() {
                   onChange={(e) => updateExercise(section, index, "video_url", e.target.value)}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
                   placeholder="URL del video (YouTube, etc.) o sube un archivo"
+                  disabled={uploadingVideo.section === section && uploadingVideo.index === index}
                 />
                 <div className="flex items-center gap-2">
-                  <label className="px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer">
+                  <label className={`px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer flex items-center gap-2 ${
+                    (uploadingVideo.section === section && uploadingVideo.index === index) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}>
                     <input
                       type="file"
                       accept="video/*"
                       className="hidden"
+                      disabled={uploadingVideo.section === section && uploadingVideo.index === index}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         
+                        // Validar tamaño del archivo (500MB máximo)
+                        const maxSize = 500 * 1024 * 1024; // 500MB
+                        if (file.size > maxSize) {
+                          toast.error(`El archivo es demasiado grande. Tamaño máximo: 500MB`);
+                          e.target.value = '';
+                          return;
+                        }
+                        
+                        setUploadingVideo({ section, index });
                         try {
                           const result = await apiClient.uploadWorkoutVideo(file);
                           if (result?.data?.url) {
@@ -307,23 +320,43 @@ export default function WorkoutRoutineEditPage() {
                           }
                         } catch (error) {
                           console.error("Error subiendo video:", error);
-                          toast.error(error?.response?.data?.error || "Error al subir el video");
+                          if (error?.response?.data?.error?.includes('too large') || error?.response?.data?.error?.includes('File too large')) {
+                            toast.error("El archivo es demasiado grande. Tamaño máximo: 500MB");
+                          } else {
+                            toast.error(error?.response?.data?.error || "Error al subir el video");
+                          }
+                        } finally {
+                          setUploadingVideo({ section: null, index: null });
                         }
                         e.target.value = ''; // Reset input
                       }}
                     />
-                    📹 Subir video
+                    {uploadingVideo.section === section && uploadingVideo.index === index ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Cargando video...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Subir video</span>
+                      </>
+                    )}
                   </label>
-                  {exercise.video_url && (
+                  {exercise.video_url && !(uploadingVideo.section === section && uploadingVideo.index === index) && (
                     <button
                       type="button"
                       onClick={() => updateExercise(section, index, "video_url", "")}
-                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300"
+                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1"
                     >
+                      <X className="w-3 h-3" />
                       Eliminar
                     </button>
                   )}
                 </div>
+                <p className="text-xs text-foreground-secondary">
+                  Tamaño máximo: 500MB. Formatos: MP4, MOV, AVI, etc.
+                </p>
                 {exercise.video_url && (
                   <div className="mt-2">
                     {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
@@ -363,17 +396,30 @@ export default function WorkoutRoutineEditPage() {
                   onChange={(e) => updateExercise(section, index, "image_url", e.target.value)}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
                   placeholder="URL de la imagen o sube un archivo"
+                  disabled={uploadingImage.section === section && uploadingImage.index === index}
                 />
                 <div className="flex items-center gap-2">
-                  <label className="px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer">
+                  <label className={`px-3 py-1.5 text-xs font-medium text-primary hover:text-primary-hover border border-primary/20 rounded-lg hover:bg-primary/10 cursor-pointer flex items-center gap-2 ${
+                    (uploadingImage.section === section && uploadingImage.index === index) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
+                      disabled={uploadingImage.section === section && uploadingImage.index === index}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         
+                        // Validar tamaño del archivo (10MB máximo)
+                        const maxSize = 10 * 1024 * 1024; // 10MB
+                        if (file.size > maxSize) {
+                          toast.error(`El archivo es demasiado grande. Tamaño máximo: 10MB`);
+                          e.target.value = '';
+                          return;
+                        }
+                        
+                        setUploadingImage({ section, index });
                         try {
                           const result = await apiClient.uploadWorkoutImage(file);
                           if (result?.data?.url) {
@@ -382,23 +428,43 @@ export default function WorkoutRoutineEditPage() {
                           }
                         } catch (error) {
                           console.error("Error subiendo imagen:", error);
-                          toast.error(error?.response?.data?.error || "Error al subir la imagen");
+                          if (error?.response?.data?.error?.includes('too large') || error?.response?.data?.error?.includes('File too large')) {
+                            toast.error("El archivo es demasiado grande. Tamaño máximo: 10MB");
+                          } else {
+                            toast.error(error?.response?.data?.error || "Error al subir la imagen");
+                          }
+                        } finally {
+                          setUploadingImage({ section: null, index: null });
                         }
                         e.target.value = ''; // Reset input
                       }}
                     />
-                    🖼️ Subir imagen
+                    {uploadingImage.section === section && uploadingImage.index === index ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Cargando imagen...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-4 h-4" />
+                        <span>Subir imagen</span>
+                      </>
+                    )}
                   </label>
-                  {exercise.image_url && (
+                  {exercise.image_url && !(uploadingImage.section === section && uploadingImage.index === index) && (
                     <button
                       type="button"
                       onClick={() => updateExercise(section, index, "image_url", "")}
-                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300"
+                      className="px-2 py-1 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1"
                     >
+                      <X className="w-3 h-3" />
                       Eliminar
                     </button>
                   )}
                 </div>
+                <p className="text-xs text-foreground-secondary">
+                  Tamaño máximo: 10MB. Formatos: JPG, PNG, GIF, WEBP.
+                </p>
               </div>
             </div>
           </div>
