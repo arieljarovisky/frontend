@@ -928,6 +928,23 @@ apiClient.uploadWorkoutImage = async function (file) {
   return data;
 };
 
+apiClient.importWorkoutRoutines = async function (routines) {
+  const { data } = await apiClient.post("/api/workout-routines/import", { routines });
+  return data;
+};
+
+apiClient.importWorkoutRoutineFromWord = async function (file) {
+  const formData = new FormData();
+  formData.append('word', file);
+  const { data } = await apiClient.post("/api/workout-routines/import/word", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    transformRequest: [(data) => data],
+  });
+  return data;
+};
+
 apiClient.getBodyParts = async function () {
   const { data } = await apiClient.get("/api/workout-routines/body-parts");
   return data?.data || data || [];

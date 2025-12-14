@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { SearchInput } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { Link, useParams } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 export default function WorkoutRoutinesPage() {
   const { tenantSlug } = useParams();
@@ -14,8 +14,10 @@ export default function WorkoutRoutinesPage() {
   const [selectedRoutine, setSelectedRoutine] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [bodyParts, setBodyParts] = useState([]);
@@ -184,13 +186,22 @@ export default function WorkoutRoutinesPage() {
             Gestiona y asigna rutinas de ejercicios a tus clientes
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Crear rutina
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Importar rutinas
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Crear rutina
+          </button>
+        </div>
       </div>
 
       {/* Búsqueda */}
@@ -544,6 +555,211 @@ export default function WorkoutRoutinesPage() {
                   className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {creating ? "Creando..." : "Crear rutina"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de importación */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg border border-border p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-foreground">Importar rutinas</h2>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-foreground-muted hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-foreground-secondary mb-4">
+                  Puedes importar rutinas desde un archivo Word (.docx) o JSON. El sistema intentará extraer automáticamente la información de la rutina.
+                </p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                    Archivo Word (.docx)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      try {
+                        setImporting(true);
+                        const result = await apiClient.importWorkoutRoutineFromWord(file);
+
+                        if (result?.data) {
+                          toast.success(`Rutina "${result.data.name}" importada correctamente desde Word`);
+                          await refetch();
+                          setShowImportModal(false);
+                        }
+                      } catch (error) {
+                        console.error("Error importando rutina desde Word:", error);
+                        toast.error(error?.response?.data?.error || "Error al importar la rutina desde Word");
+                      } finally {
+                        setImporting(false);
+                        e.target.value = ''; // Reset input
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                    disabled={importing}
+                  />
+                  <p className="text-xs text-foreground-muted mt-1 mb-3">
+                    El documento debe contener el nombre de la rutina, ejercicios con series y repeticiones
+                  </p>
+                  
+                  <div className="bg-background-secondary rounded-lg p-4 border border-border">
+                    <p className="text-xs font-medium text-foreground-secondary mb-2">Ejemplo de formato Word:</p>
+                    <div className="bg-white dark:bg-gray-900 rounded border border-border p-4 text-sm font-mono text-left whitespace-pre-wrap text-foreground">
+{`RUTINA DE PIERNAS Y GLÚTEOS
+
+Descripción: Rutina completa para trabajar piernas y glúteos
+
+Dificultad: Intermedio
+Duración: 60 minutos
+
+EJERCICIOS PRINCIPALES
+
+Sentadillas
+3 series x 10-12 repeticiones
+Descanso: 60 segundos
+Descripción: Realizar sentadillas profundas manteniendo la espalda recta
+
+Prensa de piernas
+4 series x 8-10 repeticiones
+Descanso: 90 segundos
+Descripción: Ejecutar con control completo del movimiento
+
+Zancadas
+3 series x 12 repeticiones por pierna
+Descanso: 45 segundos
+
+CALENTAMIENTO
+
+Movilidad de cadera
+2 series x 10 repeticiones
+
+ENFRIAMIENTO
+
+Estiramiento de cuádriceps
+30 segundos por pierna`}
+                    </div>
+                    <p className="text-xs text-foreground-muted mt-2">
+                      El sistema detectará automáticamente: nombre, ejercicios, series, repeticiones, descanso y secciones.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-sm text-foreground-secondary mb-2">
+                    O sube un archivo JSON con el formato:
+                  </p>
+                <pre className="bg-background-secondary p-4 rounded-lg text-xs text-foreground-secondary overflow-x-auto mb-4">
+{`[
+  {
+    "name": "Rutina de ejemplo",
+    "description": "Descripción de la rutina",
+    "duration_minutes": 60,
+    "difficulty": "intermedio",
+    "body_parts": ["piernas", "brazos"],
+    "exercises": [
+      {
+        "name": "Sentadillas",
+        "body_part": "piernas",
+        "sets": 3,
+        "reps": "10-12",
+        "rest_seconds": 60,
+        "description": "Descripción del ejercicio",
+        "tips": "Consejos de técnica",
+        "video_url": "",
+        "image_url": ""
+      }
+    ],
+    "warmup": [],
+    "cooldown": []
+  }
+]`}
+                </pre>
+              </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground-secondary mb-2">
+                    Archivo JSON
+                  </label>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    try {
+                      setImporting(true);
+                      const text = await file.text();
+                      const jsonData = JSON.parse(text);
+
+                      // Validar que sea un array
+                      if (!Array.isArray(jsonData)) {
+                        toast.error("El archivo JSON debe contener un array de rutinas");
+                        return;
+                      }
+
+                      if (jsonData.length === 0) {
+                        toast.error("El archivo no contiene rutinas para importar");
+                        return;
+                      }
+
+                      // Importar las rutinas
+                      const result = await apiClient.importWorkoutRoutines(jsonData);
+
+                      if (result?.data) {
+                        const { imported, total, errors } = result.data;
+                        toast.success(
+                          `Se importaron ${imported} de ${total} rutinas${errors ? ` (${errors.length} errores)` : ""}`
+                        );
+                        
+                        if (errors && errors.length > 0) {
+                          console.error("Errores de importación:", errors);
+                          toast.error(`Algunas rutinas no se pudieron importar. Revisa la consola para más detalles.`);
+                        }
+
+                        // Recargar la lista
+                        await refetch();
+                        setShowImportModal(false);
+                      }
+                    } catch (error) {
+                      console.error("Error importando rutinas:", error);
+                      if (error instanceof SyntaxError) {
+                        toast.error("El archivo JSON no es válido. Verifica el formato.");
+                      } else {
+                        toast.error(error?.response?.data?.error || "Error al importar las rutinas");
+                      }
+                    } finally {
+                      setImporting(false);
+                      e.target.value = ''; // Reset input
+                    }
+                  }}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                  disabled={importing}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  disabled={importing}
+                  className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>
