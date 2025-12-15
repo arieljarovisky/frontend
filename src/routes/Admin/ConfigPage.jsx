@@ -2282,16 +2282,17 @@ export default function ConfigPage() {
               </>
             )}
 
-            {/* Personalización del Bot */}
-            <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-foreground mb-2">
-                  Personalización del Bot
-                </h3>
-                <p className="text-sm text-foreground-secondary">
-                  Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1.5 py-0.5 rounded text-xs font-mono">{"{name}"}</code> para reemplazar el nombre del cliente.
-                </p>
-              </div>
+            {/* Personalización del Bot - Solo visible si el bot está activo */}
+            {whatsappConfig.hubActive && (
+              <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-foreground mb-2">
+                    Personalización del Bot
+                  </h3>
+                  <p className="text-sm text-foreground-secondary">
+                    Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1.5 py-0.5 rounded text-xs font-mono">{"{name}"}</code> para reemplazar el nombre del cliente.
+                  </p>
+                </div>
 
               <div className="space-y-4">
                 <FieldGroup
@@ -2406,6 +2407,7 @@ export default function ConfigPage() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </ConfigSection>
       </div>
