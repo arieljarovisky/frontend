@@ -157,6 +157,13 @@ export default function AppLayout() {
     }
   }, [sidebarOpen]);
 
+  useEffect(() => {
+    const el = document.getElementById("main-content");
+    if (el) {
+      el.focus();
+    }
+  }, [pathname]);
+
   // Obtener tipo de negocio - debe ejecutarse antes de cualquier return condicional
   const { data: businessTypeData } = useQuery(
     async () => {
@@ -363,6 +370,12 @@ export default function AppLayout() {
 
   return (
     <div className="arja-shell">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 px-3 py-2 rounded-lg bg-background border border-border shadow text-foreground"
+      >
+        Saltar al contenido principal
+      </a>
       {/* Overlay para mobile */}
       {sidebarOpen && (
         <div
@@ -546,7 +559,12 @@ export default function AppLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="arja-main__content">
+        <main
+          id="main-content"
+          className="arja-main__content"
+          tabIndex="-1"
+          aria-label="Contenido principal"
+        >
           <div className="arja-main__content-inner px-2 sm:px-0">
             <TrialExpiredBlock>
             <div className="animate-fade-in">

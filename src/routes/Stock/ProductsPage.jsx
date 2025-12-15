@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { useAuth } from "../../context/AuthContext";
@@ -25,6 +25,7 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { logger } from "../../utils/logger.js";
+import VirtualList from "../../shared/VirtualList.jsx";
 
 export default function ProductsPage() {
   const { tenantSlug } = useParams();
@@ -511,90 +512,98 @@ export default function ProductsPage() {
         </div>
       ) : (
         <>
-          {/* Vista de cards en mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 xs:gap-4">
-            {(products || []).map((product) => {
-              const status = getStockStatus(product);
-              const StatusIcon = status.icon;
-              return (
-                <div key={product.id} className="card p-3 xs:p-4">
-                  <div className="flex items-start justify-between mb-3 gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm xs:text-base font-semibold text-foreground truncate">{product.name}</h3>
-                      {product.description && (
-                        <p className="text-xs xs:text-sm text-foreground-muted line-clamp-2 mt-1">{product.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 xs:gap-2 ml-2 flex-shrink-0">
-                      {branches.length > 1 && (
+          {/* Vista de cards en mobile (virtualizada) */}
+          <div className="lg:hidden">
+            <VirtualList
+              items={products || []}
+              height={500}
+              itemHeight={180}
+              overscan={4}
+              className="space-y-3 xs:space-y-4"
+              keyExtractor={(p) => p.id}
+              renderItem={(product) => {
+                const status = getStockStatus(product);
+                const StatusIcon = status.icon;
+                return (
+                  <div className="card p-3 xs:p-4">
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm xs:text-base font-semibold text-foreground truncate">{product.name}</h3>
+                        {product.description && (
+                          <p className="text-xs xs:text-sm text-foreground-muted line-clamp-2 mt-1">{product.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 xs:gap-2 ml-2 flex-shrink-0">
+                        {branches.length > 1 && (
+                          <button
+                            onClick={() => {
+                              setTransferProduct(product);
+                              setShowTransferModal(true);
+                            }}
+                            className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            title="Transferir entre sucursales"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => {
-                            setTransferProduct(product);
-                            setShowTransferModal(true);
+                            setEditingProduct(product);
+                            setShowModal(true);
                           }}
-                          className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                          title="Transferir entre sucursales"
+                          className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
+                          title="Editar"
                         >
-                          <ArrowRightLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
+                          <Edit className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setEditingProduct(product);
-                          setShowModal(true);
-                        }}
-                        className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
-                        title="Editar"
-                      >
-                        <Edit className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(product.id)}
-                        className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
-                      </button>
+                        <button
+                          onClick={() => handleDeleteClick(product.id)}
+                          className="p-1.5 xs:p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-1.5 xs:space-y-2 text-xs xs:text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Código:</span>
-                      <span className="text-foreground font-medium truncate text-left">{product.code || "-"}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Categoría:</span>
-                      <span className="text-foreground truncate text-left">{product.category_name || "-"}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Stock:</span>
-                      <span className="text-foreground font-medium">{product.stock_quantity}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Precio:</span>
-                      <span className="text-foreground font-semibold">${Number(product.price).toLocaleString('es-AR')}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Sucursal:</span>
-                      <span className="text-foreground text-[10px] xs:text-xs font-medium truncate text-left">
-                        {showTotalStock 
-                          ? (product.branch_name && product.branch_name.includes(',') 
-                            ? "Múltiples sucursales" 
-                            : "Todas las sucursales")
-                          : (product.branch_name || "Sin asignar")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
-                      <span className="text-foreground-secondary text-[10px] xs:text-xs">Estado:</span>
-                      <div className={`inline-flex items-center gap-1 ${status.color}`}>
-                        <StatusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                        <span className="text-[10px] xs:text-xs">{status.label}</span>
+                    <div className="space-y-1.5 xs:space-y-2 text-xs xs:text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Código:</span>
+                        <span className="text-foreground font-medium truncate text-left">{product.code || "-"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Categoría:</span>
+                        <span className="text-foreground truncate text-left">{product.category_name || "-"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Stock:</span>
+                        <span className="text-foreground font-medium">{product.stock_quantity}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Precio:</span>
+                        <span className="text-foreground font-semibold">${Number(product.price).toLocaleString('es-AR')}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Sucursal:</span>
+                        <span className="text-foreground text-[10px] xs:text-xs font-medium truncate text-left">
+                          {showTotalStock 
+                            ? (product.branch_name && product.branch_name.includes(',') 
+                              ? "Múltiples sucursales" 
+                              : "Todas las sucursales")
+                            : (product.branch_name || "Sin asignar")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                        <span className="text-foreground-secondary text-[10px] xs:text-xs">Estado:</span>
+                        <div className={`inline-flex items-center gap-1 ${status.color}`}>
+                          <StatusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
+                          <span className="text-[10px] xs:text-xs">{status.label}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              }}
+            />
           </div>
 
           {/* Vista de tabla en desktop */}
@@ -794,53 +803,57 @@ export default function ProductsPage() {
             {/* Lista de productos */}
             <div className="flex-1 overflow-y-auto px-4 xs:px-5 sm:px-6 py-4 xs:py-5">
               <div className="space-y-2 xs:space-y-3">
-                {lowStockProducts.map((product) => {
-                  const status = getStockStatus(product);
-                  const StatusIcon = status.icon;
-                  return (
-                    <div 
-                      key={product.id} 
-                      className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <StatusIcon className={`w-5 h-5 ${status.color}`} />
-                            <h3 className="font-semibold text-foreground">{product.name}</h3>
-                            {product.code && (
-                              <span className="text-xs text-foreground-muted">({product.code})</span>
-                            )}
-                          </div>
-                          <div className="text-sm text-foreground-secondary space-y-1">
-                            {product.branch_name && (
-                              <p>Sucursal: <span className="font-medium">{product.branch_name}</span></p>
-                            )}
-                            <p>
-                              Stock actual: <span className="font-bold text-amber-600 dark:text-amber-400">{product.stock_quantity}</span>
-                              {product.min_stock > 0 && (
-                                <span className="ml-2">
-                                  | Mínimo: <span className="font-medium">{product.min_stock}</span>
-                                </span>
+                <VirtualList
+                  items={lowStockProducts}
+                  height={420}
+                  itemHeight={96}
+                  overscan={6}
+                  keyExtractor={(p) => p.id}
+                  renderItem={(product) => {
+                    const status = getStockStatus(product);
+                    const StatusIcon = status.icon;
+                    return (
+                      <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <StatusIcon className={`w-5 h-5 ${status.color}`} />
+                              <h3 className="font-semibold text-foreground">{product.name}</h3>
+                              {product.code && (
+                                <span className="text-xs text-foreground-muted">({product.code})</span>
                               )}
-                            </p>
-                            <p className={status.color}>{status.label}</p>
+                            </div>
+                            <div className="text-sm text-foreground-secondary space-y-1">
+                              {product.branch_name && (
+                                <p>Sucursal: <span className="font-medium">{product.branch_name}</span></p>
+                              )}
+                              <p>
+                                Stock actual: <span className="font-bold text-amber-600 dark:text-amber-400">{product.stock_quantity}</span>
+                                {product.min_stock > 0 && (
+                                  <span className="ml-2">
+                                    | Mínimo: <span className="font-medium">{product.min_stock}</span>
+                                  </span>
+                                )}
+                              </p>
+                              <p className={status.color}>{status.label}</p>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => {
+                              setEditingProduct(product);
+                              setShowModal(true);
+                              setShowAlertsModal(false);
+                            }}
+                            className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                            title="Editar producto"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            setEditingProduct(product);
-                            setShowModal(true);
-                            setShowAlertsModal(false);
-                          }}
-                          className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                          title="Editar producto"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  }}
+                />
               </div>
             </div>
 
@@ -913,6 +926,10 @@ export default function ProductsPage() {
 
 // Modal para crear/editar producto
 function ProductModal({ product, categories, branches, branchesLoading, defaultBranchId, onClose, onSave }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
   const [formData, setFormData] = useState({
     name: product?.name || "",
     code: product?.code || "",
@@ -974,6 +991,11 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
           }}
           onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="product-modal-title"
+          tabIndex="-1"
+          ref={dialogRef}
         >
         {/* Header con gradiente sutil */}
         <div 
@@ -983,7 +1005,7 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
             background: 'linear-gradient(to right, rgb(var(--background)), rgb(var(--background-secondary)))'
           }}
         >
-          <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate pr-2">
+          <h2 id="product-modal-title" className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate pr-2">
             {product ? "Editar Producto" : "Nuevo Producto"}
           </h2>
           <button
@@ -1256,6 +1278,10 @@ function ProductModal({ product, categories, branches, branchesLoading, defaultB
 }
 
 function CategoryModal({ categories = [], onClose, onUpdated }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
@@ -1320,8 +1346,16 @@ function CategoryModal({ categories = [], onClose, onUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 xs:p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
-      <div className="card w-full max-w-5xl relative shadow-2xl border border-border/60 bg-background/95 p-4 xs:p-5 sm:p-6 lg:p-8 max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 xs:p-4 sm:p-6 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="card w-full max-w-5xl relative shadow-2xl border border-border/60 bg-background/95 p-4 xs:p-5 sm:p-6 lg:p-8 max-h-[95vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="category-modal-title"
+        tabIndex="-1"
+        ref={dialogRef}
+      >
         <button
           onClick={onClose}
           className="absolute top-3 xs:top-4 right-3 xs:right-4 text-foreground-secondary hover:text-foreground z-10"
@@ -1330,7 +1364,7 @@ function CategoryModal({ categories = [], onClose, onUpdated }) {
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl xs:text-2xl font-semibold text-foreground mb-4 xs:mb-6 pr-8">Categorías</h2>
+        <h2 id="category-modal-title" className="text-xl xs:text-2xl font-semibold text-foreground mb-4 xs:mb-6 pr-8">Categorías</h2>
 
         <div className="grid lg:grid-cols-[1.4fr,360px] gap-4 xs:gap-5 sm:gap-6">
           <div className="border border-border rounded-2xl xs:rounded-3xl overflow-hidden bg-background-secondary/70 p-2 xs:p-3 sm:p-4">
@@ -1440,6 +1474,10 @@ function CategoryModal({ categories = [], onClose, onUpdated }) {
 
 // Modal para transferir stock entre sucursales
 function TransferModal({ product, branches, onClose, onSuccess }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
   const [formData, setFormData] = useState({
     from_branch_id: product?.branch_id || "",
     to_branch_id: "",
@@ -1538,6 +1576,11 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
           }}
           onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="transfer-modal-title"
+          tabIndex="-1"
+          ref={dialogRef}
         >
         <div 
           className="flex items-center justify-between px-4 xs:px-5 sm:px-6 py-4 xs:py-5 border-b"
@@ -1547,7 +1590,7 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
           }}
         >
           <div className="min-w-0 flex-1 pr-2">
-            <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate">
+            <h2 id="transfer-modal-title" className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground truncate">
               Transferir Stock
             </h2>
             <p className="text-xs xs:text-sm text-foreground-secondary mt-1 truncate">
@@ -1704,4 +1747,3 @@ function TransferModal({ product, branches, onClose, onSuccess }) {
     </div>
   );
 }
-

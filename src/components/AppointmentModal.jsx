@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../context/UseApp";
 import { apiClient } from "../api/client";
@@ -72,6 +72,7 @@ function isoToLocalInput(isoOrLocal) {
 export default function AppointmentModal({ open, onClose, event }) {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const dialogRef = useRef(null);
   // Seguir el tema global (clase 'dark' en <html>) para light/dark mode
   const [darkMode, setDarkMode] = useState(() =>
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false
@@ -197,6 +198,11 @@ export default function AppointmentModal({ open, onClose, event }) {
     return () => {
       document.body.style.overflow = prevOverflow || "";
     };
+  }, [open]);
+  useEffect(() => {
+    if (open && dialogRef.current) {
+      dialogRef.current.focus();
+    }
   }, [open]);
 
   useEffect(() => {
@@ -641,11 +647,18 @@ export default function AppointmentModal({ open, onClose, event }) {
           if (e.target === e.currentTarget) onClose?.();
         }}
       >
-        <div className="arja-modal__panel">
+        <div
+          className="arja-modal__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="class-modal-title"
+          tabIndex="-1"
+          ref={dialogRef}
+        >
           <header className="arja-modal__header">
             <div>
               <p className="arja-modal__subtitle">Detalle de clase</p>
-              <h2 className="arja-modal__title">{detail.activity_type || "Clase grupal"}</h2>
+              <h2 id="class-modal-title" className="arja-modal__title">{detail.activity_type || "Clase grupal"}</h2>
               {detail.status === "cancelled" && (
                 <div className="badge badge-danger">
                   <AlertTriangle />
@@ -809,10 +822,15 @@ export default function AppointmentModal({ open, onClose, event }) {
           willChange: "transform",
           pointerEvents: "auto",
         }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="appointment-modal-title"
+        tabIndex="-1"
+        ref={dialogRef}
       >
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className={`text-xl font-bold tracking-tight ${textColor} flex items-center gap-2`}>
+            <h3 id="appointment-modal-title" className={`text-xl font-bold tracking-tight ${textColor} flex items-center gap-2`}>
               <Calendar className="w-5 h-5" />
               Editar turno
             </h3>

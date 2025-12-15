@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 
 // Caché global simple para evitar peticiones duplicadas
 const queryCache = new Map();
-const CACHE_TTL = 5000; // 5 segundos de caché
+const DEFAULT_CACHE_TTL = 5000; // 5 segundos de caché
 
 function getCacheKey(fn, deps) {
     // Crear una clave única basada en la función y dependencias
@@ -17,7 +17,7 @@ function getCachedData(key) {
     if (!cached) return null;
     
     const now = Date.now();
-    if (now - cached.timestamp > CACHE_TTL) {
+    if (now - cached.timestamp > (cached.ttl ?? DEFAULT_CACHE_TTL)) {
         queryCache.delete(key);
         return null;
     }
@@ -25,10 +25,11 @@ function getCachedData(key) {
     return cached.data;
 }
 
-function setCachedData(key, data) {
+function setCachedData(key, data, ttl) {
     queryCache.set(key, {
         data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        ttl: typeof ttl === "number" ? ttl : DEFAULT_CACHE_TTL
     });
 }
 
@@ -37,7 +38,7 @@ function setCachedData(key, data) {
  * - fn: (signal) => Promise<any>
  * - deps: dependencias para re-ejecutar
  */
-export function useQuery(fn, deps = []) {
+export function useQuery(fn, deps = [], options = {}) {
     const [data, setData] = useState(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -46,12 +47,14 @@ export function useQuery(fn, deps = []) {
     const abortControllerRef = useRef(null);
     const isExecutingRef = useRef(false);
     const cacheKeyRef = useRef(getCacheKey(fn, deps));
+    const ttlRef = useRef(typeof options.staleTime === "number" ? options.staleTime : DEFAULT_CACHE_TTL);
 
     // Actualizar ref cuando cambia la función
     useEffect(() => {
         fnRef.current = fn;
         cacheKeyRef.current = getCacheKey(fn, deps);
-    }, [fn, deps]);
+        ttlRef.current = typeof options.staleTime === "number" ? options.staleTime : DEFAULT_CACHE_TTL;
+    }, [fn, deps, options]);
 
     const executeQuery = useCallback(async (signal, skipLoading = false, forceRefresh = false) => {
         // Evitar ejecuciones duplicadas
@@ -83,7 +86,7 @@ export function useQuery(fn, deps = []) {
             if (mountedRef.current && !signal.aborted) {
                 setData(result);
                 // Guardar en caché
-                setCachedData(cacheKey, result);
+                setCachedData(cacheKey, result, ttlRef.current);
             }
         } catch (e) {
             if (signal.aborted || !mountedRef.current) {

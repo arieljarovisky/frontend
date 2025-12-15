@@ -1,86 +1,86 @@
 // src/main.jsx
-import React from "react";
+import React, { Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
 import { logger } from "./utils/logger.js";
 import "./styles/arja-theme.css";
+import Skeleton from "./components/ui/Skeleton.jsx";
 
-// Layout y páginas
-import LandingPage from "./routes/LandingPage.jsx";
-import DocsPage from "./routes/DocsPage.jsx";
-import AppLayout from "./routes/AppLayout.jsx";
-import DashboardPage from "./routes/DashboardPage.jsx";
-import CustomersPage from "./routes/CustomersPage.jsx";
-import CustomerDetailPage from "./routes/CustomerDetailPage.jsx";
-import CustomerMembershipHistoryPage from "./routes/CustomerMembershipHistoryPage.jsx";
-import WorkoutRoutinesPage from "./routes/WorkoutRoutinesPage.jsx";
-import WorkoutRoutineEditPage from "./routes/WorkoutRoutineEditPage.jsx";
-import BookingPage from "./routes/BookingPage.jsx";
-import DepositsPage from "./routes/Depositspage.jsx";
-import LoginPage from "./routes/LoginPage.jsx";
-import ClassesPage from "./routes/ClassesPage.jsx";
+const LandingPage = React.lazy(() => import("./routes/LandingPage.jsx"));
+const DocsPage = React.lazy(() => import("./routes/DocsPage.jsx"));
+const AppLayout = React.lazy(() => import("./routes/AppLayout.jsx"));
+const DashboardPage = React.lazy(() => import("./routes/DashboardPage.jsx"));
+const CustomersPage = React.lazy(() => import("./routes/CustomersPage.jsx"));
+const CustomerDetailPage = React.lazy(() => import("./routes/CustomerDetailPage.jsx"));
+const CustomerMembershipHistoryPage = React.lazy(() => import("./routes/CustomerMembershipHistoryPage.jsx"));
+const WorkoutRoutinesPage = React.lazy(() => import("./routes/WorkoutRoutinesPage.jsx"));
+const WorkoutRoutineEditPage = React.lazy(() => import("./routes/WorkoutRoutineEditPage.jsx"));
+const BookingPage = React.lazy(() => import("./routes/BookingPage.jsx"));
+const DepositsPage = React.lazy(() => import("./routes/Depositspage.jsx"));
+const LoginPage = React.lazy(() => import("./routes/LoginPage.jsx"));
+const ClassesPage = React.lazy(() => import("./routes/ClassesPage.jsx"));
 
-// Auth
+// Auth y contexto
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
-import PaymentSuccess from "./routes/PaymentSuccess.jsx";
-import PaymentFailure from "./routes/PaymentFailure.jsx";
+const PaymentSuccess = React.lazy(() => import("./routes/PaymentSuccess.jsx"));
+const PaymentFailure = React.lazy(() => import("./routes/PaymentFailure.jsx"));
 
 // Sistema de notificaciones
 import { NotificationSystem } from "./components/notifications/NotificationSystem.jsx";
-import DepositsConfig from "./routes/Admin/DepositsConfig.jsx";
-import Commissions from "./routes/Admin/Comissions.jsx";
-import InstructorStats from "./routes/Admin/InstructorStats.jsx";
-import ConfigPage from "./routes/Admin/ConfigPage.jsx";
-import NotificationsPage from "./routes/NotificationPage.jsx";
-import ProductsPage from "./routes/Stock/ProductsPage.jsx";
-import StockReservationsPage from "./routes/Stock/StockReservationsPage.jsx";
-import StockTransfersPage from "./routes/Stock/StockTransfersPage.jsx";
-import StockAlertsPage from "./routes/Stock/StockAlertsPage.jsx";
-import StockValuationPage from "./routes/Stock/StockValuationPage.jsx";
-import InvoicingPage from "./routes/Invoicing/InvoicingPage.jsx";
-import EcommerceSalesPage from "./routes/Invoicing/EcommerceSalesPage.jsx";
-import UsersPage from "./routes/Users/UsersPage.jsx";
-import SuperAdminLayout from "./routes/SuperAdmin/SuperAdminLayout.jsx";
-import SuperAdminTenantsPage from "./routes/SuperAdmin/SuperAdminTenantsPage.jsx";
-import SuperAdminTenantDetail from "./routes/SuperAdmin/SuperAdminTenantDetail.jsx";
+const DepositsConfig = React.lazy(() => import("./routes/Admin/DepositsConfig.jsx"));
+const Commissions = React.lazy(() => import("./routes/Admin/Comissions.jsx"));
+const InstructorStats = React.lazy(() => import("./routes/Admin/InstructorStats.jsx"));
+const ConfigPage = React.lazy(() => import("./routes/Admin/ConfigPage.jsx"));
+const NotificationsPage = React.lazy(() => import("./routes/NotificationPage.jsx"));
+const ProductsPage = React.lazy(() => import("./routes/Stock/ProductsPage.jsx"));
+const StockReservationsPage = React.lazy(() => import("./routes/Stock/StockReservationsPage.jsx"));
+const StockTransfersPage = React.lazy(() => import("./routes/Stock/StockTransfersPage.jsx"));
+const StockAlertsPage = React.lazy(() => import("./routes/Stock/StockAlertsPage.jsx"));
+const StockValuationPage = React.lazy(() => import("./routes/Stock/StockValuationPage.jsx"));
+const InvoicingPage = React.lazy(() => import("./routes/Invoicing/InvoicingPage.jsx"));
+const EcommerceSalesPage = React.lazy(() => import("./routes/Invoicing/EcommerceSalesPage.jsx"));
+const UsersPage = React.lazy(() => import("./routes/Users/UsersPage.jsx"));
+const SuperAdminLayout = React.lazy(() => import("./routes/SuperAdmin/SuperAdminLayout.jsx"));
+const SuperAdminTenantsPage = React.lazy(() => import("./routes/SuperAdmin/SuperAdminTenantsPage.jsx"));
+const SuperAdminTenantDetail = React.lazy(() => import("./routes/SuperAdmin/SuperAdminTenantDetail.jsx"));
 import SuperAdminRoute from "./components/SuperAdminRoute.jsx";
-import OnboardingPage from "./routes/Onboarding/OnboardingPage.jsx";
-import PaymentSetupPage from "./routes/Onboarding/PaymentSetupPage.jsx";
-import PaymentCompletePage from "./routes/Onboarding/PaymentCompletePage.jsx";
-import ActivationPendingPage from "./routes/Onboarding/ActivationPendingPage.jsx";
-import InstructorsPage from "./routes/Admin/InstructorsPage.jsx";
-import MembershipPlansPage from "./routes/Admin/MembershipPlansPage.jsx";
-import BranchesPage from "./routes/Admin/BranchesPage.jsx";
+const OnboardingPage = React.lazy(() => import("./routes/Onboarding/OnboardingPage.jsx"));
+const PaymentSetupPage = React.lazy(() => import("./routes/Onboarding/PaymentSetupPage.jsx"));
+const PaymentCompletePage = React.lazy(() => import("./routes/Onboarding/PaymentCompletePage.jsx"));
+const ActivationPendingPage = React.lazy(() => import("./routes/Onboarding/ActivationPendingPage.jsx"));
+const InstructorsPage = React.lazy(() => import("./routes/Admin/InstructorsPage.jsx"));
+const MembershipPlansPage = React.lazy(() => import("./routes/Admin/MembershipPlansPage.jsx"));
+const BranchesPage = React.lazy(() => import("./routes/Admin/BranchesPage.jsx"));
 import FeatureGate from "./components/FeatureGate.jsx";
 import { AppProvider } from "./context/AppProvider.jsx";
-import EnterpriseRequest from "./routes/EnterpriseRequest.jsx";
-import ForgotPasswordPage from "./routes/ForgotPasswordPage.jsx";
-import ResetPasswordPage from "./routes/ResetPasswordPage.jsx";
-import ActivatePage from "./routes/ActivatePage.jsx";
-import HelpPage from "./routes/HelpPage.jsx";
-import ContactPage from "./routes/ContactPage.jsx";
-import TermsPage from "./routes/TermsPage.jsx";
-import PrivacyPage from "./routes/PrivacyPage.jsx";
+const EnterpriseRequest = React.lazy(() => import("./routes/EnterpriseRequest.jsx"));
+const ForgotPasswordPage = React.lazy(() => import("./routes/ForgotPasswordPage.jsx"));
+const ResetPasswordPage = React.lazy(() => import("./routes/ResetPasswordPage.jsx"));
+const ActivatePage = React.lazy(() => import("./routes/ActivatePage.jsx"));
+const HelpPage = React.lazy(() => import("./routes/HelpPage.jsx"));
+const ContactPage = React.lazy(() => import("./routes/ContactPage.jsx"));
+const TermsPage = React.lazy(() => import("./routes/TermsPage.jsx"));
+const PrivacyPage = React.lazy(() => import("./routes/PrivacyPage.jsx"));
 
 // Componente de redirección para mantener compatibilidad con /privacy
 const PrivacyRedirect = () => <Navigate to="/privacy.html" replace />;
 
-import PlansPage from "./routes/PlansPage.jsx";
-import SubscriptionSuccess from "./routes/SubscriptionSuccess.jsx";
-import SubscriptionFailure from "./routes/SubscriptionFailure.jsx";
-import CashRegisterPage from "./routes/CashRegister/CashRegisterPage.jsx";
-import AccountingPage from "./routes/Accounting/AccountingPage.jsx";
+const PlansPage = React.lazy(() => import("./routes/PlansPage.jsx"));
+const SubscriptionSuccess = React.lazy(() => import("./routes/SubscriptionSuccess.jsx"));
+const SubscriptionFailure = React.lazy(() => import("./routes/SubscriptionFailure.jsx"));
+const CashRegisterPage = React.lazy(() => import("./routes/CashRegister/CashRegisterPage.jsx"));
+const AccountingPage = React.lazy(() => import("./routes/Accounting/AccountingPage.jsx"));
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { logDiagnosis, startMonitoring } from "./utils/performanceMonitor.js";
-import IntegrationsPage from "./routes/Admin/IntegrationsPage.jsx";
-import FeatureRequestPage from "./routes/FeatureRequestPage.jsx";
-import TwoFactorAuthPage from "./routes/TwoFactorAuthPage.jsx";
-import GoogleOAuthCallback from "./routes/GoogleOAuthCallback.jsx";
-import MobileAppPage from "./routes/Admin/MobileAppPage.jsx";
+const IntegrationsPage = React.lazy(() => import("./routes/Admin/IntegrationsPage.jsx"));
+const FeatureRequestPage = React.lazy(() => import("./routes/FeatureRequestPage.jsx"));
+const TwoFactorAuthPage = React.lazy(() => import("./routes/TwoFactorAuthPage.jsx"));
+const GoogleOAuthCallback = React.lazy(() => import("./routes/GoogleOAuthCallback.jsx"));
+const MobileAppPage = React.lazy(() => import("./routes/Admin/MobileAppPage.jsx"));
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -613,7 +613,9 @@ createRoot(document.getElementById("root")).render(
         <ThemeProvider>
           <AuthProvider>
             <NotificationSystem />
-            <RouterProvider router={router} />
+            <Suspense fallback={<div className="p-4"><Skeleton className="h-6 mb-2" /><Skeleton className="h-6 mb-2" /><Skeleton className="h-6" /></div>}>
+              <RouterProvider router={router} />
+            </Suspense>
           </AuthProvider>
         </ThemeProvider>
       </LanguageProvider>

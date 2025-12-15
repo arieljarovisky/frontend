@@ -1,5 +1,5 @@
 // src/routes/DashboardPage.jsx
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useQuery } from "../shared/useQuery.js";
 import { apiClient } from "../api";
 import { useNavigate } from "react-router-dom";
@@ -1018,11 +1018,15 @@ export default function DashboardPage() {
           <div
             className="bg-background rounded-2xl shadow-2xl border border-border p-6 max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dashboard-whatsapp-modal-title"
+            tabIndex="-1"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold text-foreground">
+                <h3 id="dashboard-whatsapp-modal-title" className="text-lg font-semibold text-foreground">
                   Turno reprogramado
                 </h3>
               </div>

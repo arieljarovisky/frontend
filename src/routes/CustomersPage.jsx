@@ -8,6 +8,7 @@ import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { useApp } from "../context/UseApp.js";
 import { useTranslation } from "../i18n/useTranslation.js";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import VirtualList from "../shared/VirtualList.jsx";
 
 const formatCurrency = (value, currency = "ARS") => {
     if (value == null) return "—";
@@ -265,87 +266,94 @@ export default function CustomersPage() {
                     </div>
                 ) : (
                     <div className="divide-y divide-border">
-                        {rows.map((r) => (
-                            <Link
-                                key={r.id}
-                                to={`/${tenantSlug}/customers/${r.id}`}
-                                className="w-full text-left px-4 md:px-6 py-4 hover:bg-background-secondary/50 grid items-start gap-x-3 transition-colors group"
-                                style={{
-                                    gridTemplateColumns: classesEnabled && showMembershipColumn
-                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr ${columnLayout.membership}fr`
-                                        : classesEnabled
-                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr`
-                                        : showMembershipColumn
-                                        ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.membership}fr`
-                                        : `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr`
-                                }}
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="relative size-10 flex-shrink-0">
-                                        {r.picture ? (
+                        <VirtualList
+                            items={rows}
+                            height={560}
+                            itemHeight={88}
+                            overscan={8}
+                            keyExtractor={(r) => r.id}
+                            renderItem={(r) => (
+                                <Link
+                                    to={`/${tenantSlug}/customers/${r.id}`}
+                                    className="w-full text-left px-4 md:px-6 py-4 hover:bg-background-secondary/50 grid items-start gap-x-3 transition-colors group"
+                                    style={{
+                                        gridTemplateColumns: classesEnabled && showMembershipColumn
+                                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr ${columnLayout.membership}fr`
+                                            : classesEnabled
+                                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.classes}fr`
+                                            : showMembershipColumn
+                                            ? `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr ${columnLayout.membership}fr`
+                                            : `${columnLayout.customer}fr ${columnLayout.phone}fr ${columnLayout.appointments}fr`
+                                    }}
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="relative size-10 flex-shrink-0">
+                                            {r.picture ? (
                                             <img 
                                                 src={r.picture} 
                                                 alt={r.name || "Cliente"} 
+                                                loading="lazy"
                                                 className="size-10 rounded-full object-cover border border-border"
                                                 style={{ display: 'block' }}
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';
                                                     const fallback = e.target.nextElementSibling;
-                                                    if (fallback) {
-                                                        fallback.style.display = 'flex';
-                                                    }
+                                                        if (fallback) {
+                                                            fallback.style.display = 'flex';
+                                                        }
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div 
+                                                className="size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold group-hover:bg-primary-500/20 transition-colors"
+                                                style={{ 
+                                                    display: r.picture ? 'none' : 'flex',
+                                                    position: r.picture ? 'absolute' : 'static',
+                                                    top: r.picture ? 0 : 'auto',
+                                                    left: r.picture ? 0 : 'auto',
+                                                    right: r.picture ? 0 : 'auto',
+                                                    bottom: r.picture ? 0 : 'auto'
                                                 }}
-                                            />
-                                        ) : null}
-                                        <div 
-                                            className="size-10 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-400 text-sm font-semibold group-hover:bg-primary-500/20 transition-colors"
-                                            style={{ 
-                                                display: r.picture ? 'none' : 'flex',
-                                                position: r.picture ? 'absolute' : 'static',
-                                                top: r.picture ? 0 : 'auto',
-                                                left: r.picture ? 0 : 'auto',
-                                                right: r.picture ? 0 : 'auto',
-                                                bottom: r.picture ? 0 : 'auto'
-                                            }}
-                                        >
-                                            {initials(r.name || "?")}
+                                            >
+                                                {initials(r.name || "?")}
+                                            </div>
+                                        </div>
+                                        <div className="min-w-0 flex-1 overflow-hidden">
+                                            <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
+                                                {r.name || t("customers.noName")}
+                                            </div>
+                                            <div className="text-xs text-foreground-muted truncate">ID #{r.id}</div>
                                         </div>
                                     </div>
-                                    <div className="min-w-0 flex-1 overflow-hidden">
-                                        <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
-                                            {r.name || t("customers.noName")}
-                                        </div>
-                                        <div className="text-xs text-foreground-muted truncate">ID #{r.id}</div>
+                                    <div className="text-sm text-foreground-secondary min-w-0 truncate">
+                                        {formatPhone(r.phone_e164 ?? r.phone) || "—"}
                                     </div>
-                                </div>
-                                <div className="text-sm text-foreground-secondary min-w-0 truncate">
-                                    {formatPhone(r.phone_e164 ?? r.phone) || "—"}
-                                </div>
-                                <div className="text-right min-w-0">
-                                    <div className="text-sm font-semibold text-foreground">
-                                        {r.total_appointments ?? r.appointments_count ?? 0}
-                                    </div>
-                                </div>
-                                {classesEnabled ? (
                                     <div className="text-right min-w-0">
-                                        <div className="text-sm font-semibold text-foreground whitespace-nowrap">
-                                            {r.upcoming_classes ?? 0}{" "}
-                                            <span className="text-xs text-foreground-muted font-normal uppercase tracking-wide">
-                                                anotadas
-                                            </span>
-                                        </div>
-                                        <div className="text-xs text-foreground-secondary whitespace-nowrap">
-                                            {r.completed_classes ?? 0} realizadas
+                                        <div className="text-sm font-semibold text-foreground">
+                                            {r.total_appointments ?? r.appointments_count ?? 0}
                                         </div>
                                     </div>
-                                ) : null}
-                                {showMembershipColumn ? (
-                                    <div className="text-right min-w-0 overflow-hidden">
-                                        {renderMembershipInfo(r)}
-                                    </div>
-                                ) : null}
-                            </Link>
-                        ))}
+                                    {classesEnabled ? (
+                                        <div className="text-right min-w-0">
+                                            <div className="text-sm font-semibold text-foreground whitespace-nowrap">
+                                                {r.upcoming_classes ?? 0}{" "}
+                                                <span className="text-xs text-foreground-muted font-normal uppercase tracking-wide">
+                                                    anotadas
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-foreground-secondary whitespace-nowrap">
+                                                {r.completed_classes ?? 0} realizadas
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                    {showMembershipColumn ? (
+                                        <div className="text-right min-w-0 overflow-hidden">
+                                            {renderMembershipInfo(r)}
+                                        </div>
+                                    ) : null}
+                                </Link>
+                            )}
+                        />
                     </div>
                 )}
 

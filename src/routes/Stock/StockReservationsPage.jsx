@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "../../shared/useQuery.js";
 import { apiClient } from "../../api";
 import { useAuth } from "../../context/AuthContext";
@@ -279,13 +279,17 @@ export default function StockReservationsPage() {
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
             }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fulfill-modal-title"
+            tabIndex="-1"
           >
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
                   <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground">Confirmar Cumplimiento</h2>
+                <h2 id="fulfill-modal-title" className="text-xl font-bold text-foreground">Confirmar Cumplimiento</h2>
               </div>
               <p className="text-foreground-secondary mb-6">
                 ¿Confirmar cumplimiento de esta reserva? El stock se descontará.
@@ -327,13 +331,17 @@ export default function StockReservationsPage() {
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
             }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-modal-title"
+            tabIndex="-1"
           >
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
                   <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground">Cancelar Reserva</h2>
+                <h2 id="cancel-modal-title" className="text-xl font-bold text-foreground">Cancelar Reserva</h2>
               </div>
               <p className="text-foreground-secondary mb-6">
                 ¿Estás seguro de cancelar esta reserva?
@@ -362,6 +370,10 @@ export default function StockReservationsPage() {
 
 // Modal para crear/editar reserva
 function ReservationModal({ reservation, products, branches, onClose, onSave }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
   const [formData, setFormData] = useState({
     product_id: reservation?.product_id || "",
     branch_id: reservation?.branch_id || "",
@@ -409,9 +421,17 @@ function ReservationModal({ reservation, products, branches, onClose, onSave }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-background rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-background rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reservation-modal-title"
+        tabIndex="-1"
+        ref={dialogRef}
+      >
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-bold text-foreground">
+          <h2 id="reservation-modal-title" className="text-xl font-bold text-foreground">
             {reservation ? "Editar Reserva" : "Nueva Reserva"}
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-background-secondary">
@@ -532,4 +552,3 @@ function ReservationModal({ reservation, products, branches, onClose, onSave }) 
     </div>
   );
 }
-
