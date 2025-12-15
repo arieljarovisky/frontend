@@ -113,6 +113,115 @@ export default function UsersPage() {
     (user.email && user.email.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const renderUserCard = (user) => (
+    <div className="card card--space-lg">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+            {user.email[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="font-medium text-foreground">{user.email}</div>
+            {getRoleBadge(user.role)}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setEditingUser(user);
+              setShowModal(true);
+            }}
+            className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
+            title="Editar"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDelete(user.id)}
+            className="p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="Eliminar"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-foreground-secondary">Estado:</span>
+          <span className={`${user.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
+            {user.is_active ? (
+              <span className="inline-flex items-center gap-1">
+                <UserCheck className="w-4 h-4" />
+                Activo
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <UserX className="w-4 h-4" />
+                Inactivo
+              </span>
+            )}
+          </span>
+        </div>
+
+        {user.branchNames && user.branchNames.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {user.branchNames.map((branch) => (
+              <span
+                key={`${user.id}-branch-${branch.id}`}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-border/70 bg-background-secondary"
+              >
+                {branch.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-foreground-muted italic">
+            Acceso a todas las sucursales
+          </div>
+        )}
+
+        {user.last_login_at && (
+          <div className="flex items-center justify-between">
+            <span className="text-foreground-secondary">Último acceso:</span>
+            <span className="text-foreground text-xs">
+              {new Date(user.last_login_at).toLocaleDateString('es-AR')}
+            </span>
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-border">
+          <button
+            onClick={() => setShowPermissions(user.id === showPermissions ? null : user.id)}
+            className="text-xs text-primary hover:text-primary-hover flex items-center gap-1"
+          >
+            <Key className="w-3 h-3" />
+            {user.id === showPermissions ? "Ocultar" : "Ver"} permisos
+          </button>
+          {showPermissions === user.id && user.permissions && (
+            <div className="mt-2 space-y-1">
+              {Object.entries(user.permissions).map(([module, perms]) => (
+                <div key={module} className="text-xs">
+                  <span className="font-medium text-foreground">
+                    {moduleTranslations[module] || module}:
+                  </span>
+                  <span className="text-foreground-secondary ml-1">
+                    {Array.isArray(perms)
+                      ? perms.map(p => {
+                          const [mod, action] = p.split('.');
+                          return actionTranslations[action] || action;
+                        }).join(", ")
+                      : "ninguno"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -181,113 +290,7 @@ export default function UsersPage() {
             itemHeight={160}
             overscan={8}
             keyExtractor={(u) => u.id}
-            renderItem={(user) => (
-              <div className="card card--space-lg">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-                      {user.email[0].toUpperCase()}
-                    </div>
-                  <div>
-                    <div className="font-medium text-foreground">{user.email}</div>
-                    {getRoleBadge(user.role)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditingUser(user);
-                      setShowModal(true);
-                    }}
-                    className="p-2 rounded-lg text-foreground-secondary hover:text-primary hover:bg-primary-light dark:hover:bg-primary/20 transition-colors"
-                    title="Editar"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="p-2 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground-secondary">Estado:</span>
-                    <span className={`${user.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {user.is_active ? (
-                        <span className="inline-flex items-center gap-1">
-                          <UserCheck className="w-4 h-4" />
-                          Activo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1">
-                          <UserX className="w-4 h-4" />
-                          Inactivo
-                        </span>
-                      )}
-                    </span>
-                  </div>
-
-                {user.branchNames && user.branchNames.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {user.branchNames.map((branch) => (
-                      <span
-                        key={`${user.id}-branch-${branch.id}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-border/70 bg-background-secondary"
-                      >
-                        {branch.name}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-foreground-muted italic">
-                    Acceso a todas las sucursales
-                  </div>
-                )}
-
-                {user.last_login_at && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground-secondary">Último acceso:</span>
-                    <span className="text-foreground text-xs">
-                      {new Date(user.last_login_at).toLocaleDateString('es-AR')}
-                    </span>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-border">
-                  <button
-                    onClick={() => setShowPermissions(user.id === showPermissions ? null : user.id)}
-                    className="text-xs text-primary hover:text-primary-hover flex items-center gap-1"
-                  >
-                    <Key className="w-3 h-3" />
-                    {user.id === showPermissions ? "Ocultar" : "Ver"} permisos
-                  </button>
-                  {showPermissions === user.id && user.permissions && (
-                    <div className="mt-2 space-y-1">
-                      {Object.entries(user.permissions).map(([module, perms]) => (
-                        <div key={module} className="text-xs">
-                          <span className="font-medium text-foreground">
-                            {moduleTranslations[module] || module}:
-                          </span>
-                          <span className="text-foreground-secondary ml-1">
-                            {Array.isArray(perms) 
-                              ? perms.map(p => {
-                                  const [mod, action] = p.split('.');
-                                  return actionTranslations[action] || action;
-                                }).join(", ")
-                              : "ninguno"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            renderItem={renderUserCard}
           />
         </div>
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
