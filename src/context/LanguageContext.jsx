@@ -13,6 +13,7 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     // Guardar idioma en localStorage cuando cambie
     localStorage.setItem('app_language', language);
+    console.log('[LanguageContext] Language changed to:', language);
   }, [language]);
 
   const value = {

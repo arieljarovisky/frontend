@@ -95,8 +95,13 @@ export default function ConfigPage() {
   const [searchParams] = useSearchParams();
   const { user, tenant } = useAuth();
   const { tenantInfo, refreshFeatures } = useApp();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [active, setActive] = useState("general");
+  
+  // Debug: log cuando cambia el idioma
+  useEffect(() => {
+    console.log('[ConfigPage] Language changed to:', language);
+  }, [language]);
   const barRef = useRef(null);
   const navScrollRef = useRef(null);
   const navAnchorRef = useRef(null);

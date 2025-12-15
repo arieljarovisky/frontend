@@ -5,11 +5,19 @@ import { Languages } from 'lucide-react';
 export default function LanguageSelector() {
   const { language, setLanguage } = useLanguage();
 
+  const handleLanguageChange = (e) => {
+    const newLanguage = e.target.value;
+    console.log('[LanguageSelector] Changing language from', language, 'to', newLanguage);
+    setLanguage(newLanguage);
+    // Forzar re-render del componente
+    window.dispatchEvent(new Event('languagechange'));
+  };
+
   return (
     <div className="relative">
       <select
         value={language}
-        onChange={(e) => setLanguage(e.target.value)}
+        onChange={handleLanguageChange}
         className="appearance-none bg-background-secondary border border-border rounded-lg px-3 py-2 pr-8 text-sm text-foreground cursor-pointer hover:bg-background-secondary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
         aria-label="Select language"
       >
