@@ -1514,7 +1514,7 @@ export default function ConfigPage() {
         <div 
           className="fixed right-6 animate-in slide-in-from-top-2"
           style={{ 
-            top: floating ? `${topOffset + navHeight + 16}px` : '96px',
+            top: floating ? `${topOffset + navHeight + 80}px` : '160px',
             zIndex: 100
           }}
         >
