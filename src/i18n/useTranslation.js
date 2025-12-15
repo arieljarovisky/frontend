@@ -4,9 +4,14 @@ import { useMemo } from 'react';
 import esTranslations from './translations/es.json';
 import enTranslations from './translations/en.json';
 
+// Verificar que las traducciones se cargaron correctamente (solo en desarrollo)
+if (import.meta.env.DEV) {
+  console.log('[i18n] Translations loaded - ES keys:', Object.keys(esTranslations || {}).length, 'EN keys:', Object.keys(enTranslations || {}).length);
+}
+
 const translations = {
-  es: esTranslations,
-  en: enTranslations,
+  es: esTranslations || {},
+  en: enTranslations || {},
 };
 
 export function useTranslation() {
@@ -17,9 +22,9 @@ export function useTranslation() {
       const keys = key.split('.');
       let value = translations[language];
       
-      // Debug: solo en desarrollo
-      if (import.meta.env.DEV && key === 'whatsapp.botPersonalization') {
-        console.log('[i18n] Language:', language, 'Key:', key, 'Translations available:', Object.keys(translations[language] || {}));
+      // Debug - solo en desarrollo y para claves específicas
+      if (import.meta.env.DEV && (key.includes('whatsapp') || key.includes('config'))) {
+        console.log('[i18n] Translating:', key, '→ Language:', language);
       }
 
       // Navegar por las claves anidadas

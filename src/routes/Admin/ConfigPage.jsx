@@ -2093,8 +2093,8 @@ export default function ConfigPage() {
       {/* WHATSAPP */}
       <div id="whatsapp">
         <ConfigSection
-          title="WhatsApp Business"
-          description="Conectá tu número de WhatsApp para automatizar reservas y recordatorios"
+          title={t("whatsapp.title")}
+          description={t("whatsapp.description")}
           icon={MessageCircle}
         >
           <div className="space-y-8">
@@ -2106,9 +2106,9 @@ export default function ConfigPage() {
                     <MessageCircle className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-foreground mb-2">Conectá tu WhatsApp Business</h3>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{t("whatsapp.connectTitle")}</h3>
                     <p className="text-sm text-foreground-secondary mb-6 leading-relaxed">
-                      Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta y nosotros nos encargamos del resto.
+                      {t("whatsapp.connectDescription")}
                     </p>
                     {whatsappConfig.oauthAvailable ? (
                       <Button
@@ -2120,12 +2120,12 @@ export default function ConfigPage() {
                         {connectingWhatsApp ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Conectando...
+                            {t("whatsapp.connecting")}
                           </>
                         ) : (
                           <>
                             <ExternalLink className="w-5 h-5" />
-                            Conectar WhatsApp Business
+                            {t("whatsapp.connect")}
                           </>
                         )}
                       </Button>
@@ -2163,7 +2163,7 @@ export default function ConfigPage() {
                       </p>
                       <div className="space-y-3 pt-4 border-t border-border/40">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">Asistente activo</span>
+                          <span className="text-sm font-medium text-foreground">{t("whatsapp.assistantActive")}</span>
                           <SwitchField
                             label=""
                             checked={whatsappConfig.hubActive}
@@ -2173,7 +2173,7 @@ export default function ConfigPage() {
                         </div>
                         {whatsappConfig.updatedAt && (
                           <p className="text-xs text-foreground-muted/70 pt-2 border-t border-border/30">
-                            Última actualización:<br />
+                            {t("whatsapp.lastUpdate")}<br />
                             <span className="font-medium">{new Date(whatsappConfig.updatedAt).toLocaleString("es-AR")}</span>
                           </p>
                         )}
@@ -2186,12 +2186,12 @@ export default function ConfigPage() {
                     {/* Número de WhatsApp */}
                     <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
                       <div className="mb-4">
-                        <h3 className="text-lg font-bold text-foreground mb-2">Número de WhatsApp</h3>
-                        <p className="text-sm text-foreground-secondary">Configurá el número desde el cual se enviarán los mensajes</p>
+                        <h3 className="text-lg font-bold text-foreground mb-2">{t("whatsapp.phoneNumberLabel")}</h3>
+                        <p className="text-sm text-foreground-secondary">{t("whatsapp.phoneNumberHint")}</p>
                       </div>
                       <FieldGroup
                         label=""
-                        hint="Incluí el código de país. Ejemplo: +5491123456789"
+                        hint={t("whatsapp.phoneNumberHint")}
                       >
                         <input
                           type="text"
