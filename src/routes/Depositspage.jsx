@@ -145,7 +145,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
             {expanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
 
-          {deposit.urgency !== "expired" && deposit.urgency !== "paid" && deposit.status !== 'deposit_paid' && deposit.status !== 'confirmed' && (
+          {deposit.urgency !== "expired" && deposit.status !== 'deposit_paid' && deposit.status !== 'confirmed' && (
             <>
               <button
                 onClick={() => handleAction("markPaid")}
@@ -218,7 +218,7 @@ function DepositRow({ deposit, onAction, onRefresh }) {
 // ============================================
 
 export default function DepositsPage() {
-  const [includeExpired, setIncludeExpired] = useState(true); // Por defecto mostrar todas incluyendo vencidas
+  const [includeExpired, setIncludeExpired] = useState(true); // Mostrar pendientes incluyendo vencidas
   const [refreshKey, setRefresh] = useState(0);
   
   // Filtros y paginado
