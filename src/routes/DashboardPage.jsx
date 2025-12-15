@@ -32,7 +32,8 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+const Line = React.lazy(() => import('react-chartjs-2').then(m => ({ default: m.Line })));
+const Bar = React.lazy(() => import('react-chartjs-2').then(m => ({ default: m.Bar })));
 
 // Drag and Drop
 import {
@@ -403,6 +404,9 @@ export default function DashboardPage() {
   const [showWhatsAppModal, setShowWhatsAppModal] = React.useState(false);
   const [pendingUpdate, setPendingUpdate] = React.useState(null); // { itemId, newTime, oldTime }
   const [expandedSlots, setExpandedSlots] = React.useState(0); // Número de veces que se ha expandido (0 = compacto)
+  const modalRef = React.useRef(null);
+  const closeBtnRef = React.useRef(null);
+  const confirmBtnRef = React.useRef(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -417,6 +421,35 @@ export default function DashboardPage() {
   React.useEffect(() => {
     setAgendaItems(agendaArr);
   }, [agendaArr]);
+
+  React.useEffect(() => {
+    if (showWhatsAppModal) {
+      confirmBtnRef.current?.focus();
+    }
+  }, [showWhatsAppModal]);
+
+  const handleModalKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setShowWhatsAppModal(false);
+      setPendingUpdate(null);
+      return;
+    }
+    if (e.key === 'Tab' && modalRef.current) {
+      const selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+      const nodes = modalRef.current.querySelectorAll(selectors);
+      const focusables = Array.from(nodes);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    }
+  };
 
   const handleDragStart = (event) => {
     setActiveId(event.active.id);
@@ -712,85 +745,87 @@ export default function DashboardPage() {
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '300px', width: '100%' }}
               >
-                <Line
-                  data={{
-                    labels: incomeArr.map(d => getMonthName(d.month)),
-                    datasets: [
-                      {
-                        label: t("dashboard.income"),
-                        data: incomeArr.map(d => d.income),
-                        borderColor: '#0ea5e9',
-                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#0ea5e9',
-                        pointBorderColor: '#0ea5e9',
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                          color: '#a1a1aa',
-                          font: {
-                            size: 12
-                          }
+                <React.Suspense fallback={<div className="w-full h-[280px] flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>}>
+                  <Line
+                    data={{
+                      labels: incomeArr.map(d => getMonthName(d.month)),
+                      datasets: [
+                        {
+                          label: t("dashboard.income"),
+                          data: incomeArr.map(d => d.income),
+                          borderColor: '#0ea5e9',
+                          backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                          borderWidth: 3,
+                          fill: true,
+                          tension: 0.4,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                          pointBackgroundColor: '#0ea5e9',
+                          pointBorderColor: '#0ea5e9',
                         }
-                      },
-                      tooltip: {
-                        backgroundColor: '#27272a',
-                        borderColor: '#3f3f46',
-                        borderWidth: 1,
-                        borderRadius: 12,
-                        padding: 12,
-                        titleColor: '#fafafa',
-                        bodyColor: '#fafafa',
-                        callbacks: {
-                          label: function(context) {
-                            return `Ingresos: ${money(context.parsed.y)}`;
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        ticks: {
-                          color: '#a1a1aa',
-                          font: {
-                            size: 12
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: true,
+                          position: 'top',
+                          labels: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            }
                           }
                         },
-                        grid: {
-                          color: 'rgba(63, 63, 70, 0.3)',
-                          borderDash: [3, 3]
+                        tooltip: {
+                          backgroundColor: '#27272a',
+                          borderColor: '#3f3f46',
+                          borderWidth: 1,
+                          borderRadius: 12,
+                          padding: 12,
+                          titleColor: '#fafafa',
+                          bodyColor: '#fafafa',
+                          callbacks: {
+                            label: function(context) {
+                              return `Ingresos: ${money(context.parsed.y)}`;
+                            }
+                          }
                         }
                       },
-                      y: {
-                        ticks: {
-                          color: '#a1a1aa',
-                          font: {
-                            size: 12
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            }
                           },
-                          callback: function(value) {
-                            return `$${value.toLocaleString('es-AR')}`;
+                          grid: {
+                            color: 'rgba(63, 63, 70, 0.3)',
+                            borderDash: [3, 3]
                           }
                         },
-                        grid: {
-                          color: 'rgba(63, 63, 70, 0.3)',
-                          borderDash: [3, 3]
+                        y: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            },
+                            callback: function(value) {
+                              return `$${value.toLocaleString('es-AR')}`;
+                            }
+                          },
+                          grid: {
+                            color: 'rgba(63, 63, 70, 0.3)',
+                            borderDash: [3, 3]
+                          }
                         }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </React.Suspense>
               </div>
             )}
           </Section>
@@ -828,77 +863,79 @@ export default function DashboardPage() {
                 className="w-full" 
                 style={{ height: '280px', position: 'relative', minWidth: '200px', width: '100%' }}
               >
-                <Bar
-                  data={{
-                    labels: topServicesArr.map(d => d.service_name),
-                    datasets: [
-                      {
-                        label: t("navigation.appointments"),
-                        data: topServicesArr.map(d => d.count),
-                        backgroundColor: (context) => {
-                          const ctx = context.chart.ctx;
-                          const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-                          gradient.addColorStop(0, '#60a5fa');
-                          gradient.addColorStop(1, '#a78bfa');
-                          return gradient;
-                        },
-                        borderRadius: 12,
-                        borderSkipped: false,
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false
-                      },
-                      tooltip: {
-                        backgroundColor: '#18181b',
-                        borderColor: '#3f3f46',
-                        borderWidth: 1,
-                        borderRadius: 12,
-                        padding: 12,
-                        titleColor: '#fafafa',
-                        bodyColor: '#fafafa',
-                        callbacks: {
-                          label: function(context) {
-                            const value = context.parsed.y;
-                            return `${value} turno${value !== 1 ? 's' : ''}`;
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        ticks: {
-                          color: '#a1a1aa',
-                          font: {
-                            size: 11
+                <React.Suspense fallback={<div className="w-full h-[280px] flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>}>
+                  <Bar
+                    data={{
+                      labels: topServicesArr.map(d => d.service_name),
+                      datasets: [
+                        {
+                          label: t("navigation.appointments"),
+                          data: topServicesArr.map(d => d.count),
+                          backgroundColor: (context) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+                            gradient.addColorStop(0, '#60a5fa');
+                            gradient.addColorStop(1, '#a78bfa');
+                            return gradient;
                           },
-                          maxRotation: 12,
-                          minRotation: 12
-                        },
-                        grid: {
+                          borderRadius: 12,
+                          borderSkipped: false,
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
                           display: false
+                        },
+                        tooltip: {
+                          backgroundColor: '#18181b',
+                          borderColor: '#3f3f46',
+                          borderWidth: 1,
+                          borderRadius: 12,
+                          padding: 12,
+                          titleColor: '#fafafa',
+                          bodyColor: '#fafafa',
+                          callbacks: {
+                            label: function(context) {
+                              const value = context.parsed.y;
+                              return `${value} turno${value !== 1 ? 's' : ''}`;
+                            }
+                          }
                         }
                       },
-                      y: {
-                        ticks: {
-                          color: '#a1a1aa',
-                          font: {
-                            size: 12
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 11
+                            },
+                            maxRotation: 12,
+                            minRotation: 12
+                          },
+                          grid: {
+                            display: false
                           }
                         },
-                        grid: {
-                          color: 'rgba(63, 63, 70, 0.25)',
-                          borderDash: [3, 3]
+                        y: {
+                          ticks: {
+                            color: '#a1a1aa',
+                            font: {
+                              size: 12
+                            }
+                          },
+                          grid: {
+                            color: 'rgba(63, 63, 70, 0.25)',
+                            borderDash: [3, 3]
+                          }
                         }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </React.Suspense>
               </div>
             )}
           </Section>
@@ -1021,7 +1058,10 @@ export default function DashboardPage() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="dashboard-whatsapp-modal-title"
+            aria-describedby="dashboard-whatsapp-modal-desc"
             tabIndex="-1"
+            ref={modalRef}
+            onKeyDown={handleModalKeyDown}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -1036,13 +1076,14 @@ export default function DashboardPage() {
                   setPendingUpdate(null);
                 }}
                 className="p-1 rounded-lg hover:bg-background-secondary transition-colors"
+                ref={closeBtnRef}
               >
                 <X className="w-4 h-4 text-foreground-secondary" />
               </button>
             </div>
             
             <div className="mb-6">
-              <p className="text-sm text-foreground-secondary mb-3">
+              <p id="dashboard-whatsapp-modal-desc" className="text-sm text-foreground-secondary mb-3">
                 El turno de <strong className="text-foreground">{pendingUpdate.item?.customer_name || 'Cliente'}</strong> se actualizó:
               </p>
               <div className="flex items-center gap-2 p-3 rounded-lg bg-background-secondary border border-border">
@@ -1087,6 +1128,7 @@ export default function DashboardPage() {
                   confirmUpdate(sendWhatsApp);
                 }}
                 className="flex-1 px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                ref={confirmBtnRef}
               >
                 <MessageSquare className="w-4 h-4" />
                 Confirmar
