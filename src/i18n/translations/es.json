@@ -1,0 +1,67 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "close": "Cerrar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "language": {
+    "spanish": "Español",
+    "english": "English",
+    "selectLanguage": "Idioma"
+  },
+  "whatsapp": {
+    "title": "WhatsApp",
+    "connect": "Conectar WhatsApp Business",
+    "disconnect": "Desconectar WhatsApp",
+    "connected": "Conectado",
+    "notConnected": "No conectado",
+    "status": "Estado",
+    "phoneNumber": "Número de WhatsApp",
+    "phoneNumberHint": "Incluí el código de país. Ejemplo: +5491123456789",
+    "assistantActive": "Asistente activo",
+    "supportAgent": "Botón de Ayuda",
+    "supportAgentDescription": "Permití que tus clientes se conecten con un agente humano cuando presionen \"Ayuda\"",
+    "enableSupportAgent": "Habilitar botón de ayuda",
+    "supportAgentPhone": "Número del agente de soporte",
+    "supportAgentPhoneHint": "Número de WhatsApp del agente que recibirá las solicitudes (formato E.164, ej: 5491170590570)",
+    "botPersonalization": "Personalización del Bot",
+    "botPersonalizationDescription": "Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá {name} para reemplazar el nombre del cliente.",
+    "greeting": "Saludo inicial",
+    "greetingHint": "Mensaje que aparece cuando el cliente escribe 'hola' por primera vez",
+    "greetingWithName": "Saludo con nombre",
+    "greetingWithNameHint": "Mensaje cuando el cliente ya está registrado. Usá {name} para el nombre",
+    "welcomeMessage": "Mensaje de bienvenida",
+    "welcomeMessageHint": "Texto que aparece en el menú principal del bot",
+    "welcomeFullMessage": "Mensaje completo de bienvenida (opcional)",
+    "welcomeFullMessageHint": "Mensaje más extenso y personalizado que aparece en el menú principal. Podés usar {name} para incluir el nombre del cliente. Si está vacío, se usará el mensaje de bienvenida corto.",
+    "nameRequest": "Solicitud de nombre",
+    "nameRequestHint": "Mensaje para pedirle el nombre al cliente nuevo",
+    "branchSelection": "Selección de sucursal",
+    "branchSelectionHint": "Mensaje cuando hay múltiples sucursales disponibles",
+    "serviceSelectionHeader": "Encabezado - Selección de servicio",
+    "serviceSelectionHeaderHint": "Título al mostrar la lista de servicios",
+    "instructorSelectionBody": "Cuerpo - Selección de profesional",
+    "instructorSelectionBodyHint": "Texto al mostrar la lista de profesionales/instructores",
+    "saveChangesNote": "Los cambios se guardarán junto con el resto de la configuración usando el botón \"Guardar Cambios\" arriba"
+  },
+  "config": {
+    "title": "Configuración",
+    "saveChanges": "Guardar Cambios",
+    "saving": "Guardando...",
+    "unsavedChanges": "Tienes cambios sin guardar"
+  }
+}
+

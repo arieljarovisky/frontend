@@ -38,6 +38,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/UseApp";
 import Button from "../../components/ui/Button";
 import { logger } from "../../utils/logger.js";
+import { useTranslation } from "../../i18n/useTranslation.js";
 
 function ConfigSection({ title, description, icon: Icon, children }) {
   return (
@@ -94,6 +95,7 @@ export default function ConfigPage() {
   const [searchParams] = useSearchParams();
   const { user, tenant } = useAuth();
   const { tenantInfo, refreshFeatures } = useApp();
+  const { t } = useTranslation();
   const [active, setActive] = useState("general");
   const barRef = useRef(null);
   const navScrollRef = useRef(null);
@@ -2287,17 +2289,17 @@ export default function ConfigPage() {
               <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
                 <div className="mb-6">
                   <h3 className="text-lg font-bold text-foreground mb-2">
-                    Personalización del Bot
+                    {t("whatsapp.botPersonalization")}
                   </h3>
                   <p className="text-sm text-foreground-secondary">
-                    Personalizá los mensajes que el bot de WhatsApp envía a tus clientes. Usá <code className="bg-background-secondary px-1.5 py-0.5 rounded text-xs font-mono">{"{name}"}</code> para reemplazar el nombre del cliente.
+                    {t("whatsapp.botPersonalizationDescription")}
                   </p>
                 </div>
 
               <div className="space-y-4">
                 <FieldGroup
-                  label="Saludo inicial"
-                  hint="Mensaje que aparece cuando el cliente escribe 'hola' por primera vez"
+                  label={t("whatsapp.greeting")}
+                  hint={t("whatsapp.greetingHint")}
                 >
                   <input
                     type="text"
@@ -2309,8 +2311,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Saludo con nombre"
-                  hint="Mensaje cuando el cliente ya está registrado. Usá {name} para el nombre"
+                  label={t("whatsapp.greetingWithName")}
+                  hint={t("whatsapp.greetingWithNameHint")}
                 >
                   <input
                     type="text"
@@ -2322,8 +2324,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Mensaje de bienvenida"
-                  hint="Texto que aparece en el menú principal del bot"
+                  label={t("whatsapp.welcomeMessage")}
+                  hint={t("whatsapp.welcomeMessageHint")}
                 >
                   <input
                     type="text"
@@ -2335,8 +2337,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Mensaje completo de bienvenida (opcional)"
-                  hint="Mensaje más extenso y personalizado que aparece en el menú principal. Podés usar {name} para incluir el nombre del cliente. Si está vacío, se usará el mensaje de bienvenida corto."
+                  label={t("whatsapp.welcomeFullMessage")}
+                  hint={t("whatsapp.welcomeFullMessageHint")}
                 >
                   <textarea
                     value={botConfig.welcomeFullMessage || ""}
@@ -2347,8 +2349,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Solicitud de nombre"
-                  hint="Mensaje para pedirle el nombre al cliente nuevo"
+                  label={t("whatsapp.nameRequest")}
+                  hint={t("whatsapp.nameRequestHint")}
                 >
                   <textarea
                     value={botConfig.nameRequest}
@@ -2359,8 +2361,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Selección de sucursal"
-                  hint="Mensaje cuando hay múltiples sucursales disponibles"
+                  label={t("whatsapp.branchSelection")}
+                  hint={t("whatsapp.branchSelectionHint")}
                 >
                   <input
                     type="text"
@@ -2372,8 +2374,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Encabezado - Selección de servicio"
-                  hint="Título al mostrar la lista de servicios"
+                  label={t("whatsapp.serviceSelectionHeader")}
+                  hint={t("whatsapp.serviceSelectionHeaderHint")}
                 >
                   <input
                     type="text"
@@ -2385,8 +2387,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Cuerpo - Selección de profesional"
-                  hint="Texto al mostrar la lista de profesionales/instructores"
+                  label={t("whatsapp.instructorSelectionBody")}
+                  hint={t("whatsapp.instructorSelectionBodyHint")}
                 >
                   <input
                     type="text"
@@ -2401,7 +2403,7 @@ export default function ConfigPage() {
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
                     <Info className="w-4 h-4 text-primary-400" />
                     <p className="text-sm text-foreground-muted">
-                      Los cambios se guardarán junto con el resto de la configuración usando el botón "Guardar Cambios" arriba
+                      {t("whatsapp.saveChangesNote")}
                     </p>
                   </div>
                 </div>

@@ -1,0 +1,67 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "language": {
+    "spanish": "Español",
+    "english": "English",
+    "selectLanguage": "Language"
+  },
+  "whatsapp": {
+    "title": "WhatsApp",
+    "connect": "Connect WhatsApp Business",
+    "disconnect": "Disconnect WhatsApp",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "status": "Status",
+    "phoneNumber": "WhatsApp Number",
+    "phoneNumberHint": "Include country code. Example: +5491123456789",
+    "assistantActive": "Assistant active",
+    "supportAgent": "Help Button",
+    "supportAgentDescription": "Allow your customers to connect with a human agent when they press \"Help\"",
+    "enableSupportAgent": "Enable help button",
+    "supportAgentPhone": "Support agent phone number",
+    "supportAgentPhoneHint": "WhatsApp number of the agent who will receive requests (E.164 format, e.g.: 5491170590570)",
+    "botPersonalization": "Bot Personalization",
+    "botPersonalizationDescription": "Customize the messages that the WhatsApp bot sends to your customers. Use {name} to replace the customer's name.",
+    "greeting": "Initial greeting",
+    "greetingHint": "Message that appears when the customer writes 'hello' for the first time",
+    "greetingWithName": "Greeting with name",
+    "greetingWithNameHint": "Message when the customer is already registered. Use {name} for the name",
+    "welcomeMessage": "Welcome message",
+    "welcomeMessageHint": "Text that appears in the bot's main menu",
+    "welcomeFullMessage": "Full welcome message (optional)",
+    "welcomeFullMessageHint": "Longer and more personalized message that appears in the main menu. You can use {name} to include the customer's name. If empty, the short welcome message will be used.",
+    "nameRequest": "Name request",
+    "nameRequestHint": "Message to ask the new customer for their name",
+    "branchSelection": "Branch selection",
+    "branchSelectionHint": "Message when there are multiple branches available",
+    "serviceSelectionHeader": "Header - Service selection",
+    "serviceSelectionHeaderHint": "Title when showing the service list",
+    "instructorSelectionBody": "Body - Professional selection",
+    "instructorSelectionBodyHint": "Text when showing the list of professionals/instructors",
+    "saveChangesNote": "Changes will be saved together with the rest of the configuration using the \"Save Changes\" button above"
+  },
+  "config": {
+    "title": "Configuration",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "unsavedChanges": "You have unsaved changes"
+  }
+}
+

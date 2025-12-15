@@ -24,6 +24,7 @@ import ClassesPage from "./routes/ClassesPage.jsx";
 // Auth
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
 import PaymentSuccess from "./routes/PaymentSuccess.jsx";
 import PaymentFailure from "./routes/PaymentFailure.jsx";
@@ -608,12 +609,14 @@ if (typeof window !== 'undefined') {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ThemeProvider>
-        <AuthProvider>
-          <NotificationSystem />
-          <RouterProvider router={router} />
-        </AuthProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationSystem />
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
