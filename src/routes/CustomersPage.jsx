@@ -6,6 +6,7 @@ import { apiClient } from "../api";
 import { SearchInput, initials, formatPhone, formatDateTime } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
 import { useApp } from "../context/UseApp.js";
+import { useTranslation } from "../i18n/useTranslation.js";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 const formatCurrency = (value, currency = "ARS") => {
@@ -25,6 +26,7 @@ const formatCurrency = (value, currency = "ARS") => {
 };
 
 export default function CustomersPage() {
+    const { t } = useTranslation();
     // 1) Estado local de búsqueda y paginación
     const [params, setParams] = useSearchParams();
     const { tenantSlug } = useParams();
@@ -113,11 +115,11 @@ export default function CustomersPage() {
     }, [classesEnabled, showMembershipColumn]);
 
     const membershipStyles = {
-        authorized: { label: "Activa", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" },
-        pending: { label: "Pendiente", className: "bg-amber-500/10 text-amber-400 border border-amber-400/20" },
-        paused: { label: "Pausada", className: "bg-slate-500/10 text-slate-300 border border-slate-400/20" },
-        cancelled: { label: "Cancelada", className: "bg-rose-500/10 text-rose-400 border border-rose-400/20" },
-        default: { label: "Sin suscripción", className: "bg-foreground/5 text-foreground-secondary border border-border" },
+        authorized: { label: t("customers.active"), className: "bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" },
+        pending: { label: t("customers.pending"), className: "bg-amber-500/10 text-amber-400 border border-amber-400/20" },
+        paused: { label: t("customers.paused"), className: "bg-slate-500/10 text-slate-300 border border-slate-400/20" },
+        cancelled: { label: t("customers.cancelled"), className: "bg-rose-500/10 text-rose-400 border border-rose-400/20" },
+        default: { label: t("customers.noSubscription"), className: "bg-foreground/5 text-foreground-secondary border border-border" },
     };
 
     const renderMembershipInfo = (row) => {
@@ -182,10 +184,10 @@ export default function CustomersPage() {
             {/* Header */}
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground mb-1">Clientes</h1>
+                    <h1 className="text-2xl font-bold text-foreground mb-1">{t("customers.title")}</h1>
                     {pagination && (
                         <p className="text-sm text-foreground-secondary">
-                            {pagination.total === 0 ? "Sin clientes" : `${pagination.total} cliente${pagination.total !== 1 ? "s" : ""} en total`}
+                            {pagination.total === 0 ? t("customers.noCustomers") : t("customers.totalCustomers", { count: pagination.total, plural: pagination.total !== 1 ? "s" : "" })}
                         </p>
                     )}
                 </div>
@@ -198,7 +200,7 @@ export default function CustomersPage() {
                         value={q}
                         onChange={setQ}
                         onSubmit={submitSearch}
-                        placeholder="Buscar por nombre o teléfono…"
+                        placeholder={t("customers.searchPlaceholder")}
                         width="100%"
                     />
                     {loading && qDebounced ? (
@@ -223,7 +225,7 @@ export default function CustomersPage() {
                     }}
                 >
                     <div className="min-w-0">Cliente</div>
-                    <div className="min-w-0">Teléfono</div>
+                    <div className="min-w-0">{t("customers.phone")}</div>
                     <div className="text-right min-w-0">Turnos</div>
                     {classesEnabled ? (
                         <div className="text-right min-w-0">
@@ -234,7 +236,7 @@ export default function CustomersPage() {
                         </div>
                     ) : null}
                     {showMembershipColumn ? (
-                        <div className="text-right min-w-0">Membresía</div>
+                        <div className="text-right min-w-0">{t("customers.membership")}</div>
                     ) : null}
                 </div>
 
@@ -242,23 +244,23 @@ export default function CustomersPage() {
                 {loading ? (
                     <div className="px-6 py-12 flex flex-col items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mb-3" />
-                        <div className="text-sm text-foreground-muted">Cargando clientes…</div>
+                        <div className="text-sm text-foreground-muted">{t("customers.loadingCustomers")}</div>
                     </div>
                 ) : error ? (
                     <div className="px-6 py-12 text-center">
-                        <div className="text-sm text-red-400 mb-2">Error al cargar clientes</div>
+                        <div className="text-sm text-red-400 mb-2">{t("customers.errorLoadingCustomers")}</div>
                         <div className="text-xs text-foreground-muted">{error}</div>
                     </div>
                 ) : rows.length === 0 ? (
                     <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
                         <Users className="w-12 h-12 text-foreground-muted mb-3 opacity-50" />
                         <div className="text-sm text-foreground-secondary mb-1">
-                            {qDebounced ? "No se encontraron clientes" : "Sin clientes todavía"}
+                            {qDebounced ? t("customers.noCustomersFound") : t("customers.noCustomersYet")}
                         </div>
                         <div className="text-xs text-foreground-muted">
                             {qDebounced
                                 ? "Intenta con otro término de búsqueda"
-                                : "Los clientes aparecerán aquí cuando crees turnos o se registren"}
+                                : t("customers.customersWillAppear")}
                         </div>
                     </div>
                 ) : (
@@ -311,7 +313,7 @@ export default function CustomersPage() {
                                     </div>
                                     <div className="min-w-0 flex-1 overflow-hidden">
                                         <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary-400 transition-colors">
-                                            {r.name || "(Sin nombre)"}
+                                            {r.name || t("customers.noName")}
                                         </div>
                                         <div className="text-xs text-foreground-muted truncate">ID #{r.id}</div>
                                     </div>
@@ -353,7 +355,7 @@ export default function CustomersPage() {
                         <div className="text-sm text-foreground-secondary">
                             Mostrando <span className="font-semibold text-foreground">{startItem}</span> a{" "}
                             <span className="font-semibold text-foreground">{endItem}</span> de{" "}
-                            <span className="font-semibold text-foreground">{pagination.total}</span> clientes
+                            <span className="font-semibold text-foreground">{pagination.total}</span> {t("customers.title").toLowerCase()}
                         </div>
                         <div className="flex items-center gap-2">
                             <button

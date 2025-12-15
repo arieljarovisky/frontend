@@ -4,10 +4,12 @@ import { useQuery } from "../shared/useQuery.js";
 import { toast } from "sonner";
 import { SearchInput } from "../shared/ui.jsx";
 import { useDebouncedValue } from "../shared/useDebouncedValue.js";
+import { useTranslation } from "../i18n/useTranslation.js";
 import { Link, useParams } from "react-router-dom";
 import { Plus, Upload, Trash2, Edit, UserPlus, UserCheck } from "lucide-react";
 
 export default function WorkoutRoutinesPage() {
+  const { t } = useTranslation();
   const { tenantSlug } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
   const qDebounced = useDebouncedValue(searchQuery, 300);
@@ -129,7 +131,7 @@ export default function WorkoutRoutinesPage() {
 
   const handleCreateRoutine = async () => {
     if (!routineName.trim()) {
-      toast.error("El nombre de la rutina es requerido");
+      toast.error(t("routines.routineNameRequired"));
       return;
     }
 
@@ -184,9 +186,9 @@ export default function WorkoutRoutinesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Rutinas de ejercicios</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-1">{t("routines.title")}</h1>
           <p className="text-sm text-foreground-secondary">
-            Gestiona y asigna rutinas de ejercicios a tus clientes
+            {t("routines.manageAndAssign")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -195,14 +197,14 @@ export default function WorkoutRoutinesPage() {
             className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
-            Importar rutinas
+            {t("routines.importRoutines")}
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Crear rutina
+            {t("routines.createRoutine")}
           </button>
         </div>
       </div>
@@ -213,7 +215,7 @@ export default function WorkoutRoutinesPage() {
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Buscar rutinas por nombre, descripción o dificultad…"
+            placeholder={t("routines.searchPlaceholder")}
             width="100%"
           />
         </div>
@@ -224,7 +226,7 @@ export default function WorkoutRoutinesPage() {
         {loading ? (
           <div className="px-6 py-12 flex flex-col items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mb-3" />
-            <div className="text-sm text-foreground-muted">Cargando rutinas…</div>
+            <div className="text-sm text-foreground-muted">{t("common.loading")}</div>
           </div>
         ) : error ? (
           <div className="px-6 py-12 text-center">
@@ -234,12 +236,12 @@ export default function WorkoutRoutinesPage() {
         ) : filteredRoutines.length === 0 ? (
           <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
             <div className="text-sm text-foreground-secondary mb-1">
-              {qDebounced ? "No se encontraron rutinas" : "Sin rutinas todavía"}
+              {qDebounced ? t("routines.noRoutinesFound") : t("routines.noRoutinesYet")}
             </div>
             <div className="text-xs text-foreground-muted">
               {qDebounced
-                ? "Intenta con otro término de búsqueda"
-                : "Las rutinas aparecerán aquí cuando se creen"}
+                ? t("routines.tryAnotherSearch")
+                : t("routines.routinesWillAppear")}
             </div>
           </div>
         ) : (
@@ -274,7 +276,7 @@ export default function WorkoutRoutinesPage() {
                       <div className="flex items-center gap-4 text-xs text-foreground-muted">
                         {assignedCustomer ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-foreground-secondary">Asignada a:</span>
+                            <span className="text-foreground-secondary">{t("routines.assignedTo")}</span>
                             <Link
                               to={`/${tenantSlug}/customers/${routine.assigned_to_customer_id}`}
                               className="text-primary hover:text-primary-hover font-medium"
@@ -283,11 +285,11 @@ export default function WorkoutRoutinesPage() {
                             </Link>
                           </div>
                         ) : (
-                          <span className="text-foreground-muted">Sin asignar</span>
+                          <span className="text-foreground-muted">{t("routines.unassigned")}</span>
                         )}
                         {routine.created_at && (
                           <span>
-                            Creada: {new Date(routine.created_at).toLocaleDateString("es-AR")}
+                            {t("routines.created")} {new Date(routine.created_at).toLocaleDateString("es-AR")}
                           </span>
                         )}
                       </div>
@@ -296,20 +298,20 @@ export default function WorkoutRoutinesPage() {
                       <Link
                         to={`/${tenantSlug}/workout-routines/${routine.id}/edit`}
                         className="p-2 text-foreground-secondary hover:text-foreground border border-border rounded-lg hover:bg-background-secondary transition-colors"
-                        title="Editar rutina"
+                        title={t("routines.editRoutine")}
                       >
                         <Edit className="w-5 h-5" />
                       </Link>
                       <button
                         onClick={() => handleAssignClick(routine)}
                         className="p-2 text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
-                        title={assignedCustomer ? "Reasignar rutina" : "Asignar rutina"}
+                        title={assignedCustomer ? t("routines.reassignRoutine") : t("routines.assignRoutine")}
                       >
                         {assignedCustomer ? <UserCheck className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
                       </button>
                       <button
                         onClick={async () => {
-                          if (!window.confirm(`¿Estás seguro de que deseas eliminar la rutina "${routine.name}"? Esta acción no se puede deshacer.`)) {
+                          if (!window.confirm(t("routines.confirmDelete", { name: routine.name }))) {
                             return;
                           }
                           
@@ -327,7 +329,7 @@ export default function WorkoutRoutinesPage() {
                         }}
                         disabled={deleting === routine.id}
                         className="p-2 text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Eliminar rutina"
+                        title={t("routines.deleteRoutine")}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -355,7 +357,7 @@ export default function WorkoutRoutinesPage() {
           >
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-foreground">
-                Asignar rutina: {selectedRoutine.name}
+                {t("routines.assignRoutineTitle", { name: selectedRoutine.name })}
               </h3>
               <button
                 onClick={() => {
@@ -374,7 +376,7 @@ export default function WorkoutRoutinesPage() {
               <SearchInput
                 value={customerSearchQuery}
                 onChange={setCustomerSearchQuery}
-                placeholder="Buscar cliente por nombre o teléfono..."
+                placeholder={t("routines.searchCustomer")}
                 width="100%"
               />
             </div>
@@ -401,8 +403,8 @@ export default function WorkoutRoutinesPage() {
                       return (
                         <div className="text-sm text-foreground-secondary py-8 text-center">
                           {customerSearchQuery
-                            ? "No se encontraron clientes con ese criterio"
-                            : "No hay clientes disponibles"}
+                            ? t("routines.noCustomersFound")
+                            : t("routines.noCustomersAvailable")}
                         </div>
                       );
                     }
@@ -455,7 +457,7 @@ export default function WorkoutRoutinesPage() {
                               
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-semibold text-foreground truncate">
-                                  {customer.name || "(Sin nombre)"}
+                                  {customer.name || t("customers.noName")}
                                 </div>
                                 {customer.phone && (
                                   <div className="text-xs text-foreground-muted mt-1 truncate">
@@ -466,7 +468,7 @@ export default function WorkoutRoutinesPage() {
                             </div>
                             {isAssigned && (
                               <span className="text-xs font-medium text-primary ml-2 flex-shrink-0">
-                                Asignada
+                                {t("routines.assigned")}
                               </span>
                             )}
                           </div>
@@ -487,7 +489,7 @@ export default function WorkoutRoutinesPage() {
                         const phone = (customer.phone || "").toLowerCase();
                         return name.includes(query) || phone.includes(query);
                       });
-                      return `${filtered.length} de ${customers.length} clientes`;
+                      return t("routines.ofCustomers", { filtered: filtered.length, total: customers.length });
                     })()}
                   </div>
                 )}
@@ -537,7 +539,7 @@ export default function WorkoutRoutinesPage() {
               {/* Nombre de la rutina */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Nombre de la rutina <span className="text-red-400">*</span>
+                  {t("routines.routineName")} <span className="text-red-400">{t("routines.required")}</span>
                 </label>
                 <input
                   type="text"
@@ -551,7 +553,7 @@ export default function WorkoutRoutinesPage() {
               {/* Descripción */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Descripción (opcional)
+                  {t("routines.description")}
                 </label>
                 <textarea
                   value={routineDescription}
@@ -627,7 +629,7 @@ export default function WorkoutRoutinesPage() {
               {/* Asignar a cliente (opcional) */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Asignar directamente a un cliente (opcional)
+                  {t("routines.assignDirectly")}
                 </label>
                 <select
                   value={assignToCustomerId || ""}
@@ -637,7 +639,7 @@ export default function WorkoutRoutinesPage() {
                   <option value="">No asignar ahora</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
-                      {customer.name || "(Sin nombre)"} {customer.phone ? `- ${customer.phone}` : ""}
+                      {customer.name || t("customers.noName")} {customer.phone ? `- ${customer.phone}` : ""}
                     </option>
                   ))}
                 </select>
@@ -665,7 +667,7 @@ export default function WorkoutRoutinesPage() {
                   disabled={creating || !routineName.trim()}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {creating ? "Creando..." : "Crear rutina"}
+                  {creating ? t("common.saving") : t("routines.createRoutine")}
                 </button>
               </div>
             </div>
@@ -678,7 +680,7 @@ export default function WorkoutRoutinesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg border border-border p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Importar rutinas</h2>
+              <h2 className="text-xl font-semibold text-foreground">{t("routines.importTitle")}</h2>
               <button
                 onClick={() => setShowImportModal(false)}
                 className="text-foreground-muted hover:text-foreground"
@@ -690,12 +692,12 @@ export default function WorkoutRoutinesPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-foreground-secondary mb-4">
-                  Sube un archivo Word (.docx) con una rutina. El sistema intentará extraer automáticamente la información de la rutina.
+                  {t("routines.uploadWordFile")}
                 </p>
                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-foreground-secondary mb-2">
-                    Archivo Word (.docx)
+                    {t("routines.wordFileLabel")}
                   </label>
                   <input
                     type="file"
@@ -709,13 +711,13 @@ export default function WorkoutRoutinesPage() {
                         const result = await apiClient.importWorkoutRoutineFromWord(file);
 
                         if (result?.data) {
-                          toast.success(`Rutina "${result.data.name}" importada correctamente desde Word`);
+                          toast.success(t("routines.importSuccess", { name: result.data.name }));
                           await refetch();
                           setShowImportModal(false);
                         }
                       } catch (error) {
                         console.error("Error importando rutina desde Word:", error);
-                        toast.error(error?.response?.data?.error || "Error al importar la rutina desde Word");
+                        toast.error(error?.response?.data?.error || t("routines.importError"));
                       } finally {
                         setImporting(false);
                         e.target.value = ''; // Reset input
@@ -725,11 +727,11 @@ export default function WorkoutRoutinesPage() {
                     disabled={importing}
                   />
                   <p className="text-xs text-foreground-muted mt-1 mb-3">
-                    El documento debe contener el nombre de la rutina, ejercicios con series y repeticiones
+                    {t("routines.importDocument")}
                   </p>
                   
                   <div className="bg-background-secondary rounded-lg p-4 border border-border">
-                    <p className="text-xs font-medium text-foreground-secondary mb-2">Ejemplo de formato Word:</p>
+                    <p className="text-xs font-medium text-foreground-secondary mb-2">{t("routines.wordExampleTitle")}</p>
                     <div className="bg-white dark:bg-gray-900 rounded border border-border p-4 text-sm font-mono text-left whitespace-pre-wrap text-foreground">
 {`RUTINA DE PIERNAS Y GLÚTEOS
 
@@ -765,7 +767,7 @@ Estiramiento de cuádriceps
 30 segundos por pierna`}
                     </div>
                     <p className="text-xs text-foreground-muted mt-2">
-                      El sistema detectará automáticamente: nombre, ejercicios, series, repeticiones, descanso y secciones.
+                      {t("routines.autoDetect")}
                     </p>
                   </div>
                 </div>

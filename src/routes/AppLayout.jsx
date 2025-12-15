@@ -4,6 +4,7 @@ import { apiClient } from "../api/client";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useTranslation } from "../i18n/useTranslation";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
@@ -128,6 +129,7 @@ export default function AppLayout() {
   const base = `/${tenantSlug || ""}`;
   const authContext = useAuth();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -235,18 +237,18 @@ export default function AppLayout() {
 
   // Agrupar items del menú
   const mainNavItems = [
-    { to: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
-    { to: `${base}/appointments`, label: navLabels.appointments, icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
-    { to: `${base}/classes`, label: navLabels.classes, icon: GraduationCap, active: pathname.startsWith(`${base}/classes`), featureKey: "classes" },
-    { to: `${base}/workout-routines`, label: "Rutinas", icon: Activity, active: pathname.startsWith(`${base}/workout-routines`), featureKey: "routines" },
-    { to: `${base}/customers`, label: navLabels.customers, icon: Users, active: pathname.startsWith(`${base}/customers`) },
-    { to: `${base}/deposits`, label: navLabels.deposits, icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
+    { to: `${base}/dashboard`, label: t("navigation.dashboard"), icon: LayoutDashboard, active: pathname === `${base}/dashboard` },
+    { to: `${base}/appointments`, label: navLabels.appointments || t("navigation.appointments"), icon: Calendar, active: pathname.startsWith(`${base}/appointments`) },
+    { to: `${base}/classes`, label: navLabels.classes || t("navigation.classes"), icon: GraduationCap, active: pathname.startsWith(`${base}/classes`), featureKey: "classes" },
+    { to: `${base}/workout-routines`, label: t("navigation.routines"), icon: Activity, active: pathname.startsWith(`${base}/workout-routines`), featureKey: "routines" },
+    { to: `${base}/customers`, label: navLabels.customers || t("navigation.customers"), icon: Users, active: pathname.startsWith(`${base}/customers`) },
+    { to: `${base}/deposits`, label: navLabels.deposits || t("navigation.deposits"), icon: DollarSign, active: pathname.startsWith(`${base}/deposits`) },
   ];
 
   const managementNavItems = [
     {
       to: `${base}/stock/products`,
-      label: "Stock",
+      label: t("navigation.stock"),
       icon: Package,
       active: pathname.startsWith(`${base}/stock`),
       module: "stock",
@@ -254,7 +256,7 @@ export default function AppLayout() {
     },
     {
       to: `${base}/invoicing`,
-      label: "Facturación",
+      label: t("navigation.invoicing"),
       icon: FileText,
       active: pathname.startsWith(`${base}/invoicing`),
       module: "invoicing",
@@ -262,7 +264,7 @@ export default function AppLayout() {
     },
     {
       to: `${base}/ecommerce-sales`,
-      label: "Ventas Online",
+      label: t("navigation.onlineSales"),
       icon: ShoppingCart,
       active: pathname.startsWith(`${base}/ecommerce-sales`),
       module: "invoicing",
@@ -273,21 +275,21 @@ export default function AppLayout() {
   const adminNavItems = [
     {
       to: `${base}/cash-register`,
-      label: "Cierre de Caja",
+      label: t("navigation.cashRegister"),
       icon: Receipt,
       active: pathname.startsWith(`${base}/cash-register`),
       adminOnly: true,
     },
     {
       to: `${base}/accounting`,
-      label: "Registro Contable",
+      label: t("navigation.accounting"),
       icon: BookOpen,
       active: pathname.startsWith(`${base}/accounting`),
       adminOnly: true,
     },
     {
       to: `${base}/admin/integraciones`,
-      label: "Integraciones",
+      label: t("navigation.integrations"),
       icon: PlugZap,
       active: pathname.startsWith(`${base}/admin/integraciones`),
       adminOnly: true,
@@ -295,7 +297,7 @@ export default function AppLayout() {
     },
     {
       to: `${base}/admin/mobile-app`,
-      label: "App móvil",
+      label: t("navigation.mobileApp"),
       icon: Smartphone,
       active: pathname.startsWith(`${base}/admin/mobile-app`),
       adminOnly: true,
@@ -304,11 +306,11 @@ export default function AppLayout() {
   ];
 
   const configNavItems = [
-    { to: `${base}/notifications`, label: "Notificaciones", icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
-    { to: `${base}/users`, label: "Usuarios", icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
-    { to: `${base}/admin/instructores`, label: navLabels.professionals, icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
-    { to: `${base}/admin/branches`, label: "Sucursales", icon: Building2, active: pathname.startsWith(`${base}/admin/branches`), adminOnly: true },
-    { to: `${base}/admin/config`, label: "Configuración", icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
+    { to: `${base}/notifications`, label: t("navigation.notifications"), icon: Bell, active: pathname.startsWith(`${base}/notifications`), badge: unreadCount > 0 ? unreadCount : null },
+    { to: `${base}/users`, label: t("navigation.users"), icon: Users, active: pathname.startsWith(`${base}/users`), adminOnly: true },
+    { to: `${base}/admin/instructores`, label: navLabels.professionals || t("navigation.professionals"), icon: UserRound, active: pathname.startsWith(`${base}/admin/instructores`), adminOnly: true },
+    { to: `${base}/admin/branches`, label: t("navigation.branches"), icon: Building2, active: pathname.startsWith(`${base}/admin/branches`), adminOnly: true },
+    { to: `${base}/admin/config`, label: t("navigation.config"), icon: Settings, active: pathname.startsWith(`${base}/admin/config`), adminOnly: true },
   ];
 
   // Función para filtrar items
@@ -423,7 +425,7 @@ export default function AppLayout() {
           {filteredManagementNav.length > 0 && (
             <>
               <div className="arja-nav-divider">
-                <span>Gestión</span>
+                <span>{t("navigation.management")}</span>
               </div>
               {filteredManagementNav.map((item) => (
                 <SidebarNavButton
@@ -439,7 +441,7 @@ export default function AppLayout() {
           {filteredAdminNav.length > 0 && (
             <>
               <div className="arja-nav-divider">
-                <span>Administración</span>
+                <span>{t("navigation.administration")}</span>
               </div>
               {filteredAdminNav.map((item) => (
                 <SidebarNavButton
@@ -455,7 +457,7 @@ export default function AppLayout() {
           {filteredConfigNav.length > 0 && (
             <>
               <div className="arja-nav-divider">
-                <span>Configuración</span>
+                <span>{t("navigation.settings")}</span>
               </div>
               {filteredConfigNav.map((item) => (
                 <SidebarNavButton
@@ -472,13 +474,13 @@ export default function AppLayout() {
         <div className="arja-sidebar__footer">
           {/* Theme Toggle */}
           <div className="arja-sidebar__theme">
-            <span>Tema</span>
+            <span>{t("navigation.theme")}</span>
             <ThemeToggle />
           </div>
           
           {/* Language Selector */}
           <div className="arja-sidebar__theme" style={{ marginTop: '8px' }}>
-            <span>Idioma</span>
+            <span>{t("language.selectLanguage")}</span>
             <LanguageSelector />
           </div>
 
@@ -488,7 +490,7 @@ export default function AppLayout() {
               className="arja-sidebar__superadmin"
             >
               <Shield />
-              <span>Panel del dueño</span>
+              <span>{t("navigation.superAdmin")}</span>
             </Link>
           )}
 
@@ -513,7 +515,7 @@ export default function AppLayout() {
             className="arja-sidebar__logout"
           >
             <LogOut />
-            <span>Cerrar sesión</span>
+            <span>{t("navigation.logout")}</span>
           </button>
         </div>
       </aside>

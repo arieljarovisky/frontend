@@ -18,112 +18,115 @@ import {
   UserPlus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "../i18n/useTranslation.js";
 import ThemeToggle from "../components/ThemeToggle";
+import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
 import ChatWidget from "../components/ChatWidget";
 
 export default function LandingPage() {
+  const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   // Cambiar el título de la página
   useEffect(() => {
-    document.title = "ARJA ERP | Sistema de Gestión Empresarial";
-  }, []);
+    document.title = t("landing.title");
+  }, [t]);
 
   const features = [
     {
       icon: Calendar,
-      title: "Gestión de Turnos",
-      description: "Calendario intuitivo para gestionar turnos, horarios y disponibilidad de tus profesionales y servicios."
+      title: t("landing.features.appointments.title"),
+      description: t("landing.features.appointments.description")
     },
     {
       icon: Users,
-      title: "Base de Clientes",
-      description: "Administra tu base de clientes con historial completo de servicios y preferencias."
+      title: t("landing.features.customers.title"),
+      description: t("landing.features.customers.description")
     },
     {
       icon: DollarSign,
-      title: "Pagos con Mercado Pago",
-      description: "Acepta señas y pagos online de forma segura con integración completa de Mercado Pago."
+      title: t("landing.features.payments.title"),
+      description: t("landing.features.payments.description")
     },
     {
       icon: Bell,
-      title: "Notificaciones Automáticas",
-      description: "Recordatorios automáticos por WhatsApp para reducir faltas y mejorar la asistencia."
+      title: t("landing.features.notifications.title"),
+      description: t("landing.features.notifications.description")
     },
     {
       icon: Smartphone,
-      title: "WhatsApp Integrado",
-      description: "Bot inteligente que permite a tus clientes agendar turnos directamente por WhatsApp."
+      title: t("landing.features.whatsapp.title"),
+      description: t("landing.features.whatsapp.description")
     },
     {
       icon: Shield,
-      title: "Seguro y Confiable",
-      description: "Datos protegidos con seguridad de nivel empresarial y respaldos automáticos."
+      title: t("landing.features.security.title"),
+      description: t("landing.features.security.description")
     }
   ];
 
   const pricingPlans = [
     {
-      name: "Esencial",
+      name: t("landing.pricing.plans.essential.name"),
       price: "$14.900",
       period: "mes",
-      description: "Para negocios que están comenzando",
+      description: t("landing.pricing.plans.essential.description"),
       features: [
-        "Hasta 2 profesionales",
-        "Agenda inteligente de turnos",
-        "Recordatorios automáticos",
-        "Clientes ilimitados",
-        "Reportes básicos"
+        t("landing.pricing.plans.essential.features.professionals"),
+        t("landing.pricing.plans.essential.features.appointments"),
+        t("landing.pricing.plans.essential.features.reminders"),
+        t("landing.pricing.plans.essential.features.customers"),
+        t("landing.pricing.plans.essential.features.reports")
       ],
       popular: false
     },
     {
-      name: "Crecimiento",
+      name: t("landing.pricing.plans.growth.name"),
       price: "$24.900",
       period: "mes",
-      description: "Ideal para equipos en expansión",
+      description: t("landing.pricing.plans.growth.description"),
       features: [
-        "Hasta 6 profesionales",
-        "Pagos y señas con Mercado Pago",
-        "WhatsApp Bot para reservas",
-        "Control de stock y comisiones",
-        "Tableros y reportes pro",
-        "Soporte prioritario"
+        t("landing.pricing.plans.growth.features.professionals"),
+        t("landing.pricing.plans.growth.features.payments"),
+        t("landing.pricing.plans.growth.features.whatsapp"),
+        t("landing.pricing.plans.growth.features.stock"),
+        t("landing.pricing.plans.growth.features.dashboards"),
+        t("landing.pricing.plans.growth.features.support")
       ],
       popular: true
     },
     {
-      name: "Escala",
+      name: t("landing.pricing.plans.scale.name"),
       price: "$44.900",
       period: "mes",
-      description: "Operaciones con varias sucursales",
+      description: t("landing.pricing.plans.scale.description"),
       features: [
-        "Profesionales ilimitados",
-        "Hasta 2 sucursales operando en simultáneo",
-        "Multi-sucursal con roles avanzados",
-        "Automatizaciones y campañas",
-        "Integración AFIP / ARCA",
-        "Dashboards financieros",
-        "WhatsApp avanzado + flujos especiales",
-        "Onboarding guiado"
+        t("landing.pricing.plans.scale.features.professionals"),
+        t("landing.pricing.plans.scale.features.branches"),
+        t("landing.pricing.plans.scale.features.multibranch"),
+        t("landing.pricing.plans.scale.features.automation"),
+        t("landing.pricing.plans.scale.features.afip"),
+        t("landing.pricing.plans.scale.features.dashboards"),
+        t("landing.pricing.plans.scale.features.whatsapp"),
+        t("landing.pricing.plans.scale.features.onboarding")
       ],
       popular: false
     },
     {
-      name: "Pro a medida",
+      name: t("landing.pricing.plans.enterprise.name"),
       price: "Consultar",
       period: "",
-      description: "Implementación custom y acompañamiento dedicado",
+      description: t("landing.pricing.plans.enterprise.description"),
       features: [
-        "Arquitectura multi-tenant",
-        "Sucursales ilimitadas a medida",
-        "API y flujos personalizados",
-        "Integraciones externas",
-        "Capacitación in-company",
-        "SLA y soporte 24/7",
-        "Launch plan con especialista"
+        t("landing.pricing.plans.enterprise.features.architecture"),
+        t("landing.pricing.plans.enterprise.features.branches"),
+        t("landing.pricing.plans.enterprise.features.api"),
+        t("landing.pricing.plans.enterprise.features.integrations"),
+        t("landing.pricing.plans.enterprise.features.training"),
+        t("landing.pricing.plans.enterprise.features.sla"),
+        t("landing.pricing.plans.enterprise.features.launch")
       ],
       popular: false
     }
@@ -131,67 +134,67 @@ export default function LandingPage() {
 
   const stats = [
     {
-      value: "100%",
-      label: "Automatización",
-      description: "De tus procesos de gestión"
+      value: t("landing.stats.automation.value"),
+      label: t("landing.stats.automation.label"),
+      description: t("landing.stats.automation.description")
     },
     {
-      value: "24/7",
-      label: "Disponibilidad",
-      description: "Para tus clientes y tu negocio"
+      value: t("landing.stats.availability.value"),
+      label: t("landing.stats.availability.label"),
+      description: t("landing.stats.availability.description")
     },
     {
-      value: "99.9%",
-      label: "Uptime",
-      description: "De disponibilidad del servicio"
+      value: t("landing.stats.uptime.value"),
+      label: t("landing.stats.uptime.label"),
+      description: t("landing.stats.uptime.description")
     },
     {
-      value: "+50",
-      label: "Funcionalidades",
-      description: "Integradas en un solo sistema"
+      value: t("landing.stats.features.value"),
+      label: t("landing.stats.features.label"),
+      description: t("landing.stats.features.description")
     }
   ];
 
   const useCases = [
     {
       icon: Calendar,
-      title: "Servicios por Turnos",
-      description: "Ideal para negocios que trabajan con citas: salones, barberías, spas, centros de estética, consultorios y más."
+      title: t("landing.useCases.appointments.title"),
+      description: t("landing.useCases.appointments.description")
     },
     {
       icon: Users,
-      title: "Servicios con Equipos",
-      description: "Gestiona múltiples profesionales, horarios, disponibilidad y asignación de recursos en tiempo real."
+      title: t("landing.useCases.teams.title"),
+      description: t("landing.useCases.teams.description")
     },
     {
       icon: DollarSign,
-      title: "Negocios con Pagos Online",
-      description: "Acepta señas, pagos anticipados y membresías recurrentes integrado con Mercado Pago."
+      title: t("landing.useCases.payments.title"),
+      description: t("landing.useCases.payments.description")
     },
     {
       icon: Bell,
-      title: "Comunicación Automatizada",
-      description: "Recordatorios automáticos, confirmaciones y seguimiento por WhatsApp sin intervención manual."
+      title: t("landing.useCases.automation.title"),
+      description: t("landing.useCases.automation.description")
     },
     {
       icon: FileSpreadsheet,
-      title: "Facturación Electrónica",
-      description: "Facturación AFIP/ARCA integrada, control de stock, reportes financieros y gestión contable."
+      title: t("landing.useCases.invoicing.title"),
+      description: t("landing.useCases.invoicing.description")
     },
     {
       icon: Building2,
-      title: "Múltiples Sucursales",
-      description: "Administra varias ubicaciones desde un solo sistema con control centralizado y reportes consolidados."
+      title: t("landing.useCases.branches.title"),
+      description: t("landing.useCases.branches.description")
     },
     {
       icon: Zap,
-      title: "Servicios Rápidos",
-      description: "Para negocios que necesitan agilidad: reservas instantáneas, check-in rápido y gestión eficiente."
+      title: t("landing.useCases.fast.title"),
+      description: t("landing.useCases.fast.description")
     },
     {
       icon: Shield,
-      title: "Negocios Regulados",
-      description: "Cumplimiento normativo, trazabilidad, respaldos automáticos y seguridad de datos empresarial."
+      title: t("landing.useCases.regulated.title"),
+      description: t("landing.useCases.regulated.description")
     }
   ];
 
@@ -219,7 +222,7 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Funcionalidades
+              {t("landing.nav.features")}
             </a>
             <a
               href="#pricing"
@@ -229,7 +232,7 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Precios
+              {t("landing.nav.pricing")}
             </a>
             <a
               href="#use-cases"
@@ -239,7 +242,7 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Casos de Uso
+              {t("landing.nav.useCases")}
             </a>
             <a
               href="/docs"
@@ -249,21 +252,22 @@ export default function LandingPage() {
               }}
               className="landing-nav__link"
             >
-              Documentación
+              {t("landing.nav.docs")}
             </a>
             <div className="landing-nav__auth">
+              <LanguageSelector />
               <ThemeToggle />
               <button
                 onClick={() => navigate("/login")}
                 className="btn-ghost btn--compact"
               >
-                Iniciar Sesión
+                {t("landing.auth.login")}
               </button>
               <button
                 onClick={() => navigate("/onboarding")}
                 className="btn-primary btn--compact"
               >
-                Comenzar Gratis
+                {t("landing.auth.startFree")}
               </button>
             </div>
           </div>
@@ -285,7 +289,7 @@ export default function LandingPage() {
                 setMobileMenuOpen(false);
               }}
             >
-              Funcionalidades
+              {t("landing.nav.features")}
             </a>
             <a
               href="#pricing"
@@ -294,7 +298,7 @@ export default function LandingPage() {
                 setMobileMenuOpen(false);
               }}
             >
-              Precios
+              {t("landing.nav.pricing")}
             </a>
             <a
               href="#use-cases"
@@ -303,7 +307,7 @@ export default function LandingPage() {
                 setMobileMenuOpen(false);
               }}
             >
-              Casos de Uso
+              {t("landing.nav.useCases")}
             </a>
             <a
               href="/docs"
@@ -313,9 +317,10 @@ export default function LandingPage() {
                 navigate("/docs");
               }}
             >
-              Documentación
+              {t("landing.nav.docs")}
             </a>
             <div className="landing-nav__mobile-theme">
+              <LanguageSelector />
               <ThemeToggle />
             </div>
             <button
@@ -325,7 +330,7 @@ export default function LandingPage() {
               }}
               className="btn-ghost w-full"
             >
-              Iniciar Sesión
+              {t("landing.auth.login")}
             </button>
             <button
               onClick={() => {
@@ -334,7 +339,7 @@ export default function LandingPage() {
               }}
               className="btn-primary w-full"
             >
-              Comenzar Gratis
+              {t("landing.auth.startFree")}
             </button>
           </div>
         )}
@@ -356,18 +361,17 @@ export default function LandingPage() {
               variants={fadeInUp}
               className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground mb-4 sm:mb-6"
             >
-              Gestiona tu Negocio
+              {t("landing.hero.title")}
               <br />
               <span className="text-gradient">
-                de Forma Inteligente
+                {t("landing.hero.titleHighlight")}
               </span>
             </motion.h1>
             <motion.p
               variants={fadeInUp}
               className="text-base sm:text-lg md:text-xl lg:text-2xl text-foreground-secondary mb-6 sm:mb-8 max-w-3xl mx-auto px-4"
             >
-              Sistema ERP completo para gestionar turnos, stock, facturación y más. 
-              Con pagos online, notificaciones automáticas y bot de WhatsApp integrado.
+              {t("landing.hero.subtitle")}
             </motion.p>
             <motion.div
               variants={fadeInUp}
@@ -377,7 +381,7 @@ export default function LandingPage() {
                 onClick={() => navigate("/onboarding")}
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
               >
-                Comenzar Gratis
+                {t("landing.hero.ctaPrimary")}
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
@@ -386,14 +390,14 @@ export default function LandingPage() {
                 }}
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border text-sm sm:text-base"
               >
-                Ver Características
+                {t("landing.hero.ctaSecondary")}
               </button>
             </motion.div>
             <motion.p
               variants={fadeInUp}
               className="text-xs sm:text-sm text-foreground-muted mt-4 sm:mt-6 px-4"
             >
-              ✓ Prueba gratuita de 14 días • ✓ Sin tarjeta de crédito • ✓ Cancela cuando quieras
+              {t("landing.hero.trial")}
             </motion.p>
           </motion.div>
         </div>
@@ -410,10 +414,10 @@ export default function LandingPage() {
             className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
-              Todo lo que necesitas en un solo lugar
+              {t("landing.features.title")}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
-              Herramientas poderosas diseñadas para hacer crecer tu negocio
+              {t("landing.features.subtitle")}
             </p>
           </motion.div>
 
@@ -456,10 +460,10 @@ export default function LandingPage() {
             className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
-              Planes que se adaptan a tu negocio
+              {t("landing.pricing.title")}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
-              Elige el plan perfecto para tu negocio. Todos incluyen prueba gratuita.
+              {t("landing.pricing.subtitle")}
             </p>
           </motion.div>
 
@@ -480,7 +484,7 @@ export default function LandingPage() {
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold">
-                      Más Popular
+                      {t("landing.pricing.mostPopular")}
                     </span>
                   </div>
                 )}
@@ -516,7 +520,7 @@ export default function LandingPage() {
                       : "bg-background-secondary text-foreground hover:bg-border border border-border"
                   }`}
                 >
-                  Comenzar Ahora
+                  {t("landing.pricing.startNow")}
                 </button>
               </motion.div>
             ))}
@@ -528,7 +532,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center text-foreground-secondary mt-8"
           >
-            Todos los planes incluyen prueba gratuita de 14 días. Sin tarjeta de crédito.
+            {t("landing.pricing.trialNote")}
           </motion.p>
         </div>
       </section>
@@ -544,10 +548,10 @@ export default function LandingPage() {
             className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
-              Sistema confiable y robusto
+              {t("landing.stats.title")}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
-              Tecnología de nivel empresarial al alcance de tu negocio
+              {t("landing.stats.subtitle")}
             </p>
           </motion.div>
 
@@ -587,10 +591,10 @@ export default function LandingPage() {
             className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
-              Ideal para cualquier negocio de servicios
+              {t("landing.useCases.title")}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary max-w-2xl mx-auto px-4">
-              Desde pequeños emprendimientos hasta empresas con múltiples sucursales
+              {t("landing.useCases.subtitle")}
             </p>
           </motion.div>
 
@@ -633,17 +637,17 @@ export default function LandingPage() {
             className="card card--space-lg sm:card--space-xl card--no-hover text-center"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-4">
-              ¿Listo para transformar tu negocio?
+              {t("landing.cta.title")}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-foreground-secondary mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
-              Comienza tu prueba gratuita hoy mismo. Sin tarjeta de crédito, sin compromiso.
+              {t("landing.cta.subtitle")}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <button
                 onClick={() => navigate("/login")}
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
               >
-                Comenzar Gratis
+                {t("landing.cta.startFree")}
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
@@ -652,7 +656,7 @@ export default function LandingPage() {
                 }}
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-background-secondary text-foreground rounded-lg font-semibold hover:bg-border transition-colors border border-border text-sm sm:text-base"
               >
-                Ver Planes
+                {t("landing.cta.viewPlans")}
               </button>
             </div>
           </motion.div>
@@ -668,35 +672,35 @@ export default function LandingPage() {
                 <Logo size="default" showText={true} />
               </div>
               <p className="text-foreground-secondary text-sm">
-                Sistema de gestión ERP para cualquier negocio de servicios. Turnos, stock, facturación, membresías y más.
+                {t("landing.footer.description")}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Producto</h4>
+              <h4 className="font-semibold text-foreground mb-4">{t("landing.footer.product")}</h4>
               <ul className="space-y-2 text-sm text-foreground-secondary">
-                <li><a href="#features" className="hover:text-foreground transition-colors">Características</a></li>
-                <li><a href="#pricing" className="hover:text-foreground transition-colors">Precios</a></li>
-                <li><a href="#use-cases" className="hover:text-foreground transition-colors">Casos de Uso</a></li>
+                <li><a href="#features" className="hover:text-foreground transition-colors">{t("landing.footer.features")}</a></li>
+                <li><a href="#pricing" className="hover:text-foreground transition-colors">{t("landing.footer.pricing")}</a></li>
+                <li><a href="#use-cases" className="hover:text-foreground transition-colors">{t("landing.footer.useCases")}</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Soporte</h4>
+              <h4 className="font-semibold text-foreground mb-4">{t("landing.footer.support")}</h4>
               <ul className="space-y-2 text-sm text-foreground-secondary">
-                <li><a href="/docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }} className="hover:text-foreground transition-colors">Documentación</a></li>
-                <li><a href="/help" onClick={(e) => { e.preventDefault(); navigate("/help"); }} className="hover:text-foreground transition-colors">Ayuda</a></li>
-                <li><a href="/contact" onClick={(e) => { e.preventDefault(); navigate("/contact"); }} className="hover:text-foreground transition-colors">Contacto</a></li>
+                <li><a href="/docs" onClick={(e) => { e.preventDefault(); navigate("/docs"); }} className="hover:text-foreground transition-colors">{t("landing.footer.docs")}</a></li>
+                <li><a href="/help" onClick={(e) => { e.preventDefault(); navigate("/help"); }} className="hover:text-foreground transition-colors">{t("landing.footer.help")}</a></li>
+                <li><a href="/contact" onClick={(e) => { e.preventDefault(); navigate("/contact"); }} className="hover:text-foreground transition-colors">{t("landing.footer.contact")}</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+              <h4 className="font-semibold text-foreground mb-4">{t("landing.footer.legal")}</h4>
               <ul className="space-y-2 text-sm text-foreground-secondary">
-                <li><a href="/terms" onClick={(e) => { e.preventDefault(); navigate("/terms"); }} className="hover:text-foreground transition-colors">Términos</a></li>
-                <li><a href="/privacy.html" className="hover:text-foreground transition-colors">Privacidad</a></li>
+                <li><a href="/terms" onClick={(e) => { e.preventDefault(); navigate("/terms"); }} className="hover:text-foreground transition-colors">{t("landing.footer.terms")}</a></li>
+                <li><a href="/privacy.html" className="hover:text-foreground transition-colors">{t("landing.footer.privacy")}</a></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-border pt-8 text-center text-sm text-foreground-secondary">
-            <p>&copy; {new Date().getFullYear()} ARJA ERP. Todos los derechos reservados.</p>
+            <p>&copy; {new Date().getFullYear()} ARJA ERP. {t("landing.footer.copyright")}</p>
           </div>
         </div>
       </footer>

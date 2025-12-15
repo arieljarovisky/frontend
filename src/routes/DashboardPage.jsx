@@ -5,6 +5,7 @@ import { apiClient } from "../api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { logger } from "../utils/logger.js";
+import { useTranslation } from "../i18n/useTranslation.js";
 import {
   TrendingUp,
   Users,
@@ -345,6 +346,7 @@ const endOfWeek = (base = new Date()) => {
 };
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   
   const { data: topServices, loading: loadingSvc, error: errorSvc } =
@@ -636,10 +638,10 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Dashboard
+            {t("dashboard.title")}
           </h1>
           <p className="text-foreground-secondary">
-            Resumen de actividad y métricas en tiempo real
+            {t("dashboard.subtitle")}
           </p>
         </div>
       </div>
@@ -647,30 +649,30 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <StatCard
-          title="Turnos hoy"
+          title={t("dashboard.appointmentsToday")}
           value={todayTotal}
-          subtitle="Todos los estados"
+          subtitle={t("dashboard.allStatuses")}
           icon={Calendar}
           color="primary"
         />
         <StatCard
-          title="Confirmados"
+          title={t("dashboard.confirmed")}
           value={todayConfirmed}
-          subtitle="Pagos completados"
+          subtitle={t("dashboard.completedPayments")}
           icon={CheckCircle2}
           color="success"
         />
         <StatCard
-          title="Pendientes"
+          title={t("dashboard.pending")}
           value={todayPending}
-          subtitle="Requieren atención"
+          subtitle={t("dashboard.requiresAttention")}
           icon={AlertCircle}
           color="warning"
         />
         <StatCard
-          title="Ingresos Semana"
+          title={t("dashboard.weeklyIncome")}
           value={money(incomeWeek)}
-          subtitle="Señas cobradas"
+          subtitle={t("dashboard.depositsCollected")}
           icon={DollarSign}
           color="success"
         />
@@ -680,7 +682,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Income Chart */}
         <div className="lg:col-span-3">
-          <Section title={`Ingresos ${year}`}>
+          <Section title={t("dashboard.incomeYear", { year })}>
             {loadingInc ? (
               <div className="w-full h-[280px] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
@@ -689,20 +691,20 @@ export default function DashboardPage() {
               <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
                 <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
                 <p className="text-foreground-secondary text-sm">
-                  Error al cargar los datos de ingresos
+                  {t("dashboard.errorLoadingIncome")}
                 </p>
                 <p className="text-foreground-muted text-xs mt-1">
-                  {typeof errorInc === 'string' ? errorInc : errorInc?.message || "Intenta recargar la página"}
+                  {typeof errorInc === 'string' ? errorInc : errorInc?.message || t("dashboard.tryReload")}
                 </p>
               </div>
             ) : !incomeArr || incomeArr.length === 0 ? (
               <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
                 <DollarSign className="w-12 h-12 text-foreground-muted mb-3" />
                 <p className="text-foreground-secondary text-sm">
-                  No hay datos de ingresos para mostrar
+                  {t("dashboard.noIncomeData")}
                 </p>
                 <p className="text-foreground-muted text-xs mt-1">
-                  Los ingresos aparecerán cuando tengas turnos completados
+                  {t("dashboard.incomeWillAppear")}
                 </p>
               </div>
             ) : (
@@ -715,7 +717,7 @@ export default function DashboardPage() {
                     labels: incomeArr.map(d => getMonthName(d.month)),
                     datasets: [
                       {
-                        label: 'Ingresos',
+                        label: t("dashboard.income"),
                         data: incomeArr.map(d => d.income),
                         borderColor: '#0ea5e9',
                         backgroundColor: 'rgba(14, 165, 233, 0.1)',
@@ -796,7 +798,7 @@ export default function DashboardPage() {
 
         {/* Top Services Chart */}
         <div className="lg:col-span-2">
-          <Section title="Servicios Top">
+          <Section title={t("dashboard.topServices")}>
             {loadingSvc ? (
               <div className="w-full h-[280px] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
@@ -805,20 +807,20 @@ export default function DashboardPage() {
               <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
                 <AlertCircle className="w-12 h-12 text-foreground-muted mb-3" />
                 <p className="text-foreground-secondary text-sm">
-                  Error al cargar los servicios más solicitados
+                  {t("dashboard.errorLoadingServices")}
                 </p>
                 <p className="text-foreground-muted text-xs mt-1">
-                  {typeof errorSvc === 'string' ? errorSvc : errorSvc?.message || "Intenta recargar la página"}
+                  {typeof errorSvc === 'string' ? errorSvc : errorSvc?.message || t("dashboard.tryReload")}
                 </p>
               </div>
             ) : !topServicesArr || topServicesArr.length === 0 ? (
               <div className="w-full h-[280px] flex flex-col items-center justify-center text-center p-6">
                 <Users className="w-12 h-12 text-foreground-muted mb-3" />
                 <p className="text-foreground-secondary text-sm">
-                  No hay datos de servicios para mostrar
+                  {t("dashboard.noServicesData")}
                 </p>
                 <p className="text-foreground-muted text-xs mt-1">
-                  Los servicios aparecerán cuando tengas turnos programados
+                  {t("dashboard.servicesWillAppear")}
                 </p>
               </div>
             ) : (
@@ -831,7 +833,7 @@ export default function DashboardPage() {
                     labels: topServicesArr.map(d => d.service_name),
                     datasets: [
                       {
-                        label: 'Turnos',
+                        label: t("navigation.appointments"),
                         data: topServicesArr.map(d => d.count),
                         backgroundColor: (context) => {
                           const ctx = context.chart.ctx;
@@ -905,10 +907,10 @@ export default function DashboardPage() {
 
       {/* Today's Agenda - Calendario */}
       <Section
-        title="Agenda de Hoy"
+        title={t("dashboard.todayAgenda")}
         action={
           <span className="text-sm text-foreground-secondary">
-            {agendaArr.length} turnos programados
+            {t("dashboard.scheduledAppointments", { count: agendaArr.length })}
           </span>
         }
       >
@@ -919,7 +921,7 @@ export default function DashboardPage() {
         ) : agendaArr.length === 0 ? (
           <div className="py-12 text-center">
             <Clock className="w-12 h-12 mx-auto mb-3 text-foreground-muted" />
-            <p className="text-foreground-secondary">No hay turnos programados para hoy</p>
+            <p className="text-foreground-secondary">{t("dashboard.noAppointmentsToday")}</p>
           </div>
         ) : (
           <DndContext

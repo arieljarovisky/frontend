@@ -136,15 +136,15 @@ export default function ConfigPage() {
   }
 
   const TABS = [
-    { id: "general", label: "General", Icon: Settings },
-    { id: "business-type", label: "Tipo de Negocio", Icon: Building2, adminOnly: true },
-    { id: "working-hours", label: "Horarios Laborales", Icon: Clock },
-    { id: "calendar", label: "Horarios del Calendario", Icon: Clock },
+    { id: "general", label: t("config.general"), Icon: Settings },
+    { id: "business-type", label: t("config.businessType"), Icon: Building2, adminOnly: true },
+    { id: "working-hours", label: t("config.workingHours"), Icon: Clock },
+    { id: "calendar", label: t("config.calendarHours"), Icon: Clock },
     { id: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
-    { id: "contact", label: "ARCA", Icon: Receipt },
-    { id: "mercadopago", label: "Mercado Pago", Icon: CreditCard },
-    { id: "commissions", label: "Comisiones", Icon: Percent },
-    { id: "security", label: "Seguridad", Icon: Shield },
+    { id: "contact", label: t("config.arca"), Icon: Receipt },
+    { id: "mercadopago", label: t("config.mercadopago"), Icon: CreditCard },
+    { id: "commissions", label: t("config.commissions"), Icon: Percent },
+    { id: "security", label: t("config.security"), Icon: Shield },
   ];
 
   useEffect(() => {
@@ -1602,23 +1602,23 @@ export default function ConfigPage() {
       {/* GENERAL */}
       <div id="general">
         <ConfigSection
-          title="Configuración General"
-          description="Información básica de tu negocio"
+          title={t("config.generalTitle")}
+          description={t("config.generalDescription")}
           icon={Settings}
         >
           <div className="grid md:grid-cols-2 gap-4">
-            <FieldGroup label="Nombre del negocio">
+            <FieldGroup label={t("config.businessName")}>
               <input
                 type="text"
                 value={general.businessName}
                 onChange={(e) => setGeneral({ ...general, businessName: e.target.value })}
                 className="input w-full"
                 disabled
-                title="El nombre del negocio no se puede cambiar"
+                title={t("config.businessNameHint")}
               />
             </FieldGroup>
 
-            <FieldGroup label="Zona horaria">
+            <FieldGroup label={t("config.timezone")}>
               <select
                 value={general.timezone}
                 onChange={(e) => setGeneral({ ...general, timezone: e.target.value })}
@@ -1631,7 +1631,7 @@ export default function ConfigPage() {
               </select>
             </FieldGroup>
 
-            <FieldGroup label="Moneda">
+            <FieldGroup label={t("config.currency")}>
               <select
                 value={general.currency}
                 onChange={(e) => setGeneral({ ...general, currency: e.target.value })}
@@ -1643,7 +1643,7 @@ export default function ConfigPage() {
               </select>
             </FieldGroup>
 
-            <FieldGroup label="Formato de fecha">
+            <FieldGroup label={t("config.dateFormat")}>
               <select
                 value={general.dateFormat}
                 onChange={(e) => setGeneral({ ...general, dateFormat: e.target.value })}
@@ -1820,7 +1820,7 @@ export default function ConfigPage() {
       {/* BUSINESS TYPE */}
       <div id="business-type">
         <ConfigSection
-          title="Tipo de Negocio"
+          title={t("config.businessTypeTitle")}
           description="Configurá el tipo de negocio y las funcionalidades habilitadas"
           icon={Building2}
         >
@@ -1831,7 +1831,7 @@ export default function ConfigPage() {
       {/* WORKING HOURS */}
       <div id="working-hours">
         <ConfigSection
-          title="Horarios Laborales"
+          title={t("config.workingHoursTitle")}
           description="Configurá los horarios de trabajo del negocio por sucursal para calcular horas extras de empleados"
           icon={Clock}
         >
@@ -2044,7 +2044,7 @@ export default function ConfigPage() {
       {/* CALENDAR TIME RANGE */}
       <div id="calendar">
         <ConfigSection
-          title="Horarios del Calendario"
+          title={t("config.calendarHoursTitle")}
           description="Configurá el rango de horarios que se mostrará en el calendario"
           icon={Clock}
         >
@@ -2422,8 +2422,8 @@ export default function ConfigPage() {
       {/* CONTACT */}
       <div id="contact">
         <ConfigSection
-          title="Facturación Electrónica ARCA"
-          description="Configurá los datos necesarios para emitir facturas electrónicas con ARCA"
+          title={t("config.arcaTitle")}
+          description={t("config.arcaDescription")}
           icon={Receipt}
         >
           <div className="space-y-6">

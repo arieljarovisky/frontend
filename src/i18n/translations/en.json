@@ -15,12 +15,42 @@
     "previous": "Previous",
     "confirm": "Confirm",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "actions": "Actions",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "unsavedChanges": "You have unsaved changes"
   },
   "language": {
     "spanish": "Español",
     "english": "English",
     "selectLanguage": "Language"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "appointments": "Appointments",
+    "classes": "Classes",
+    "routines": "Workout Routines",
+    "customers": "Customers",
+    "deposits": "Deposits",
+    "stock": "Stock",
+    "invoicing": "Invoicing",
+    "onlineSales": "Online Sales",
+    "cashRegister": "Cash Register",
+    "accounting": "Accounting",
+    "integrations": "Integrations",
+    "mobileApp": "Mobile App",
+    "notifications": "Notifications",
+    "users": "Users",
+    "professionals": "Instructors",
+    "branches": "Branches",
+    "config": "Configuration",
+    "management": "Management",
+    "administration": "Administration",
+    "settings": "Settings",
+    "theme": "Theme",
+    "logout": "Logout",
+    "superAdmin": "Super Admin Panel"
   },
   "whatsapp": {
     "title": "WhatsApp Business",
@@ -67,7 +97,329 @@
     "title": "Configuration",
     "saveChanges": "Save Changes",
     "saving": "Saving...",
-    "unsavedChanges": "You have unsaved changes"
+    "unsavedChanges": "You have unsaved changes",
+    "general": "General",
+    "businessType": "Business Type",
+    "workingHours": "Working Hours",
+    "calendarHours": "Calendar Hours",
+    "arca": "ARCA",
+    "mercadopago": "Mercado Pago",
+    "commissions": "Commissions",
+    "security": "Security",
+    "generalTitle": "General Configuration",
+    "generalDescription": "Basic information about your business",
+    "businessName": "Business name",
+    "businessNameHint": "The business name cannot be changed",
+    "timezone": "Timezone",
+    "currency": "Currency",
+    "dateFormat": "Date format",
+    "businessTypeTitle": "Business Type",
+    "workingHoursTitle": "Working Hours",
+    "calendarHoursTitle": "Calendar Hours",
+    "arcaTitle": "ARCA Electronic Invoicing",
+    "arcaDescription": "Configure the necessary data to issue electronic invoices with ARCA",
+    "arcaChecking": "Checking ARCA credentials...",
+    "arcaConnectionOk": "ARCA connection OK",
+    "arcaConnectionError": "Connection error",
+    "mpTitle": "Mercado Pago",
+    "commissionsTitle": "Commissions",
+    "securityTitle": "Security"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Activity summary and real-time metrics",
+    "welcome": "Welcome",
+    "today": "Today",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "appointmentsToday": "Appointments today",
+    "allStatuses": "All statuses",
+    "confirmed": "Confirmed",
+    "completedPayments": "Completed payments",
+    "pending": "Pending",
+    "requiresAttention": "Requires attention",
+    "weeklyIncome": "Weekly Income",
+    "depositsCollected": "Deposits collected",
+    "income": "Income",
+    "incomeYear": "Income {year}",
+    "errorLoadingIncome": "Error loading income data",
+    "tryReload": "Try reloading the page",
+    "noIncomeData": "No income data to display",
+    "incomeWillAppear": "Income will appear when you have completed appointments",
+    "topServices": "Most requested services",
+    "errorLoadingServices": "Error loading most requested services",
+    "noServicesData": "No services data to display",
+    "servicesWillAppear": "Services will appear when you have scheduled appointments",
+    "todayAgenda": "Today's Agenda",
+    "scheduledAppointments": "{count} scheduled appointments",
+    "noAppointmentsToday": "No appointments scheduled for today",
+    "appointmentsWillAppear": "Today's appointments will appear here"
+  },
+  "customers": {
+    "title": "Customers",
+    "addCustomer": "Add Customer",
+    "searchPlaceholder": "Search by name or phone…",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "membership": "Membership",
+    "actions": "Actions",
+    "noCustomers": "No customers",
+    "totalCustomers": "{count} customer{plural} in total",
+    "loadingCustomers": "Loading customers…",
+    "errorLoadingCustomers": "Error loading customers",
+    "noCustomersFound": "No customers found",
+    "noCustomersYet": "No customers yet",
+    "customersWillAppear": "Customers will appear here when you create appointments or they register",
+    "noName": "(No name)",
+    "active": "Active",
+    "pending": "Pending",
+    "paused": "Paused",
+    "cancelled": "Cancelled",
+    "noSubscription": "No subscription"
+  },
+  "appointments": {
+    "title": "Appointments",
+    "newAppointment": "New Appointment",
+    "today": "Today",
+    "upcoming": "Upcoming"
+  },
+  "classes": {
+    "title": "Classes",
+    "newClass": "New Class"
+  },
+  "landing": {
+    "title": "ARJA ERP | Business Management System",
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "useCases": "Use Cases",
+      "docs": "Documentation"
+    },
+    "auth": {
+      "login": "Log In",
+      "startFree": "Start Free"
+    },
+    "hero": {
+      "title": "Manage Your Business",
+      "titleHighlight": "Intelligently",
+      "subtitle": "Complete ERP system to manage appointments, inventory, invoicing and more. With online payments, automatic notifications and integrated WhatsApp bot.",
+      "ctaPrimary": "Start Free",
+      "ctaSecondary": "View Features",
+      "trial": "✓ 14-day free trial • ✓ No credit card • ✓ Cancel anytime"
+    },
+    "features": {
+      "title": "Everything you need in one place",
+      "subtitle": "Powerful tools designed to grow your business",
+      "appointments": {
+        "title": "Appointment Management",
+        "description": "Intuitive calendar to manage appointments, schedules and availability of your professionals and services."
+      },
+      "customers": {
+        "title": "Customer Base",
+        "description": "Manage your customer base with complete history of services and preferences."
+      },
+      "payments": {
+        "title": "Mercado Pago Payments",
+        "description": "Accept deposits and online payments securely with full Mercado Pago integration."
+      },
+      "notifications": {
+        "title": "Automatic Notifications",
+        "description": "Automatic WhatsApp reminders to reduce no-shows and improve attendance."
+      },
+      "whatsapp": {
+        "title": "Integrated WhatsApp",
+        "description": "Smart bot that allows your customers to schedule appointments directly via WhatsApp."
+      },
+      "security": {
+        "title": "Secure and Reliable",
+        "description": "Data protected with enterprise-level security and automatic backups."
+      }
+    },
+    "pricing": {
+      "title": "Plans that fit your business",
+      "subtitle": "Choose the perfect plan for your business. All include free trial.",
+      "mostPopular": "Most Popular",
+      "startNow": "Start Now",
+      "trialNote": "All plans include 14-day free trial. No credit card required.",
+      "plans": {
+        "essential": {
+          "name": "Essential",
+          "description": "For businesses just starting out",
+          "features": {
+            "professionals": "Up to 2 professionals",
+            "appointments": "Smart appointment scheduling",
+            "reminders": "Automatic reminders",
+            "customers": "Unlimited customers",
+            "reports": "Basic reports"
+          }
+        },
+        "growth": {
+          "name": "Growth",
+          "description": "Ideal for expanding teams",
+          "features": {
+            "professionals": "Up to 6 professionals",
+            "payments": "Payments and deposits with Mercado Pago",
+            "whatsapp": "WhatsApp Bot for bookings",
+            "stock": "Inventory and commission control",
+            "dashboards": "Pro dashboards and reports",
+            "support": "Priority support"
+          }
+        },
+        "scale": {
+          "name": "Scale",
+          "description": "Operations with multiple branches",
+          "features": {
+            "professionals": "Unlimited professionals",
+            "branches": "Up to 2 branches operating simultaneously",
+            "multibranch": "Multi-branch with advanced roles",
+            "automation": "Automations and campaigns",
+            "afip": "AFIP / ARCA integration",
+            "dashboards": "Financial dashboards",
+            "whatsapp": "Advanced WhatsApp + special flows",
+            "onboarding": "Guided onboarding"
+          }
+        },
+        "enterprise": {
+          "name": "Custom Pro",
+          "description": "Custom implementation and dedicated support",
+          "features": {
+            "architecture": "Multi-tenant architecture",
+            "branches": "Unlimited custom branches",
+            "api": "Custom API and flows",
+            "integrations": "External integrations",
+            "training": "In-company training",
+            "sla": "SLA and 24/7 support",
+            "launch": "Launch plan with specialist"
+          }
+        }
+      }
+    },
+    "stats": {
+      "title": "Reliable and robust system",
+      "subtitle": "Enterprise-level technology within reach of your business",
+      "automation": {
+        "value": "100%",
+        "label": "Automation",
+        "description": "Of your management processes"
+      },
+      "availability": {
+        "value": "24/7",
+        "label": "Availability",
+        "description": "For your customers and your business"
+      },
+      "uptime": {
+        "value": "99.9%",
+        "label": "Uptime",
+        "description": "Service availability"
+      },
+      "features": {
+        "value": "+50",
+        "label": "Features",
+        "description": "Integrated in a single system"
+      }
+    },
+    "useCases": {
+      "title": "Ideal for any service business",
+      "subtitle": "From small startups to companies with multiple branches",
+      "appointments": {
+        "title": "Appointment Services",
+        "description": "Ideal for businesses that work with appointments: salons, barbershops, spas, beauty centers, clinics and more."
+      },
+      "teams": {
+        "title": "Team Services",
+        "description": "Manage multiple professionals, schedules, availability and resource allocation in real time."
+      },
+      "payments": {
+        "title": "Businesses with Online Payments",
+        "description": "Accept deposits, advance payments and recurring memberships integrated with Mercado Pago."
+      },
+      "automation": {
+        "title": "Automated Communication",
+        "description": "Automatic reminders, confirmations and follow-up via WhatsApp without manual intervention."
+      },
+      "invoicing": {
+        "title": "Electronic Invoicing",
+        "description": "Integrated AFIP/ARCA invoicing, inventory control, financial reports and accounting management."
+      },
+      "branches": {
+        "title": "Multiple Branches",
+        "description": "Manage multiple locations from a single system with centralized control and consolidated reports."
+      },
+      "fast": {
+        "title": "Fast Services",
+        "description": "For businesses that need agility: instant bookings, quick check-in and efficient management."
+      },
+      "regulated": {
+        "title": "Regulated Businesses",
+        "description": "Regulatory compliance, traceability, automatic backups and enterprise data security."
+      }
+    },
+    "cta": {
+      "title": "Ready to transform your business?",
+      "subtitle": "Start your free trial today. No credit card, no commitment.",
+      "startFree": "Start Free",
+      "viewPlans": "View Plans"
+    },
+    "footer": {
+      "description": "ERP management system for any service business. Appointments, inventory, invoicing, memberships and more.",
+      "product": "Product",
+      "support": "Support",
+      "legal": "Legal",
+      "features": "Features",
+      "pricing": "Pricing",
+      "useCases": "Use Cases",
+      "docs": "Documentation",
+      "help": "Help",
+      "contact": "Contact",
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "copyright": "All rights reserved."
+    }
+  },
+  "routines": {
+    "title": "Workout Routines",
+    "createRoutine": "Create routine",
+    "importRoutines": "Import routines",
+    "manageAndAssign": "Manage and assign workout routines to your customers",
+    "searchPlaceholder": "Search routines by name, description or difficulty…",
+    "loadingRoutines": "Loading routines…",
+    "errorLoadingRoutines": "Error loading routines",
+    "noRoutinesFound": "No routines found",
+    "noRoutinesYet": "No routines yet",
+    "tryAnotherSearch": "Try another search term",
+    "routinesWillAppear": "Routines will appear here when created",
+    "routineNameRequired": "Routine name is required",
+    "exerciseName": "Exercise name",
+    "addExercise": "Add exercise",
+    "noExercises": "No exercises. Click \"Add exercise\" to get started.",
+    "exerciseWithoutName": "Exercise without name",
+    "searchCustomer": "Search customer by name or phone...",
+    "noCustomersFound": "No customers found with that criteria",
+    "noCustomersAvailable": "No customers available",
+    "ofCustomers": "{filtered} of {total} customers",
+    "routineName": "Routine name",
+    "required": "*",
+    "importDocument": "The document must contain the routine name, exercises with sets and repetitions",
+    "autoDetect": "The system will automatically detect: name, exercises, sets, repetitions, rest and sections.",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Describe the routine, objectives, etc...",
+    "importTitle": "Import routines",
+    "assignedTo": "Assigned to:",
+    "unassigned": "Unassigned",
+    "created": "Created:",
+    "editRoutine": "Edit routine",
+    "assignRoutine": "Assign routine",
+    "reassignRoutine": "Reassign routine",
+    "deleteRoutine": "Delete routine",
+    "assignRoutineTitle": "Assign routine: {name}",
+    "assignDirectly": "Assign directly to a customer (optional)",
+    "assigned": "Assigned",
+    "confirmDelete": "Are you sure you want to delete the routine \"{name}\"? This action cannot be undone.",
+    "uploadWordFile": "Upload a Word (.docx) file with a routine. The system will try to automatically extract the routine information.",
+    "wordFileLabel": "Word file (.docx)",
+    "wordExampleTitle": "Word format example:",
+    "importSuccess": "Routine \"{name}\" imported successfully from Word",
+    "importError": "Error importing routine from Word"
   }
 }
-

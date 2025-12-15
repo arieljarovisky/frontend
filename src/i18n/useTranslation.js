@@ -53,10 +53,18 @@ export function useTranslation() {
         return key;
       }
 
-      // Reemplazar parámetros {name}, {count}, etc.
-      return value.replace(/\{(\w+)\}/g, (match, paramKey) => {
+      // Reemplazar parámetros {name}, {count}, {year}, etc.
+      let result = value.replace(/\{(\w+)\}/g, (match, paramKey) => {
         return params[paramKey] !== undefined ? params[paramKey] : match;
       });
+      
+      // Manejar plurales simples (español)
+      if (language === 'es' && result.includes('{plural}')) {
+        const count = params.count || 0;
+        result = result.replace('{plural}', count !== 1 ? 's' : '');
+      }
+      
+      return result;
     };
   }, [language]);
 
