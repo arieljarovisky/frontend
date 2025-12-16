@@ -46,6 +46,9 @@ export default function AccountingPage() {
       const params = {
         from: dateFrom,
         to: dateTo,
+        status: "all",
+        includeExpired: true,
+        includePaid: true,
       };
       const { data } = await apiClient.get("/api/admin/deposits/pending", { params });
       return data;
@@ -143,6 +146,7 @@ export default function AccountingPage() {
       status: (() => {
         const isPaid = Boolean(d.deposit_paid_at) || ["deposit_paid","confirmed","completed"].includes(String(d.status || "").toLowerCase());
         const isExpired = !isPaid && d.hold_until && parseMySQLLocalDate(d.hold_until) < new Date();
+        if (String(d.status).toLowerCase() === "cancelled") return "cancelled";
         if (isPaid) return "paid";
         if (isExpired) return "expired";
         return "pending";
@@ -233,7 +237,9 @@ export default function AccountingPage() {
       (statusFilter === "paid" && record.status === "paid") ||
       (statusFilter === "pending" && (record.status === "pending" || record.status === "open")) ||
       (statusFilter === "closed" && record.status === "closed") ||
-      (statusFilter === "approved" && record.status === "approved");
+      (statusFilter === "approved" && record.status === "approved") ||
+      (statusFilter === "expired" && record.status === "expired") ||
+      (statusFilter === "cancelled" && record.status === "cancelled");
 
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -386,6 +392,8 @@ export default function AccountingPage() {
               <option value="pending">Pendiente</option>
               <option value="closed">Cerrado</option>
               <option value="approved">Aprobado</option>
+              <option value="expired">Vencido</option>
+              <option value="cancelled">Cancelado</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
