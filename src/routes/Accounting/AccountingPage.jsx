@@ -103,6 +103,25 @@ export default function AccountingPage() {
     const date = new Date(dateValue);
     return isNaN(date.getTime()) ? new Date().toISOString() : dateValue;
   };
+  // Parse "YYYY-MM-DD HH:mm:ss" como hora local (Argentina) sin aplicar timezone implícito del navegador
+  const parseMySQLLocalDate = (s) => {
+    if (!s || typeof s !== "string") {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const year = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    const hour = Number(m[4]);
+    const minute = Number(m[5]);
+    const second = Number(m[6] || 0);
+    return new Date(year, month, day, hour, minute, second);
+  };
 
   // Función auxiliar para obtener timestamp válido para ordenamiento
   const getDateTimestamp = (dateValue) => {
@@ -123,14 +142,14 @@ export default function AccountingPage() {
       description: `Seña para turno ${d.appointment_id || ""}`,
       status: (() => {
         const isPaid = Boolean(d.deposit_paid_at) || ["deposit_paid","confirmed","completed"].includes(String(d.status || "").toLowerCase());
-        const isExpired = !isPaid && d.hold_until && new Date(d.hold_until) < new Date();
+        const isExpired = !isPaid && d.hold_until && parseMySQLLocalDate(d.hold_until) < new Date();
         if (isPaid) return "paid";
         if (isExpired) return "expired";
         return "pending";
       })(),
       statusLabel: (() => {
         const isPaid = Boolean(d.deposit_paid_at) || ["deposit_paid","confirmed","completed"].includes(String(d.status || "").toLowerCase());
-        const isExpired = !isPaid && d.hold_until && new Date(d.hold_until) < new Date();
+        const isExpired = !isPaid && d.hold_until && parseMySQLLocalDate(d.hold_until) < new Date();
         if (isPaid) return "Pagado";
         if (isExpired) return "Vencido";
         if (String(d.status).toLowerCase() === "cancelled") return "Cancelado";
@@ -429,13 +448,14 @@ export default function AccountingPage() {
                 paginatedRecords.map((record) => {
                   // Validar fecha antes de formatear
                   const recordDate = record.date ? new Date(record.date) : new Date();
-                  const isValidDate = !isNaN(recordDate.getTime());
+                  const localRecordDate = parseMySQLLocalDate(record.date) || recordDate;
+                  const isValidDate = !isNaN(localRecordDate.getTime());
                   
                   return (
                   <tr key={record.id} className="border-b border-border hover:bg-background-secondary">
                     <td className="p-4 text-sm text-foreground">
                       {isValidDate 
-                        ? format(recordDate, "dd/MM/yyyy HH:mm", { locale: es })
+                        ? format(localRecordDate, "dd/MM/yyyy HH:mm", { locale: es })
                         : "Fecha inválida"}
                     </td>
                     <td className="p-4">
