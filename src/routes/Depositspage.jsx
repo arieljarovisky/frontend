@@ -434,6 +434,21 @@ export default function DepositsPage() {
               : `Señas pendientes (${pagination.total || 0})`}
           </h2>
           <div className="flex items-center gap-3">
+            <button
+              onClick={async () => {
+                const ok = confirm("¿Limpiar turnos cancelados y pendientes vencidos?");
+                if (!ok) return;
+                try {
+                  await apiClient.post("/api/admin/deposits/cleanup");
+                  handleRefresh();
+                } catch (e) {
+                  alert(e.response?.data?.error || e.message);
+                }
+              }}
+              className="btn-danger text-xs px-3 py-2"
+            >
+              Limpiar cancelados/vencidos
+            </button>
             <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
               <input
                 type="checkbox"
