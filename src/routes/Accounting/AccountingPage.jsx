@@ -49,6 +49,7 @@ export default function AccountingPage() {
         status: "all",
         includeExpired: true,
         includePaid: true,
+        includeCancelled: true,
       };
       const { data } = await apiClient.get("/api/admin/deposits/pending", { params });
       return data;
