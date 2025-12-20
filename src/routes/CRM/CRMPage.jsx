@@ -291,7 +291,10 @@ export default function CRMPage() {
               {customSegments.length > 0 && (
                 <div className="space-y-2">
                   {customSegments.map((seg) => (
-                    <div key={seg.code} className="p-3 rounded-lg border border-border flex items-center justify-between">
+                    <div
+                      key={seg.code}
+                      className="p-3 rounded-lg border border-border flex items-center justify-between"
+                    >
                       <div>
                         <div className="font-semibold">{seg.label}</div>
                         <div className="text-xs text-foreground-muted">{seg.description}</div>
@@ -299,13 +302,17 @@ export default function CRMPage() {
                           {seg.type} · días={seg?.params?.days ?? seg?.days ?? 0}
                         </div>
                       </div>
-                      <button onClick={() => deleteCustomSegment(seg.code)} className="btn-ghost text-danger flex items-center gap-1">
+                      <button
+                        onClick={() => deleteCustomSegment(seg.code)}
+                        className="btn-ghost text-danger flex items-center gap-1"
+                      >
                         <Trash2 className="w-4 h-4" />
                         Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
           <div className="card card--space-lg">
             <h2 className="section-header">Destinatarios</h2>
