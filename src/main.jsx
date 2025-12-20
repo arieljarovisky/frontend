@@ -81,6 +81,7 @@ const FeatureRequestPage = React.lazy(() => import("./routes/FeatureRequestPage.
 const TwoFactorAuthPage = React.lazy(() => import("./routes/TwoFactorAuthPage.jsx"));
 const GoogleOAuthCallback = React.lazy(() => import("./routes/GoogleOAuthCallback.jsx"));
 const MobileAppPage = React.lazy(() => import("./routes/Admin/MobileAppPage.jsx"));
+const CRMPage = React.lazy(() => import("./routes/CRM/CRMPage.jsx"));
 
 const router = createBrowserRouter([
   // Página principal de marketing/ventas
@@ -312,6 +313,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute roles={["admin", "staff"]}>
             <AccountingPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "crm",
+        element: (
+          <PrivateRoute roles={["admin", "staff"]}>
+            <CRMPage />
           </PrivateRoute>
         ),
       },

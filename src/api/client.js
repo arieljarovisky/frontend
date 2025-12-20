@@ -851,6 +851,24 @@ apiClient.getCustomerAppSettings = async function (customerId) {
   return data?.data ?? data ?? null;
 };
 
+/* =========================
+   CRM API
+========================= */
+apiClient.crmListSegments = async function () {
+  const { data } = await apiClient.get("/api/crm/segments/presets");
+  return data?.data ?? data ?? [];
+};
+
+apiClient.crmGetSegment = async function (code) {
+  if (!code) throw new Error("code es requerido");
+  const { data } = await apiClient.get(`/api/crm/segments/${encodeURIComponent(code)}`, { params: { limit: 200 } });
+  return data;
+};
+
+apiClient.crmSendCampaign = async function ({ segmentCode, message, preview = false, max = 50 }) {
+  const { data } = await apiClient.post("/api/crm/campaigns/send", { segmentCode, message, preview, max });
+  return data;
+};
 apiClient.updateCustomerAppSettings = async function (customerId, payload) {
   if (!customerId) throw new Error("customerId es requerido");
   const { data } = await apiClient.put(`/api/customers/${customerId}/app-settings`, payload);

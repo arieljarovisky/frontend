@@ -36,6 +36,7 @@ import {
   PlugZap,
   Smartphone,
   Activity,
+  Megaphone,
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
@@ -285,6 +286,13 @@ export default function AppLayout() {
       label: t("navigation.cashRegister"),
       icon: Receipt,
       active: pathname.startsWith(`${base}/cash-register`),
+      adminOnly: true,
+    },
+    {
+      to: `${base}/crm`,
+      label: "CRM",
+      icon: Megaphone,
+      active: pathname.startsWith(`${base}/crm`),
       adminOnly: true,
     },
     {
