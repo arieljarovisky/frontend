@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import { toast } from "sonner";
-import { Megaphone, Target, Send, Eye, Wrench, Trash2 } from "lucide-react";
+import { Megaphone, Target, Send, Eye, Wrench, Trash2, Filter, Sparkles } from "lucide-react";
 
 export default function CRMPage() {
   const { tenantSlug } = useParams();
