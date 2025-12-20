@@ -314,6 +314,9 @@ export default function CRMPage() {
                 </div>
               )}
 
+            </div>
+          </div>
+
           <div className="card card--space-lg">
             <h2 className="section-header">Destinatarios</h2>
             {loadingList ? (
