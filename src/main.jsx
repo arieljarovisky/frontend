@@ -18,7 +18,7 @@ const WorkoutRoutinesPage = React.lazy(() => import("./routes/WorkoutRoutinesPag
 const WorkoutRoutineEditPage = React.lazy(() => import("./routes/WorkoutRoutineEditPage.jsx"));
 const BookingPage = React.lazy(() => import("./routes/BookingPage.jsx"));
 const DepositsPage = React.lazy(() => import("./routes/Depositspage.jsx"));
-const LoginPage = React.lazy(() => import("./routes/LoginPage.jsx"));
+import LoginPage from "./routes/LoginPage.jsx";
 const ClassesPage = React.lazy(() => import("./routes/ClassesPage.jsx"));
 
 // Auth y contexto
@@ -87,7 +87,11 @@ const router = createBrowserRouter([
   // Página principal de marketing/ventas
   { path: "/", element: <LandingPage /> },
   { path: "/docs", element: <DocsPage /> },
-  { path: "/login", element: <LoginPage /> },
+  { 
+    path: "/login", 
+    element: <LoginPage />,
+    errorElement: <ErrorBoundary><div className="min-h-screen bg-background flex items-center justify-center p-4"><div className="text-center"><h1 className="text-2xl font-bold text-foreground mb-4">Error al cargar la página de ingreso</h1><p className="text-foreground-muted mb-4">Hubo un problema cargando el módulo. Por favor, recargá la página o intentá más tarde.</p><button onClick={() => window.location.reload()} className="btn-primary">Recargar</button></div></div></ErrorBoundary>
+  },
   { path: "/auth/google/success", element: <GoogleOAuthCallback /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
