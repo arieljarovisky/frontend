@@ -26,6 +26,7 @@ export default function CRMPage() {
   const [scheduleAt, setScheduleAt] = useState("");
   const [schedules, setSchedules] = useState([]);
   const [history, setHistory] = useState([]);
+  const [segmentQuery, setSegmentQuery] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -200,12 +201,34 @@ export default function CRMPage() {
                 <Target className="w-5 h-5" />
                 Segmentos
               </h2>
+          </div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="input w-full flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                <input
+                  className="w-full bg-transparent outline-none"
+                  value={segmentQuery}
+                  onChange={(e) => setSegmentQuery(e.target.value)}
+                  placeholder="Buscar segmentos"
+                />
+              </div>
+              <div className="badge">{segments.length + customSegments.length}</div>
             </div>
             {loadingSegs ? (
               <div className="text-foreground-muted">Cargando segmentos…</div>
             ) : (
               <div className="space-y-2">
-                {[...segments, ...customSegments].map((seg) => (
+                {[...segments, ...customSegments]
+                  .filter((seg) => {
+                    const q = segmentQuery.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      String(seg.label || "").toLowerCase().includes(q) ||
+                      String(seg.description || "").toLowerCase().includes(q) ||
+                      String(seg.code || "").toLowerCase().includes(q)
+                    );
+                  })
+                  .map((seg) => (
                   <button
                     key={seg.code}
                     onClick={() => {
@@ -399,6 +422,15 @@ export default function CRMPage() {
           <div className="card card--space-lg">
             <h2 className="section-header">Campaña</h2>
             <div className="space-y-3">
+              {selected && (
+                <div className="p-3 rounded-lg border border-border flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">{selected.label}</div>
+                    <div className="text-xs text-foreground-muted">{selected.description}</div>
+                  </div>
+                  <div className="badge">{recipients.length} destinatarios</div>
+                </div>
+              )}
               <label className="text-sm text-foreground-secondary">Mensaje</label>
               <textarea
                 className="input"
@@ -407,6 +439,20 @@ export default function CRMPage() {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Usa {nombre} para personalizar el mensaje"
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="btn-ghost"
+                  onClick={() => setMessage((m) => `${m}\n\nHola {nombre}, ${selected ? `te escribimos desde ${selected.label}` : "tenemos novedades"}.`)}
+                >
+                  <Sparkles className="w-4 h-4" /> Insertar saludo
+                </button>
+                <button
+                  className="btn-ghost"
+                  onClick={() => setMessage((m) => `${m}\n\nPara reservar: respondé este mensaje o usá el link del negocio.`)}
+                >
+                  <Sparkles className="w-4 h-4" /> Insertar CTA
+                </button>
+              </div>
               <div className="flex items-center gap-2">
                 <button onClick={doPreview} className="btn-ghost">
                   <Eye className="w-4 h-4" />
