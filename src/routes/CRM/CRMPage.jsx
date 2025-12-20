@@ -27,6 +27,9 @@ export default function CRMPage() {
   const [schedules, setSchedules] = useState([]);
   const [history, setHistory] = useState([]);
   const [segmentQuery, setSegmentQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("segments");
+  const [recipientsCount, setRecipientsCount] = useState(0);
+  const [segmentLoadError, setSegmentLoadError] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -55,13 +58,18 @@ export default function CRMPage() {
 
   async function loadRecipients(code) {
     setLoadingList(true);
+    setSegmentLoadError(null);
     try {
       const result = await apiClient.crmGetSegment(code);
       setRecipients(result?.data || []);
       setRecipientsCount(Number(result?.count || (result?.data?.length ?? 0)));
       setActiveTab("send");
     } catch (e) {
-      toast.error("Error cargando clientes del segmento");
+      const status = e?.response?.status;
+      const isCanceled = e?.code === "ERR_CANCELED" || e?.message === "canceled";
+      if (!isCanceled && status !== 403) {
+        setSegmentLoadError("Error cargando clientes del segmento");
+      }
     } finally {
       setLoadingList(false);
     }
@@ -352,12 +360,20 @@ export default function CRMPage() {
 
           <div className="card card--space-lg">
             <h2 className="section-header">Destinatarios</h2>
+            {segmentLoadError && (
+              <div className="mb-2 p-2 rounded-lg border border-danger text-danger text-xs">
+                {segmentLoadError}
+              </div>
+            )}
             {loadingList ? (
               <div className="text-foreground-muted">Cargando clientes…</div>
             ) : recipients.length === 0 ? (
               <div className="text-foreground-muted">Seleccione un segmento para ver los clientes.</div>
             ) : (
               <div className="divide-y divide-border">
+                <div className="p-2 text-xs text-foreground-muted">
+                  Mostrando {Math.min(50, recipients.length)} de {recipientsCount || recipients.length} destinatarios
+                </div>
                 {recipients.slice(0, 50).map((r) => (
                   <div key={r.id} className="py-2 flex items-center justify-between">
                     <div>
