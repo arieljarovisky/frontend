@@ -58,6 +58,8 @@ export default function CRMPage() {
     try {
       const result = await apiClient.crmGetSegment(code);
       setRecipients(result?.data || []);
+      setRecipientsCount(Number(result?.count || (result?.data?.length ?? 0)));
+      setActiveTab("send");
     } catch (e) {
       toast.error("Error cargando clientes del segmento");
     } finally {
@@ -66,7 +68,14 @@ export default function CRMPage() {
   }
 
   async function doPreview() {
-    if (!selected) return;
+    if (!selected) {
+      toast.error("Seleccioná un segmento");
+      return;
+    }
+    if (!String(message || "").trim()) {
+      toast.error("Escribí un mensaje para la campaña");
+      return;
+    }
     try {
       const resp = await apiClient.crmSendCampaign({
         segmentCode: selected.code,
@@ -76,6 +85,7 @@ export default function CRMPage() {
       });
       setPreview(resp?.preview || []);
       toast.success(`Vista previa generada (${resp?.totalCandidates || 0} candidatos)`);
+      setActiveTab("send");
     } catch (e) {
       toast.error(e?.response?.data?.error || "Error generando vista previa");
     }
