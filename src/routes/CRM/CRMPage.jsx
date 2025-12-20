@@ -300,9 +300,10 @@ export default function CRMPage() {
                     value={segmentForm.type}
                     onChange={(e) => setSegmentForm((s) => ({ ...s, type: e.target.value }))}
                   >
-                    <option value="inactive_x_days">Inactivos en X días</option>
-                    <option value="renewal_in_days">Renovación en X días</option>
-                    <option value="deposit_pending_recent_days">Seña pendiente últimos X días</option>
+                     <option value="inactive_x_days">Inactivos en X días</option>
+                     <option value="renewal_in_days">Renovación en X días</option>
+                     <option value="deposit_pending_recent_days">Seña pendiente últimos X días</option>
+                     <option value="deposit_expired_recent_days">Seña vencida últimos X días</option>
                   </select>
                 </div>
                 <div>
