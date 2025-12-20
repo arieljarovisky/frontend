@@ -859,6 +859,26 @@ apiClient.crmListSegments = async function () {
   return data?.data ?? data ?? [];
 };
 
+apiClient.crmListCustomSegments = async function () {
+  const { data } = await apiClient.get("/api/crm/segments/custom");
+  return data?.data ?? data ?? [];
+};
+
+apiClient.crmCreateCustomSegment = async function (payload) {
+  const { data } = await apiClient.post("/api/crm/segments/custom", payload);
+  return data;
+};
+
+apiClient.crmUpdateCustomSegment = async function (code, payload) {
+  const { data } = await apiClient.put(`/api/crm/segments/custom/${encodeURIComponent(code)}`, payload);
+  return data;
+};
+
+apiClient.crmDeleteCustomSegment = async function (code) {
+  const { data } = await apiClient.delete(`/api/crm/segments/custom/${encodeURIComponent(code)}`);
+  return data;
+};
+
 apiClient.crmGetSegment = async function (code) {
   if (!code) throw new Error("code es requerido");
   const { data } = await apiClient.get(`/api/crm/segments/${encodeURIComponent(code)}`, { params: { limit: 200 } });
@@ -868,6 +888,26 @@ apiClient.crmGetSegment = async function (code) {
 apiClient.crmSendCampaign = async function ({ segmentCode, message, preview = false, max = 50 }) {
   const { data } = await apiClient.post("/api/crm/campaigns/send", { segmentCode, message, preview, max });
   return data;
+};
+
+apiClient.crmListSchedules = async function () {
+  const { data } = await apiClient.get("/api/crm/campaigns/schedules");
+  return data?.data ?? data ?? [];
+};
+
+apiClient.crmCreateSchedule = async function (payload) {
+  const { data } = await apiClient.post("/api/crm/campaigns/schedules", payload);
+  return data;
+};
+
+apiClient.crmDeleteSchedule = async function (id) {
+  const { data } = await apiClient.delete(`/api/crm/campaigns/schedules/${encodeURIComponent(id)}`);
+  return data;
+};
+
+apiClient.crmListHistory = async function () {
+  const { data } = await apiClient.get("/api/crm/campaigns/history");
+  return data?.data ?? data ?? [];
 };
 apiClient.updateCustomerAppSettings = async function (customerId, payload) {
   if (!customerId) throw new Error("customerId es requerido");

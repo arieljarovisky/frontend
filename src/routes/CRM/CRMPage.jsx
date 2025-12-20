@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import { toast } from "sonner";
-import { Megaphone, Target, Send, Eye } from "lucide-react";
+import { Megaphone, Target, Send, Eye, Wrench, Trash2 } from "lucide-react";
 
 export default function CRMPage() {
   const { tenantSlug } = useParams();
   const [segments, setSegments] = useState([]);
+  const [customSegments, setCustomSegments] = useState([]);
   const [selected, setSelected] = useState(null);
   const [recipients, setRecipients] = useState([]);
   const [loadingSegs, setLoadingSegs] = useState(false);
@@ -14,13 +15,34 @@ export default function CRMPage() {
   const [message, setMessage] = useState("Hola {nombre}, te esperamos esta semana. ¿Querés reservar un turno?");
   const [preview, setPreview] = useState([]);
   const [sending, setSending] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [segmentForm, setSegmentForm] = useState({
+    code: "",
+    label: "",
+    description: "",
+    type: "inactive_x_days",
+    days: 60,
+  });
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [schedules, setSchedules] = useState([]);
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
     const load = async () => {
       setLoadingSegs(true);
       try {
-        const data = await apiClient.crmListSegments();
-        setSegments(data || []);
+        const [presets, customs] = await Promise.all([
+          apiClient.crmListSegments(),
+          apiClient.crmListCustomSegments(),
+        ]);
+        setSegments(presets || []);
+        setCustomSegments(Array.isArray(customs) ? customs : []);
+        const [sched, hist] = await Promise.all([
+          apiClient.crmListSchedules(),
+          apiClient.crmListHistory(),
+        ]);
+        setSchedules(Array.isArray(sched) ? sched : []);
+        setHistory(Array.isArray(hist) ? hist : []);
       } catch (e) {
         toast.error("Error cargando segmentos");
       } finally {
@@ -76,6 +98,91 @@ export default function CRMPage() {
     }
   }
 
+  async function createCustomSegment() {
+    if (!segmentForm.code || !segmentForm.label || !segmentForm.type) {
+      toast.error("Completá código, nombre y tipo");
+      return;
+    }
+    setCreating(true);
+    try {
+      const payload = {
+        code: segmentForm.code.trim(),
+        label: segmentForm.label.trim(),
+        description: segmentForm.description.trim(),
+        type: segmentForm.type,
+        params: { days: Number(segmentForm.days || 0) || 14 },
+      };
+      const resp = await apiClient.crmCreateCustomSegment(payload);
+      const list = resp?.data ?? resp ?? [];
+      setCustomSegments(Array.isArray(list) ? list : []);
+      toast.success("Segmento creado");
+      setSegmentForm({
+        code: "",
+        label: "",
+        description: "",
+        type: "inactive_x_days",
+        days: 60,
+      });
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Error creando segmento");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deleteCustomSegment(code) {
+    try {
+      const resp = await apiClient.crmDeleteCustomSegment(code);
+      const list = resp?.data ?? resp ?? [];
+      setCustomSegments(Array.isArray(list) ? list : []);
+      // Si estaba seleccionado, limpiar
+      if (selected?.code === code) {
+        setSelected(null);
+        setRecipients([]);
+        setPreview([]);
+      }
+      toast.success("Segmento eliminado");
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Error eliminando segmento");
+    }
+  }
+
+  async function createSchedule() {
+    if (!selected) {
+      toast.error("Seleccioná un segmento");
+      return;
+    }
+    if (!scheduleAt) {
+      toast.error("Elegí fecha y hora");
+      return;
+    }
+    try {
+      const payload = {
+        segmentCode: selected.code,
+        message,
+        sendAt: scheduleAt,
+        max: 50,
+      };
+      const resp = await apiClient.crmCreateSchedule(payload);
+      const list = resp?.data ?? resp ?? [];
+      setSchedules(Array.isArray(list) ? list : []);
+      toast.success("Campaña programada");
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Error programando campaña");
+    }
+  }
+
+  async function deleteSchedule(id) {
+    try {
+      const resp = await apiClient.crmDeleteSchedule(id);
+      const list = resp?.data ?? resp ?? [];
+      setSchedules(Array.isArray(list) ? list : []);
+      toast.success("Programación eliminada");
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Error eliminando programación");
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -98,7 +205,7 @@ export default function CRMPage() {
               <div className="text-foreground-muted">Cargando segmentos…</div>
             ) : (
               <div className="space-y-2">
-                {segments.map((seg) => (
+                {[...segments, ...customSegments].map((seg) => (
                   <button
                     key={seg.code}
                     onClick={() => {
@@ -117,6 +224,90 @@ export default function CRMPage() {
           </div>
 
           <div className="card card--space-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="section-header flex items-center gap-2">
+                <Wrench className="w-5 h-5" />
+                Segmentos personalizados
+              </h2>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-foreground-secondary">Código</label>
+                  <input
+                    className="input"
+                    value={segmentForm.code}
+                    onChange={(e) => setSegmentForm((s) => ({ ...s, code: e.target.value }))}
+                    placeholder="p.ej. inactive_90_days"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-foreground-secondary">Nombre</label>
+                  <input
+                    className="input"
+                    value={segmentForm.label}
+                    onChange={(e) => setSegmentForm((s) => ({ ...s, label: e.target.value }))}
+                    placeholder="p.ej. Inactivos 90 días"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-foreground-secondary">Tipo</label>
+                  <select
+                    className="input"
+                    value={segmentForm.type}
+                    onChange={(e) => setSegmentForm((s) => ({ ...s, type: e.target.value }))}
+                  >
+                    <option value="inactive_x_days">Inactivos en X días</option>
+                    <option value="renewal_in_days">Renovación en X días</option>
+                    <option value="deposit_pending_recent_days">Seña pendiente últimos X días</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-foreground-secondary">Días (X)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={segmentForm.days}
+                    onChange={(e) => setSegmentForm((s) => ({ ...s, days: Number(e.target.value || 0) }))}
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <label className="text-xs text-foreground-secondary">Descripción</label>
+                  <input
+                    className="input"
+                    value={segmentForm.description}
+                    onChange={(e) => setSegmentForm((s) => ({ ...s, description: e.target.value }))}
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+              <div>
+                <button onClick={createCustomSegment} disabled={creating} className="btn-primary">
+                  Crear segmento
+                </button>
+              </div>
+              {customSegments.length > 0 && (
+                <div className="space-y-2">
+                  {customSegments.map((seg) => (
+                    <div key={seg.code} className="p-3 rounded-lg border border-border flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">{seg.label}</div>
+                        <div className="text-xs text-foreground-muted">{seg.description}</div>
+                        <div className="text-xs text-foreground-muted">
+                          {seg.type} · días={seg?.params?.days ?? seg?.days ?? 0}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteCustomSegment(seg.code)} className="btn-ghost text-danger flex items-center gap-1">
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card card--space-lg">
             <h2 className="section-header">Destinatarios</h2>
             {loadingList ? (
               <div className="text-foreground-muted">Cargando clientes…</div>
@@ -130,6 +321,63 @@ export default function CRMPage() {
                       <div className="font-medium">{r.name || "Sin nombre"}</div>
                       <div className="text-xs text-foreground-muted">{r.phone}</div>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="card card--space-lg">
+            <h2 className="section-header">Programar campaña</h2>
+            <div className="space-y-3">
+              <label className="text-sm text-foreground-secondary">Fecha y hora</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={scheduleAt}
+                onChange={(e) => setScheduleAt(e.target.value)}
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={createSchedule} disabled={!selected} className="btn-primary">
+                  Programar
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="card card--space-lg">
+            <h2 className="section-header">Programadas</h2>
+            {schedules.length === 0 ? (
+              <div className="text-foreground-muted">No hay campañas programadas</div>
+            ) : (
+              <div className="space-y-2">
+                {schedules.map((s) => (
+                  <div key={s.id} className="p-3 rounded-lg border border-border flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">{s.segmentCode}</div>
+                      <div className="text-xs text-foreground-muted">{s.sendAt}</div>
+                    </div>
+                    <button onClick={() => deleteSchedule(s.id)} className="btn-ghost text-danger flex items-center gap-1">
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="card card--space-lg">
+            <h2 className="section-header">Historial</h2>
+            {history.length === 0 ? (
+              <div className="text-foreground-muted">Sin envíos recientes</div>
+            ) : (
+              <div className="space-y-2">
+                {history.slice(0, 50).map((h) => (
+                  <div key={h.id} className="p-3 rounded-lg border border-border">
+                    <div className="font-semibold">{h.segmentCode}</div>
+                    <div className="text-xs text-foreground-muted">Enviados {h.sent} de {h.total}</div>
+                    <div className="text-xs text-foreground-muted">{h.finishedAt}</div>
                   </div>
                 ))}
               </div>
