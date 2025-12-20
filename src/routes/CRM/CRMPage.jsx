@@ -203,7 +203,7 @@ export default function CRMPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Megaphone className="w-6 h-6" />
@@ -211,7 +211,7 @@ export default function CRMPage() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-4">
           <div className="card card--space-lg">
             <div className="flex items-center justify-between mb-3">
@@ -387,62 +387,7 @@ export default function CRMPage() {
             )}
           </div>
           
-          <div className="card card--space-lg">
-            <h2 className="section-header">Programar campaña</h2>
-            <div className="space-y-3">
-              <label className="text-sm text-foreground-secondary">Fecha y hora</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={scheduleAt}
-                onChange={(e) => setScheduleAt(e.target.value)}
-              />
-              <div className="flex items-center gap-2">
-                <button onClick={createSchedule} disabled={!selected} className="btn-primary">
-                  Programar
-                </button>
-              </div>
-            </div>
-          </div>
           
-          <div className="card card--space-lg">
-            <h2 className="section-header">Programadas</h2>
-            {schedules.length === 0 ? (
-              <div className="text-foreground-muted">No hay campañas programadas</div>
-            ) : (
-              <div className="space-y-2">
-                {schedules.map((s) => (
-                  <div key={s.id} className="p-3 rounded-lg border border-border flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">{s.segmentCode}</div>
-                      <div className="text-xs text-foreground-muted">{s.sendAt}</div>
-                    </div>
-                    <button onClick={() => deleteSchedule(s.id)} className="btn-ghost text-danger flex items-center gap-1">
-                      <Trash2 className="w-4 h-4" />
-                      Eliminar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="card card--space-lg">
-            <h2 className="section-header">Historial</h2>
-            {history.length === 0 ? (
-              <div className="text-foreground-muted">Sin envíos recientes</div>
-            ) : (
-              <div className="space-y-2">
-                {history.slice(0, 50).map((h) => (
-                  <div key={h.id} className="p-3 rounded-lg border border-border">
-                    <div className="font-semibold">{h.segmentCode}</div>
-                    <div className="text-xs text-foreground-muted">Enviados {h.sent} de {h.total}</div>
-                    <div className="text-xs text-foreground-muted">{h.finishedAt}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="space-y-4">
@@ -506,6 +451,63 @@ export default function CRMPage() {
               </div>
             </div>
           )}
+
+          <div className="card card--space-lg">
+            <h2 className="section-header">Programar campaña</h2>
+            <div className="space-y-3">
+              <label className="text-sm text-foreground-secondary">Fecha y hora</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={scheduleAt}
+                onChange={(e) => setScheduleAt(e.target.value)}
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={createSchedule} disabled={!selected} className="btn-primary">
+                  Programar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card card--space-lg">
+            <h2 className="section-header">Programadas</h2>
+            {schedules.length === 0 ? (
+              <div className="text-foreground-muted">No hay campañas programadas</div>
+            ) : (
+              <div className="space-y-2">
+                {schedules.map((s) => (
+                  <div key={s.id} className="p-3 rounded-lg border border-border flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">{s.segmentCode}</div>
+                      <div className="text-xs text-foreground-muted">{s.sendAt}</div>
+                    </div>
+                    <button onClick={() => deleteSchedule(s.id)} className="btn-ghost text-danger flex items-center gap-1">
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card card--space-lg">
+            <h2 className="section-header">Historial</h2>
+            {history.length === 0 ? (
+              <div className="text-foreground-muted">Sin envíos recientes</div>
+            ) : (
+              <div className="space-y-2">
+                {history.slice(0, 50).map((h) => (
+                  <div key={h.id} className="p-3 rounded-lg border border-border">
+                    <div className="font-semibold">{h.segmentCode}</div>
+                    <div className="text-xs text-foreground-muted">Enviados {h.sent} de {h.total}</div>
+                    <div className="text-xs text-foreground-muted">{h.finishedAt}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
