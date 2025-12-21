@@ -570,10 +570,18 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
             >
               {/* Header del instructor */}
               <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-border">
-                <div 
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: instructorColor }}
-                />
+                {instructor.photo_url ? (
+                  <img
+                    src={instructor.photo_url}
+                    alt={instructor.name}
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-border flex-shrink-0 object-cover"
+                  />
+                ) : (
+                  <div 
+                    className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: instructorColor }}
+                  />
+                )}
                 <h3 className="text-xs sm:text-sm font-semibold text-foreground truncate min-w-0 flex-1">
                   {instructor.name}
                 </h3>
