@@ -46,10 +46,10 @@
   --primary-light: 34 88 116;
   --accent: 32 156 212;
   --accent-hover: 46 176 226;
-  /* Sidebar más diferenciado en oscuro (teal profundo) */
-  --sidebar-bg-start: 18 40 64;
-  --sidebar-bg-end: 10 24 42;
-  --sidebar-border: 54 96 128;
+  /* Sidebar más diferenciado en oscuro (más profundo) */
+  --sidebar-bg-start: 10 22 36;
+  --sidebar-bg-end: 4 12 24;
+  --sidebar-border: 64 112 140;
   --sidebar-shadow: 4 12 24;
   --sidebar-text: 226 242 248;
   --sidebar-muted: 160 188 204;
@@ -140,4 +140,3 @@
 .fc-license-message{
   display: none !important;
 }
-
