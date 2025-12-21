@@ -31,6 +31,15 @@
   overscroll-behavior: contain;
 }
 
+.arja-sidebar--contrast {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sidebar-bg-start), 1) 0%,
+    rgba(var(--sidebar-bg-mid), 1) 40%,
+    rgba(var(--sidebar-bg-end), 1) 100%
+  );
+}
+
 .arja-sidebar.is-open {
   transform: translateX(0);
 }
