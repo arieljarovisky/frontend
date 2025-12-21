@@ -80,19 +80,9 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (loading) return;
-    if (!confirm("¿Eliminar esta notificación?")) return;
-    
-    setLoading(true);
-    try {
-      await onDelete(notification);
-      toast.success("Notificación eliminada");
-    } catch (error) {
-      toast.error(error.message || "Error al eliminar notificación");
-    } finally {
-      setLoading(false);
-    }
+    onDelete(notification);
   };
 
   return (
@@ -313,6 +303,8 @@ export default function NotificationsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState(null);
   const topPaginationRef = useRef(null);
   
   // Estados de paginación
@@ -385,19 +377,32 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleDelete = async (notification) => {
-    const id = notification.id;
-    await apiClient.delete(`/api/notifications/${id}`);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    if (!notification.is_read) {
-      setUnreadCount((c) => Math.max(0, c - 1));
+  const requestDelete = (notification) => {
+    setNotificationToDelete(notification);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteOne = async () => {
+    const notification = notificationToDelete;
+    setShowDeleteModal(false);
+    if (!notification) return;
+    try {
+      await apiClient.delete(`/api/notifications/${notification.id}`);
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      if (!notification.is_read) {
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
+      setCurrentPage((p) => {
+        const newTotal = (notifications.length - 1);
+        const newTotalPages = Math.max(1, Math.ceil(newTotal / itemsPerPage));
+        return Math.min(p, newTotalPages);
+      });
+      toast.success("Notificación eliminada");
+    } catch (error) {
+      toast.error("Error al eliminar notificación");
+    } finally {
+      setNotificationToDelete(null);
     }
-    // Ajustar paginación si la página actual quedó vacía
-    setCurrentPage((p) => {
-      const newTotal = (notifications.length - 1);
-      const newTotalPages = Math.max(1, Math.ceil(newTotal / itemsPerPage));
-      return Math.min(p, newTotalPages);
-    });
   };
 
   const handleDeleteAll = async () => {
@@ -441,7 +446,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Modal de Confirmación Moderno */}
+      {/* Modal de Confirmación para Limpiar Todo */}
       {showConfirmModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
@@ -545,6 +550,62 @@ export default function NotificationsPage() {
                         Sí, eliminar todo
                       </>
                     )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Eliminar una */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div 
+            className="relative w-full max-w-md transform transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="card overflow-hidden border-2 border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.25)]">
+              <div className="relative bg-gradient-to-r from-red-600/20 to-red-500/10 p-6 border-b border-red-500/20">
+                <div className="relative flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/30">
+                    <Trash2 className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-100 mb-1">
+                      ¿Eliminar esta notificación?
+                    </h3>
+                    <p className="text-sm text-red-200/80">
+                      Esta acción no se puede deshacer
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-4">
+                  <p className="text-sm text-foreground-secondary">
+                    {notificationToDelete?.title}
+                  </p>
+                  <p className="text-xs text-foreground-muted mt-1">
+                    {notificationToDelete?.message}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 px-4 py-2 rounded-xl border border-border hover:bg-background-secondary text-foreground-secondary font-medium transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDeleteOne}
+                    className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
@@ -709,7 +770,7 @@ export default function NotificationsPage() {
                   key={notification.id}
                   notification={notification}
                   onMarkRead={handleMarkRead}
-                  onDelete={handleDelete}
+                  onDelete={requestDelete}
                   onRefresh={handleRefresh}
                 />
               ))}
