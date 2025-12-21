@@ -211,8 +211,10 @@ export default function CRMPage() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-4 md:border-r md:border-border md:pr-4">
+      <div className="relative">
+        <div className="hidden md:block absolute inset-y-0 left-1/2 -ml-px w-px" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4 md:pr-4">
           <div className="card card--space-lg">
             <div className="flex items-center justify-between mb-3">
               <h2 className="section-header flex items-center gap-2">
@@ -508,6 +510,7 @@ export default function CRMPage() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
