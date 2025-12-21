@@ -134,7 +134,8 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
       <div className="flex gap-4">
         {/* Icono */}
         <div className={`
-          p-3 rounded-xl bg-gradient-to-br ${config.color} border flex-shrink-0
+          rounded-xl bg-gradient-to-br ${config.color} border flex-shrink-0
+          flex items-center justify-center w-12 h-12
         `}>
           <Icon className={`w-6 h-6 ${config.iconColor}`} />
         </div>
