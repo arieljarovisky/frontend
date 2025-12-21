@@ -21,9 +21,10 @@
   --primary-light: 206 244 248;
   --accent: 9 118 196;
   --accent-hover: 7 92 160;
-  --sidebar-bg-start: 226 245 250;
-  --sidebar-bg-end: 208 232 246;
-  --sidebar-border: 176 208 223;
+  /* Sidebar más diferenciado en claro */
+  --sidebar-bg-start: 234 247 255;
+  --sidebar-bg-end: 214 235 248;
+  --sidebar-border: 168 200 218;
   --sidebar-shadow: 21 50 72;
   --sidebar-text: 20 52 78;
   --sidebar-muted: 96 128 150;
@@ -45,9 +46,10 @@
   --primary-light: 34 88 116;
   --accent: 32 156 212;
   --accent-hover: 46 176 226;
-  --sidebar-bg-start: 16 30 48;
-  --sidebar-bg-end: 8 18 34;
-  --sidebar-border: 30 64 92;
+  /* Sidebar más diferenciado en oscuro (teal profundo) */
+  --sidebar-bg-start: 18 40 64;
+  --sidebar-bg-end: 10 24 42;
+  --sidebar-border: 54 96 128;
   --sidebar-shadow: 4 12 24;
   --sidebar-text: 226 242 248;
   --sidebar-muted: 160 188 204;
@@ -138,5 +140,4 @@
 .fc-license-message{
   display: none !important;
 }
-
 
