@@ -86,8 +86,7 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
     
     setLoading(true);
     try {
-      await onDelete(notification.id);
-      onRefresh();
+      await onDelete(notification);
       toast.success("Notificación eliminada");
     } catch (error) {
       toast.error(error.message || "Error al eliminar notificación");
@@ -386,8 +385,19 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (notification) => {
+    const id = notification.id;
     await apiClient.delete(`/api/notifications/${id}`);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    if (!notification.is_read) {
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+    // Ajustar paginación si la página actual quedó vacía
+    setCurrentPage((p) => {
+      const newTotal = (notifications.length - 1);
+      const newTotalPages = Math.max(1, Math.ceil(newTotal / itemsPerPage));
+      return Math.min(p, newTotalPages);
+    });
   };
 
   const handleDeleteAll = async () => {
