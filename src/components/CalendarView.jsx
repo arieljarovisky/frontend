@@ -722,6 +722,13 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
   const [dragOverSlot, setDragOverSlot] = useState(null);
   const [dragOverInstructor, setDragOverInstructor] = useState(null);
   const [dragOverDay, setDragOverDay] = useState(null);
+  const instructorPhotos = useMemo(() => {
+    const map = {};
+    (instructors || []).forEach((i) => {
+      if (i.photo_url) map[i.id] = i.photo_url;
+    });
+    return map;
+  }, [instructors]);
 
   // Calcular inicio y fin de semana (lunes a domingo)
   const weekRange = useMemo(() => {
