@@ -109,9 +109,19 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
                 <span className="inline-block w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
               )}
             </h3>
-            <span className="text-xs text-foreground-muted whitespace-nowrap">
-              {formatRelativeTime(notification.created_at)}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-xs text-foreground-muted whitespace-nowrap">
+                {formatRelativeTime(notification.created_at)}
+              </span>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="p-2 rounded-lg border border-border hover:bg-background-secondary text-foreground-muted"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <p className="text-sm text-foreground-secondary mb-3">
@@ -147,14 +157,6 @@ function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
                 Marcar leída
               </button>
             )}
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="btn-ghost text-xs px-3 py-1.5 flex items-center gap-1 text-red-400 hover:text-red-300"
-            >
-              <Trash2 className="w-3 h-3" />
-              Eliminar
-            </button>
           </div>
         </div>
       </div>
