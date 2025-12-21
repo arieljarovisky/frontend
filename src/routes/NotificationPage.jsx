@@ -29,6 +29,16 @@ const NOTIFICATION_CONFIG = {
     color: "from-primary-600/20 to-primary-600/5 border-primary-600/30",
     iconColor: "text-primary-400",
   },
+  appointment_created: {
+    icon: Calendar,
+    color: "from-primary-600/20 to-primary-600/5 border-primary-600/30",
+    iconColor: "text-primary-400",
+  },
+  appointment_reserved: {
+    icon: Calendar,
+    color: "from-primary-600/20 to-primary-600/5 border-primary-600/30",
+    iconColor: "text-primary-400",
+  },
   deposit_paid: {
     icon: DollarSign,
     color: "from-emerald-600/20 to-emerald-600/5 border-emerald-600/30",
@@ -40,6 +50,11 @@ const NOTIFICATION_CONFIG = {
     iconColor: "text-red-400",
   },
   deposit_pending: {
+    icon: AlertTriangle,
+    color: "from-amber-600/20 to-amber-600/5 border-amber-600/30",
+    iconColor: "text-amber-400",
+  },
+  deposit_expired: {
     icon: AlertTriangle,
     color: "from-amber-600/20 to-amber-600/5 border-amber-600/30",
     iconColor: "text-amber-400",
@@ -61,9 +76,33 @@ const NOTIFICATION_CONFIG = {
   },
 };
 
+function pickConfigForNotification(notification) {
+  const typeKey = String(notification?.type || "").toLowerCase();
+  let cfg = NOTIFICATION_CONFIG[typeKey] || NOTIFICATION_CONFIG.default;
+  if (cfg === NOTIFICATION_CONFIG.default) {
+    const title = String(notification?.title || "").toLowerCase();
+    const msg = String(notification?.message || "").toLowerCase();
+    const txt = `${title} ${msg}`;
+    if (txt.includes("turno") || txt.includes("reserva") || txt.includes("reservado")) {
+      cfg = NOTIFICATION_CONFIG.appointment_reserved;
+    } else if (txt.includes("cancel")) {
+      cfg = NOTIFICATION_CONFIG.appointment_cancelled;
+    } else if (txt.includes("seña pag") || txt.includes("deposit") && txt.includes("paid")) {
+      cfg = NOTIFICATION_CONFIG.deposit_paid;
+    } else if (txt.includes("seña") || txt.includes("deposit") || txt.includes("pendiente")) {
+      cfg = NOTIFICATION_CONFIG.deposit_pending;
+    } else if (txt.includes("stock") && txt.includes("alert")) {
+      cfg = NOTIFICATION_CONFIG.stock_alert;
+    } else if (txt.includes("stock")) {
+      cfg = NOTIFICATION_CONFIG.stock_movement;
+    }
+  }
+  return cfg;
+}
+
 function NotificationCard({ notification, onMarkRead, onDelete, onRefresh }) {
   const [loading, setLoading] = useState(false);
-  const config = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.default;
+  const config = pickConfigForNotification(notification);
   const Icon = config.icon;
 
   const handleMarkRead = async () => {
