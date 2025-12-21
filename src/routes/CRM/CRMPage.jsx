@@ -212,7 +212,7 @@ export default function CRMPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-4">
+        <div className="space-y-4 md:border-r md:border-border md:pr-4">
           <div className="card card--space-lg">
             <div className="flex items-center justify-between mb-3">
               <h2 className="section-header flex items-center gap-2">
@@ -390,7 +390,7 @@ export default function CRMPage() {
           
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 md:pl-4">
           <div className="card card--space-lg">
             <h2 className="section-header">Campaña</h2>
             <div className="space-y-3">
