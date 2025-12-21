@@ -22,6 +22,7 @@ const DEFAULT_INSTRUCTOR_FORM = {
   isActive: true,
   serviceIds: [],
   branchIds: [],
+  photoUrl: "",
 };
 
 const DEFAULT_SERVICE_FORM = {
@@ -236,6 +237,7 @@ export default function InstructorsPage() {
         isActive: instructorForm.isActive,
         serviceIds: instructorForm.serviceIds,
         branchIds: instructorForm.branchIds || [],
+        photoUrl: instructorForm.photoUrl || null,
       };
 
       if (editingInstructorId) {
@@ -421,10 +423,18 @@ export default function InstructorsPage() {
                       <tr key={instructor.id} className="border-b border-border/50 last:border-b-0">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span
-                              className="inline-flex w-2.5 h-2.5 rounded-full ring-2 ring-offset-2 ring-offset-background"
-                              style={{ backgroundColor: instructor.colorHex || "#6366F1" }}
-                            />
+                            {instructor.photoUrl ? (
+                              <img
+                                src={instructor.photoUrl}
+                                alt={instructor.name}
+                                className="w-8 h-8 rounded-full object-cover border border-border"
+                              />
+                            ) : (
+                              <span
+                                className="inline-flex w-2.5 h-2.5 rounded-full ring-2 ring-offset-2 ring-offset-background"
+                                style={{ backgroundColor: instructor.colorHex || "#6366F1" }}
+                              />
+                            )}
                             <div>
                               <p className="font-medium text-foreground">{instructor.name}</p>
                               <p className="text-xs text-foreground-muted">ID {instructor.id}</p>
@@ -498,6 +508,7 @@ export default function InstructorsPage() {
                                   isActive: instructor.isActive,
                                   serviceIds: instructor.serviceIds || [],
                                   branchIds: instructor.branchIds || (instructor.branchId ? [instructor.branchId] : (defaultBranchId ? [defaultBranchId] : [])),
+                                  photoUrl: instructor.photoUrl || "",
                                 });
                               }}
                               aria-label="Editar instructor"
@@ -541,6 +552,27 @@ export default function InstructorsPage() {
                   }
                   required
                 />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
+                <span className="font-medium text-foreground">Foto (URL)</span>
+                <input
+                  className="input"
+                  placeholder="https://..."
+                  value={instructorForm.photoUrl}
+                  onChange={(event) =>
+                    setInstructorForm((prev) => ({ ...prev, photoUrl: event.target.value }))
+                  }
+                />
+                {instructorForm.photoUrl && (
+                  <div className="mt-2">
+                    <img
+                      src={instructorForm.photoUrl}
+                      alt="Vista previa"
+                      className="w-16 h-16 rounded-full object-cover border border-border"
+                    />
+                  </div>
+                )}
               </label>
 
               <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
