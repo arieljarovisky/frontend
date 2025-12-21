@@ -35,9 +35,11 @@
   background: linear-gradient(
     180deg,
     rgba(var(--sidebar-bg-start), 1) 0%,
-    rgba(var(--sidebar-bg-mid), 1) 40%,
+    rgba(var(--primary), 0.18) 35%,
+    rgba(var(--sidebar-bg-mid), 1) 65%,
     rgba(var(--sidebar-bg-end), 1) 100%
-  );
+  ) !important;
+  border-right-color: rgba(var(--sidebar-border), 1) !important;
 }
 
 .arja-sidebar.is-open {
