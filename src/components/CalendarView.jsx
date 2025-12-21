@@ -218,6 +218,13 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
   const [dragOverSlot, setDragOverSlot] = useState(null);
   const [dragOverInstructor, setDragOverInstructor] = useState(null);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const instructorPhotos = useMemo(() => {
+    const map = {};
+    (instructors || []).forEach((i) => {
+      if (i.photo_url) map[i.id] = i.photo_url;
+    });
+    return map;
+  }, [instructors]);
   
   // Forzar re-render cuando cambien los eventos
   // Usamos un hash simple basado en los IDs y fechas de los eventos
@@ -663,8 +670,19 @@ function DayView({ events, instructors, instructorColors, timeRange, onEventClic
                                     backgroundColor: `${instructorColor}15`
                                   }}
                                 >
-                                  <div className="text-[11px] sm:text-xs font-semibold text-foreground truncate mb-0.5 sm:mb-1">
-                                    {item.title}
+                                  <div className="flex items-center gap-1">
+                                    {(() => {
+                                      const ep = item.extendedProps || {};
+                                      const pid = ep.instructor_id || ep.instructorId;
+                                      const photo = instructorPhotos[pid];
+                                      if (photo) {
+                                        return <img src={photo} alt="" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-border flex-shrink-0 object-cover" />;
+                                      }
+                                      return null;
+                                    })()}
+                                    <div className="text-[11px] sm:text-xs font-semibold text-foreground truncate mb-0.5 sm:mb-1">
+                                      {item.title}
+                                    </div>
                                   </div>
                                   {ep.customer_name && (
                                     <div className="text-[9px] sm:text-[10px] text-foreground-muted truncate">
@@ -1113,7 +1131,7 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                                     {slotEvents.slice(0, 2).map((item) => {
                                       const ep = item.extendedProps || {};
                                       const isDragging = draggedEvent?.id === item.id;
-                                      
+                                      const photo = instructorPhotos[ep.instructor_id || ep.instructorId];
                                       return (
                                         <div
                                           key={item.id}
@@ -1145,7 +1163,10 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
                                           }}
                                           title={`${item.title} - ${new Date(item.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
                                         >
-                                          {item.title}
+                                          <span className="inline-flex items-center gap-1">
+                                            {photo ? <img src={photo} alt="" className="w-3 h-3 rounded-full border border-border object-cover" /> : null}
+                                            <span className="truncate">{item.title}</span>
+                                          </span>
                                         </div>
                                       );
                                     })}
@@ -1177,6 +1198,13 @@ function WeekView({ events, instructors, instructorColors, timeRange, onEventCli
    Vista de Mes
 ========================= */
 function MonthView({ events, instructors, instructorColors, onEventClick, selectedDate, onDateChange, instructorFilter }) {
+  const instructorPhotos = useMemo(() => {
+    const map = {};
+    (instructors || []).forEach((i) => {
+      if (i.photo_url) map[i.id] = i.photo_url;
+    });
+    return map;
+  }, [instructors]);
   // Calcular inicio y fin del mes
   const monthRange = useMemo(() => {
     if (!selectedDate) return { start: null, end: null, days: [] };
@@ -1338,6 +1366,7 @@ function MonthView({ events, instructors, instructorColors, onEventClick, select
                     const ep = event.extendedProps || {};
                     const instructorId = ep.instructor_id || ep.instructorId;
                     const instructorColor = instructorColors[instructorId] || "#3b82f6";
+                    const photo = instructorPhotos[instructorId];
                     
                     return (
                       <div
@@ -1354,7 +1383,12 @@ function MonthView({ events, instructors, instructorColors, onEventClick, select
                         }}
                         title={event.title}
                       >
-                        <div className="font-semibold truncate">{event.title}</div>
+                        <div className="flex items-center gap-1">
+                          {photo ? (
+                            <img src={photo} alt="" className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0 object-cover" />
+                          ) : null}
+                          <div className="font-semibold truncate">{event.title}</div>
+                        </div>
                         <div className="text-[9px] opacity-75 truncate">
                           {new Date(event.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
