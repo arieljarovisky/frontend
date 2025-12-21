@@ -95,7 +95,12 @@ export default function CRMPage() {
       toast.success(`Vista previa generada (${resp?.totalCandidates || 0} candidatos)`);
       setActiveTab("send");
     } catch (e) {
-      toast.error(e?.response?.data?.error || "Error generando vista previa");
+      const msg = e?.response?.data?.error || "Error generando vista previa";
+      toast.error(msg);
+      if (e?.response?.status === 401 || String(msg).toLowerCase().includes("token")) {
+        toast.error("Iniciá sesión para enviar campañas");
+        setTimeout(() => { window.location.href = "/login"; }, 800);
+      }
     }
   }
 
@@ -111,7 +116,12 @@ export default function CRMPage() {
       });
       toast.success(`Campaña enviada: ${resp?.sent || 0} de ${resp?.total || 0}`);
     } catch (e) {
-      toast.error(e?.response?.data?.error || "Error enviando campaña");
+      const msg = e?.response?.data?.error || "Error enviando campaña";
+      toast.error(msg);
+      if (e?.response?.status === 401 || String(msg).toLowerCase().includes("token")) {
+        toast.error("Iniciá sesión para enviar campañas");
+        setTimeout(() => { window.location.href = "/login"; }, 800);
+      }
     } finally {
       setSending(false);
     }
