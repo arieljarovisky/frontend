@@ -18,9 +18,9 @@
   max-width: 90vw;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(185deg, rgba(var(--sidebar-bg-start), 0.96), rgba(var(--sidebar-bg-end), 0.98));
-  border-right: 1px solid rgba(var(--sidebar-border), 0.6);
-  box-shadow: 15px 0 35px rgba(var(--sidebar-shadow), 0.4);
+  background: linear-gradient(180deg, rgba(var(--sidebar-bg-start), 1), rgba(var(--sidebar-bg-end), 1));
+  border-right: 1px solid rgba(var(--sidebar-border), 0.9);
+  box-shadow: 18px 0 40px rgba(var(--sidebar-shadow), 0.5);
   z-index: 50;
   transform: translateX(-105%);
   transition: transform 0.32s ease;
@@ -1835,4 +1835,3 @@ select.input:focus {
     transform: translateY(0) scale(1);
   }
 }
-
