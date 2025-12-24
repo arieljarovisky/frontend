@@ -1048,6 +1048,16 @@ apiClient.getUnreadCount = async function () {
   }
 };
 
+/* =========================
+   NOTIFICATIONS API
+========================= */
+apiClient.sendNotificationToCustomer = async function (userId, { type = "info", title, message, data = {} } = {}) {
+  if (!userId) throw new Error("userId es requerido");
+  const payload = { userId, type, title, message, data };
+  const { data: res } = await apiClient.post("/api/notifications", payload);
+  return res;
+};
+
 apiClient.getCommissions = async function (params = {}) {
   try {
     const { data } = await apiClient.get("/api/commissions", { params });

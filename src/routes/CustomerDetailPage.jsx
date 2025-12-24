@@ -67,6 +67,10 @@ export default function CustomerDetailPage() {
   const [saveError, setSaveError] = useState("");
   const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState(null);
   const { classesEnabled } = useApp();
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [notifyTitle, setNotifyTitle] = useState("");
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [sendingNotify, setSendingNotify] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -288,6 +292,14 @@ export default function CustomerDetailPage() {
                 Editar
               </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setShowNotifyModal(true)}
+            className="rounded-lg bg-primary text-white px-3 py-2 text-sm font-medium hover:bg-primary-hover"
+            title="Enviar notificación push al cliente"
+          >
+            Enviar notificación
+          </button>
         </div>
       </div>
 
@@ -637,6 +649,83 @@ export default function CustomerDetailPage() {
         </div>
         <CustomerRoutinesSection customerId={id} />
       </section>
+
+      {showNotifyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNotifyModal(false)}>
+          <div className="bg-background rounded-lg border border-border p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Enviar notificación</h3>
+              <button
+                onClick={() => setShowNotifyModal(false)}
+                className="text-foreground-muted hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-foreground-secondary uppercase">Título</span>
+                <input
+                  type="text"
+                  value={notifyTitle}
+                  onChange={(e) => setNotifyTitle(e.target.value)}
+                  className="rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-foreground-secondary uppercase">Mensaje</span>
+                <textarea
+                  value={notifyMessage}
+                  onChange={(e) => setNotifyMessage(e.target.value)}
+                  className="rounded-lg border border-border px-3 py-2 text-sm bg-background min-h-24"
+                />
+              </label>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                type="button"
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+                onClick={() => setShowNotifyModal(false)}
+                disabled={sendingNotify}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-primary text-white px-4 py-2 text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={async () => {
+                  const t = notifyTitle.trim();
+                  const m = notifyMessage.trim();
+                  if (!t || !m) {
+                    toast.error("Ingresá título y mensaje");
+                    return;
+                  }
+                  setSendingNotify(true);
+                  try {
+                    await apiClient.sendNotificationToCustomer(Number(id), {
+                      type: "info",
+                      title: t,
+                      message: m,
+                      data: { source: "admin" },
+                    });
+                    toast.success("Notificación enviada");
+                    setShowNotifyModal(false);
+                    setNotifyTitle("");
+                    setNotifyMessage("");
+                  } catch (error) {
+                    toast.error(error?.response?.data?.error || "Error enviando notificación");
+                  } finally {
+                    setSendingNotify(false);
+                  }
+                }}
+                disabled={sendingNotify}
+              >
+                {sendingNotify ? "Enviando…" : "Enviar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
