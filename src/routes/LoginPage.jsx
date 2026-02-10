@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, Calendar, Users, DollarSign, Bell, CheckCircle2, Sparkles } from "lucide-react";
 import {
   authApi,
   setAccessToken,
   setTenantId,
   setAuthEmail,
   setUserData,
-  apiClient,
 } from "../api/client";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -27,12 +26,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { user, authLoaded } = useAuth();
-  const { theme } = useTheme();
+  useTheme();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [resendingActivation, setResendingActivation] = useState(false);
+  
 
   // Multi-tenant
   const [showTenantSelector, setShowTenantSelector] = useState(false);
@@ -111,9 +110,7 @@ export default function LoginPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, [user]);
 
-  const handleResendActivation = async () => {
-    toast.error("La activación por email está deshabilitada");
-  };
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -123,7 +120,6 @@ export default function LoginPage() {
     try {
       const resp = await authApi.login(email, password, twoFactorCode || null, rememberDevice);
 
-      // Verificar si requiere 2FA (puede venir con ok: false o status 200)
       if (resp?.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setError("");
@@ -162,24 +158,18 @@ export default function LoginPage() {
       goAfterLogin(resp);
     } catch (err) {
       logger.error("Error en login:", err);
-      
-      // Extraer mensaje de error del backend si está disponible
       let errorMessage = "No se pudo conectar con el servidor";
-      
       if (err?.response?.data?.error) {
-        // Error del backend con mensaje específico
         errorMessage = err.response.data.error;
       } else if (err?.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err?.message) {
-        // Error de red o axios
         if (err.message.includes("Network Error") || err.message.includes("timeout")) {
           errorMessage = "No se pudo conectar con el servidor. Verificá tu conexión a internet.";
         } else {
           errorMessage = err.message;
         }
       }
-      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -192,7 +182,6 @@ export default function LoginPage() {
     try {
       const resp = await authApi.loginTenant(email, password, slug, twoFactorCode || null, rememberDevice);
 
-      // Verificar si requiere 2FA (puede venir con ok: false o status 200)
       if (resp?.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setError("");
@@ -214,10 +203,7 @@ export default function LoginPage() {
       goAfterLogin(resp, slug);
     } catch (err) {
       logger.error("Error en login tenant:", err);
-      
-      // Extraer mensaje de error del backend si está disponible
       let errorMessage = "Error al conectar con el servidor";
-      
       if (err?.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err?.response?.data?.message) {
@@ -229,7 +215,6 @@ export default function LoginPage() {
           errorMessage = err.message;
         }
       }
-      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -387,7 +372,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Error message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
@@ -620,6 +604,4 @@ export default function LoginPage() {
     </div>
   );
 }
-
-
 

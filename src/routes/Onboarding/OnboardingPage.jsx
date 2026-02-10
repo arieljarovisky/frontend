@@ -307,8 +307,6 @@ export default function OnboardingPage() {
       }
 
       const tenantSlug = response.tenant.subdomain;
-      const tenantName = response.tenant.name;
-      const email = response.user?.email || session.email;
       const activationInfo = response.activation || {};
 
       if (response.session?.id) {
