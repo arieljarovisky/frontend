@@ -95,7 +95,7 @@ const router = createBrowserRouter([
   { path: "/auth/google/success", element: <GoogleOAuthCallback /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
-  { path: "/activate", element: <ActivatePage /> },
+  { path: "/activate", element: <Navigate to="/login" replace /> },
   { path: "/enterprise-request", element: <EnterpriseRequest /> },
   { path: "/help", element: <HelpPage /> },
   { path: "/contact", element: <ContactPage /> },
@@ -105,7 +105,7 @@ const router = createBrowserRouter([
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/payment", element: <PaymentSetupPage /> },
   { path: "/onboarding/payment/complete", element: <PaymentCompletePage /> },
-  { path: "/onboarding/activation-pending", element: <ActivationPendingPage /> },
+  { path: "/onboarding/activation-pending", element: <Navigate to="/login" replace /> },
 
   // 👇 TODA la app del tenant cuelga de /:tenantSlug
   {

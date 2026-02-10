@@ -326,28 +326,7 @@ export default function OnboardingPage() {
           ""
       );
 
-      // Si hay un token en desarrollo (porque el email falló), guardarlo
-      if (activationInfo.token) {
-        sessionStorage.setItem("activationToken", activationInfo.token);
-      }
-
-      // Redirigir a la página de activación pendiente
-      // El usuario necesita activar su cuenta por email antes de poder hacer login
-      const params = new URLSearchParams({
-        email: email,
-        tenant: tenantName || "",
-        emailSent: activationInfo.emailSent ? "true" : "false",
-      });
-      
-      if (activationInfo.emailError) {
-        params.append("emailError", "true");
-        params.append("errorMessage", activationInfo.emailError.message || "Error al enviar email");
-      }
-      
-      navigate(
-        `/onboarding/activation-pending?${params.toString()}`,
-        { replace: true }
-      );
+      navigate("/login", { replace: true });
     } catch (err) {
       logger.error("[ONBOARDING] finish error", err);
       setError(
@@ -1010,4 +989,3 @@ function PlanStep({ session, plan, features }) {
     </div>
   );
 }
-
