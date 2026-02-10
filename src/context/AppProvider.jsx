@@ -12,12 +12,12 @@ import { useAuth } from "./AuthContext";
 import { logger } from "../utils/logger.js";
 
 const BUSINESS_TYPE_DEFAULT_FEATURES = {
-  salon: { classes: false },
-  gym: { classes: true },
-  pilates: { classes: true },
-  kinesiology: { classes: false },
-  spa: { classes: false },
-  other: { classes: false },
+  salon: { classes: false, routines: false },
+  gym: { classes: true, routines: true },
+  pilates: { classes: true, routines: true },
+  kinesiology: { classes: false, routines: true },
+  spa: { classes: false, routines: false },
+  other: { classes: false, routines: false },
 };
 
 export const AppContext = createContext(null);

@@ -40,12 +40,12 @@ import {
 } from "lucide-react";
 
 const DEFAULT_FEATURES_BY_BUSINESS = {
-  salon: { classes: false },
-  gym: { classes: true },
-  pilates: { classes: true },
-  kinesiology: { classes: false },
-  spa: { classes: false },
-  other: { classes: false },
+  salon: { classes: false, routines: false },
+  gym: { classes: true, routines: true },
+  pilates: { classes: true, routines: true },
+  kinesiology: { classes: false, routines: true },
+  spa: { classes: false, routines: false },
+  other: { classes: false, routines: false },
 };
 
 // Mapeo de nombres según el tipo de negocio
