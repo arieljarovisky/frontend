@@ -307,8 +307,6 @@ export default function OnboardingPage() {
       }
 
       const tenantSlug = response.tenant.subdomain;
-      const tenantName = response.tenant.name;
-      const email = response.user?.email || session.email;
       const activationInfo = response.activation || {};
 
       if (response.session?.id) {
@@ -331,23 +329,8 @@ export default function OnboardingPage() {
         sessionStorage.setItem("activationToken", activationInfo.token);
       }
 
-      // Redirigir a la página de activación pendiente
-      // El usuario necesita activar su cuenta por email antes de poder hacer login
-      const params = new URLSearchParams({
-        email: email,
-        tenant: tenantName || "",
-        emailSent: activationInfo.emailSent ? "true" : "false",
-      });
-      
-      if (activationInfo.emailError) {
-        params.append("emailError", "true");
-        params.append("errorMessage", activationInfo.emailError.message || "Error al enviar email");
-      }
-      
-      navigate(
-        `/onboarding/activation-pending?${params.toString()}`,
-        { replace: true }
-      );
+      const loginPath = tenantSlug ? `/${tenantSlug}/login` : "/login";
+      navigate(loginPath, { replace: true });
     } catch (err) {
       logger.error("[ONBOARDING] finish error", err);
       setError(
@@ -1010,4 +993,3 @@ function PlanStep({ session, plan, features }) {
     </div>
   );
 }
-
