@@ -43,6 +43,7 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
     instructorId: "",
     date: "",
     selectedSlot: "",
+    customerId: "",
     customerName: "",
     customerPhone: "",
     repeatEnabled: false,
@@ -438,6 +439,8 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
       const customerPhone = overrideData.customerPhone || booking.customerPhone;
       const customerName =
         overrideData.customerName !== undefined ? overrideData.customerName : booking.customerName;
+      const customerId =
+        overrideData.customerId !== undefined ? overrideData.customerId : booking.customerId;
       const repeatEnabled =
         overrideData.repeatEnabled !== undefined ? overrideData.repeatEnabled : booking.repeatEnabled;
       const repeatCount =
@@ -454,7 +457,7 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
         user?.current_branch_id ??
         "";
 
-      if (!customerPhone) {
+      if (!customerPhone && !customerId) {
         setBookingSave({ saving: false, ok: false, error: "⚠️ Ingresá tu teléfono de WhatsApp" });
         return;
       }
@@ -493,7 +496,8 @@ export function AppProvider({ children, pollMs = 30000 }) { // Aumentado a 30 se
         const startsAt = toLocalMySQL(selectedSlot);
 
         const basePayload = {
-          customerPhone: customerPhone.trim(),
+          customerPhone: customerPhone ? customerPhone.trim() : undefined,
+          customerId: customerId ? Number(customerId) : undefined,
           customerName: customerName ? customerName.trim() : undefined,
           instructorId: Number(instructorId),
           serviceId: Number(serviceId),

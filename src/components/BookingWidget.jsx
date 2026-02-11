@@ -9,9 +9,7 @@ import Button from "./ui/Button";
 import { Field } from "./ui/Field";
 import { toast } from "sonner";
 import { logger } from "../utils/logger.js";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+// Unificado: sin react-hook-form para nombre/teléfono
 import { Calendar, Clock, User, Phone, CheckCircle2, Scissors, Users, Repeat, Building2, CreditCard, Send, MessageSquare, X } from "lucide-react";
 import ClassEnrollForm from "./ClassEnrollForm";
 import { apiClient } from "../api";
@@ -48,13 +46,6 @@ function Section({ title, children, right, icon: Icon }) {
   );
 }
 
-const schema = z.object({
-  customerName: z.string().max(60).optional(),
-  customerPhone: z
-    .string()
-    .regex(/^\+\d{10,15}$/, "Usá formato internacional, ej. +54911..."),
-});
-
 export default function BookingWidget() {
   const {
     services = [],
@@ -78,6 +69,9 @@ export default function BookingWidget() {
   const [sendingPaymentLink, setSendingPaymentLink] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [pendingBookingData, setPendingBookingData] = useState(null);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState([]);
+  const [customerSearching, setCustomerSearching] = useState(false);
   
   // Determinar el tab inicial basado en qué está habilitado
   const initialTab = appointmentsEnabled ? "appointments" : classesEnabled ? "classes" : "appointments";
@@ -105,13 +99,13 @@ export default function BookingWidget() {
   const lastSuccessRef = useRef(false);
   const lastErrorRef = useRef("");
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      customerName: booking.customerName || "",
-      customerPhone: booking.customerPhone || "",
-    },
-  });
+  const reset = (vals = {}) => {
+    // Mantener API similar al reset de react-hook-form usado en UI
+    updateBooking({
+      customerName: vals.customerName ?? booking.customerName ?? "",
+      customerPhone: vals.customerPhone ?? booking.customerPhone ?? "",
+    });
+  };
 
   useEffect(() => {
     if (bookingSave.ok && !lastSuccessRef.current) {
@@ -122,12 +116,10 @@ export default function BookingWidget() {
           ? "Registramos tus turnos semanales y te enviamos el detalle por WhatsApp."
           : "Te va a llegar la confirmación por WhatsApp.",
       });
-      reset({
-        customerName: "",
-        customerPhone: "",
-      });
+      reset({ customerName: "", customerPhone: "" });
       updateBooking({
         selectedSlot: "",
+        customerId: "",
         customerName: "",
         customerPhone: "",
         repeatEnabled: false,
@@ -150,16 +142,47 @@ export default function BookingWidget() {
     }
   }, [bookingSave.error]);
 
-  const onSubmit = async (data) => {
-    updateBooking({
-      customerName: data.customerName || "",
-      customerPhone: data.customerPhone,
-    });
+  useEffect(() => {
+    const q = (customerQuery || "").trim();
+    if (!q) {
+      setCustomerResults([]);
+      setCustomerSearching(false);
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    setCustomerSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiClient.listCustomers(q, controller.signal, { limit: 20 });
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        if (!cancelled) setCustomerResults(list);
+      } catch (e) {
+        if (!cancelled) setCustomerResults([]);
+      } finally {
+        if (!cancelled) setCustomerSearching(false);
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [customerQuery]);
+
+  const onSubmit = async () => {
+    const phone = (booking.customerPhone || "").trim();
+    const validPhone = /^\+\d{10,15}$/.test(phone);
+    if (!booking.customerId && !validPhone) {
+      toast.error("Ingresá el teléfono en formato +54911...");
+      return;
+    }
 
     // Guardar los datos y mostrar el modal
     setPendingBookingData({
-      customerName: data.customerName || "",
-      customerPhone: data.customerPhone,
+      customerName: booking.customerName || "",
+      customerPhone: phone || "",
+      customerId: booking.customerId || undefined,
       repeatEnabled: booking.repeatEnabled,
       repeatCount: booking.repeatCount,
       repeatUntil: booking.repeatUntil || undefined,
@@ -209,7 +232,7 @@ export default function BookingWidget() {
         amount: Number(servicePrice),
         title: `Pago completo - ${selectedService.name}`,
         description: `Pago del servicio ${selectedService.name}${selectedInstructor ? ` con ${selectedInstructor.name}` : ""}`,
-        customerId: null, // No tenemos customerId en booking público
+        customerId: booking.customerId || null,
         expiresInDays: 7,
       });
 
@@ -482,26 +505,86 @@ export default function BookingWidget() {
 
         {/* 4) Datos + Confirmación */}
         <Section title="Paso 4: Confirmá tus datos" icon={User}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Field label="Nombre" error={errors.customerName?.message}>
-              <input
-                {...register("customerName")}
-                placeholder="Juan Pérez"
-                className="input px-4 py-3"
-              />
+          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+            <Field label="Nombre del cliente">
+              <div className="relative">
+                <input
+                  value={booking.customerName || ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateBooking({ customerName: v, customerId: "" });
+                    setCustomerQuery(v);
+                  }}
+                  placeholder="Juan Pérez"
+                  className="input px-4 py-3 w-full"
+                />
+                {customerQuery && !booking.customerId && (
+                  <div className="absolute z-10 mt-2 w-full rounded-xl border border-border bg-background shadow-lg">
+                    <div className="max-h-56 overflow-auto">
+                      {customerSearching ? (
+                        <div className="px-4 py-3 text-sm text-foreground-muted">Buscando...</div>
+                      ) : (customerResults || []).length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-foreground-muted">
+                          Ingresá el teléfono para crear el cliente
+                        </div>
+                      ) : (
+                        (customerResults || []).slice(0, 10).map((c) => (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => {
+                              updateBooking({
+                                customerId: String(c.id),
+                                customerName: c.name || "",
+                                customerPhone: c.phone_e164 || c.phoneE164 || "",
+                              });
+                              setCustomerQuery("");
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-background-secondary flex items-center justify-between"
+                          >
+                            <span className="text-sm text-foreground">
+                              {c.name || "Sin nombre"}
+                            </span>
+                            <span className="text-xs text-foreground-muted">
+                              {c.phone_e164 || c.phoneE164 || ""}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {booking.customerId && (
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-background-secondary px-4 py-2">
+                  <div className="text-xs text-foreground">
+                    Cliente seleccionado
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBooking({ customerId: "", customerName: "", customerPhone: "" });
+                      setCustomerQuery("");
+                    }}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-background-secondary"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
             </Field>
 
             <Field
               label="Teléfono (WhatsApp)"
-              hint="Formato: +54911..."
-              error={errors.customerPhone?.message}
+              hint={booking.customerId ? "Se completó automáticamente desde el cliente seleccionado. Podés editarlo." : "Formato: +54911..."}
             >
               <div className="relative">
                 <input
-                  {...register("customerPhone")}
+                  value={booking.customerPhone || ""}
+                  onChange={(e) => updateBooking({ customerPhone: e.target.value })}
                   inputMode="tel"
                   placeholder="+54911..."
-                  className="input pl-11 pr-4 py-3"
+                  className="input pl-11 pr-4 py-3 w-full"
                 />
               </div>
             </Field>

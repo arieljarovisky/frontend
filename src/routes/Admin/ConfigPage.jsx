@@ -273,12 +273,15 @@ export default function ConfigPage() {
     sunday: false,
   });
   const [allDaysExpanded, setAllDaysExpanded] = useState(false); // Estado para expandir/colapsar todos
+  const [bulkHours, setBulkHours] = useState({ enabled: true, start: "09:00", end: "18:00" });
   const [bookingConfig, setBookingConfig] = useState({
     require_membership: false,
   });
   const [membershipPlans, setMembershipPlans] = useState([]);
   const [loadingMembershipPlans, setLoadingMembershipPlans] = useState(false);
   const [membershipError, setMembershipError] = useState("");
+  const [showWhatsAppTutorial, setShowWhatsAppTutorial] = useState(false);
+  const [refreshingPhoneId, setRefreshingPhoneId] = useState(false);
 
   const loadMembershipPlans = useCallback(async () => {
     try {
@@ -1483,6 +1486,25 @@ export default function ConfigPage() {
 
   const navZIndex = 70;
 
+  const handleRefreshPhoneId = async () => {
+    try {
+      setRefreshingPhoneId(true);
+      const res = await apiClient.refreshWhatsAppPhoneId();
+      const data = res?.data || res || {};
+      setWhatsappConfig((prev) => ({
+        ...prev,
+        phoneNumberId: data.phoneNumberId ?? prev.phoneNumberId,
+        updatedAt: data.updatedAt ?? prev.updatedAt,
+      }));
+      toast.success("Phone Number ID actualizado");
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.message || "No se pudo refrescar el Phone Number ID";
+      toast.error(msg);
+    } finally {
+      setRefreshingPhoneId(false);
+    }
+  };
+
   // Detectar cambios sin guardar (solo si initialConfig ya está establecido)
   useEffect(() => {
     if (!initialConfig) {
@@ -1912,6 +1934,62 @@ export default function ConfigPage() {
                       </Button>
                     </div>
 
+                    <div className="grid md:grid-cols-4 gap-3 items-end">
+                      <FieldGroup label="Aplicar a todos: habilitado">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!!bulkHours.enabled}
+                            onChange={(e) => setBulkHours((prev) => ({ ...prev, enabled: e.target.checked }))}
+                            className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-xs text-foreground-secondary">Días activos</span>
+                        </label>
+                      </FieldGroup>
+                      <FieldGroup label="Inicio">
+                        <input
+                          type="time"
+                          value={bulkHours.start || "09:00"}
+                          onChange={(e) => setBulkHours((prev) => ({ ...prev, start: e.target.value }))}
+                          className="input w-full"
+                        />
+                      </FieldGroup>
+                      <FieldGroup label="Fin">
+                        <input
+                          type="time"
+                          value={bulkHours.end || "18:00"}
+                          onChange={(e) => setBulkHours((prev) => ({ ...prev, end: e.target.value }))}
+                          className="input w-full"
+                        />
+                      </FieldGroup>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const branchKey = `branch_${selectedBranchId}`;
+                            const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+                            setWorkingHours((prev) => {
+                              const branchHours = prev[branchKey] || {};
+                              const nextBranchHours = { ...branchHours };
+                              days.forEach((day) => {
+                                const existing = branchHours[day] || {};
+                                nextBranchHours[day] = {
+                                  ...existing,
+                                  enabled: !!bulkHours.enabled,
+                                  start: bulkHours.start || "09:00",
+                                  end: bulkHours.end || "18:00",
+                                };
+                              });
+                              return { ...prev, [branchKey]: nextBranchHours };
+                            });
+                          }}
+                          className="w-full"
+                        >
+                          Aplicar a todos
+                        </Button>
+                      </div>
+                    </div>
+
                     {[
                       { key: "monday", label: "Lunes" },
                       { key: "tuesday", label: "Martes" },
@@ -2098,6 +2176,62 @@ export default function ConfigPage() {
           icon={MessageCircle}
         >
           <div className="space-y-8">
+            <div className="rounded-2xl border-2 border-border/60 bg-background-secondary/40 p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground">Tutorial de conexión</h3>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowWhatsAppTutorial((v) => !v)}
+                  className="text-xs"
+                >
+                  {showWhatsAppTutorial ? "Ocultar tutorial" : "Ver tutorial"}
+                </Button>
+              </div>
+              {showWhatsAppTutorial && (
+                <div className="space-y-3 text-sm text-foreground-secondary">
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">1</span>
+                    <span>
+                      Crear o acceder a tu Meta Business Manager y asegurarte de tener una Cuenta de WhatsApp Business.
+                      {" "}
+                      <a
+                        href="https://business.facebook.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        Abrir Meta Business Manager
+                      </a>
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">2</span>
+                    <span>Verificar el número que vas a usar en WhatsApp Business.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">3</span>
+                    <span>Hacer clic en “Conectar” para autorizar con Meta y guardar el token.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">4</span>
+                    <span>Ingresar el número en formato internacional (+54911...) y guardar.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">5</span>
+                    <span>Activar el asistente y probar un envío desde un turno confirmado.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">6</span>
+                    <span>Si falta el Phone Number ID después de OAuth, usar “Refrescar Phone ID”.</span>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* PASO 1: Conexión inicial */}
             {!whatsappConfig.hubConfigured && whatsappConfig.useOAuth && !whatsappConfig.hasOAuthToken ? (
               <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/30 shadow-lg">
@@ -2210,6 +2344,16 @@ export default function ConfigPage() {
 
                       {/* Botón de Desconectar */}
                       <div className="mt-6 pt-4 border-t border-border/40">
+                        {(whatsappConfig.hasOAuthToken && !whatsappConfig.phoneNumberId) && (
+                          <Button 
+                            onClick={handleRefreshPhoneId} 
+                            disabled={refreshingPhoneId || connectingWhatsApp || savingWhatsApp || saving} 
+                            variant="secondary"
+                            className="mr-3"
+                          >
+                            {refreshingPhoneId ? "Refrescando…" : "Refrescar Phone ID"}
+                          </Button>
+                        )}
                         <Button 
                           onClick={handleDisconnectWhatsApp} 
                           disabled={connectingWhatsApp || savingWhatsApp || saving} 

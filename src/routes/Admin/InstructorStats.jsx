@@ -604,7 +604,7 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.date || !formData.startTime || !formData.endTime) {
+    if (!formData.startTime || !formData.endTime || (!formData.repeatDaily && !formData.date)) {
       toast.error("Completá todos los campos obligatorios");
       return;
     }
@@ -617,15 +617,11 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
 
     setSaving(true);
     try {
-      if (formData.repeatDaily && formData.repeatUntil) {
-        const from = formData.date;
-        const to = formData.repeatUntil;
+      if (formData.repeatDaily) {
         await apiClient.createRecurringDaysOff({
           instructorId,
           startTime: formData.startTime,
           endTime: formData.endTime,
-          from,
-          to,
           reason: formData.reason || "Bloqueo de tiempo",
         });
       } else {
@@ -677,19 +673,21 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-background-secondary border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Fecha *
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="input w-full text-sm"
-                required
-              />
-            </div>
+            {!formData.repeatDaily && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Fecha *
+                </label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="input w-full text-sm"
+                  required
+                />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -741,19 +739,6 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
                   />
                   Todos los días
                 </label>
-                {formData.repeatDaily && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-foreground-muted">hasta</span>
-                    <input
-                      type="date"
-                      value={formData.repeatUntil}
-                      onChange={(e) => setFormData({ ...formData, repeatUntil: e.target.value })}
-                      min={formData.date || new Date().toISOString().split('T')[0]}
-                      className="input text-sm"
-                      required
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
