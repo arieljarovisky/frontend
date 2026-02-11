@@ -1148,6 +1148,10 @@ apiClient.deleteDayOff = async function (id) {
   const { data } = await apiClient.delete(`/api/days-off/${id}`);
   return data;
 };
+apiClient.createRecurringDaysOff = async function (payload) {
+  const { data } = await apiClient.post("/api/days-off/recurring", payload);
+  return data;
+};
 /* =========================
    CONFIG API (match backend)
 ========================= */

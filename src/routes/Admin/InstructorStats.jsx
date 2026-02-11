@@ -78,12 +78,13 @@ function WorkingHoursEditor({ instructorId }) {
   const [blocks, setBlocks] = useState([]); // bloqueos de tiempo
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+  const [singleBranchId, setSingleBranchId] = useState(null);
   const week = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const loadBranches = useCallback(async () => {
     try {
       setBranchesLoading(true);
-      const branchesList = await apiClient.listBranches();
+      const branchesList = await apiClient.listActiveBranches();
       // Asegurar que sea un array
       const branchesArray = Array.isArray(branchesList) 
         ? branchesList 
@@ -91,6 +92,7 @@ function WorkingHoursEditor({ instructorId }) {
         ? branchesList.data
         : [];
       setBranches(branchesArray);
+      setSingleBranchId(branchesArray.length === 1 ? Number(branchesArray[0]?.id) : null);
     } catch (e) {
       logger.error("Error cargando sucursales:", e);
       toast.error("Error al cargar sucursales");
@@ -163,6 +165,17 @@ function WorkingHoursEditor({ instructorId }) {
     loadBranches();
   }, [loadBranches]);
 
+  useEffect(() => {
+    if (singleBranchId == null) return;
+    setRows(rs => rs.map(day => ({
+      ...day,
+      schedules: day.schedules.map(s => ({
+        ...s,
+        branch_id: s.branch_id == null ? singleBranchId : s.branch_id
+      }))
+    })));
+  }, [singleBranchId]);
+
   useEffect(() => { 
     load();
     loadBlocks();
@@ -173,7 +186,7 @@ function WorkingHoursEditor({ instructorId }) {
       if (i === dayIdx) {
         return {
           ...r,
-          schedules: [...r.schedules, { branch_id: null, start_time: "10:00:00", end_time: "19:00:00" }]
+          schedules: [...r.schedules, { branch_id: singleBranchId ?? null, start_time: "10:00:00", end_time: "19:00:00" }]
         };
       }
       return r;
@@ -195,12 +208,16 @@ function WorkingHoursEditor({ instructorId }) {
   const updateSchedule = (dayIdx, scheduleIdx, patch) => {
     setRows(rs => rs.map((r, i) => {
       if (i === dayIdx) {
-        return {
-          ...r,
-          schedules: r.schedules.map((s, idx) => 
-            idx === scheduleIdx ? { ...s, ...patch } : s
-          )
-        };
+        if (patch && patch.clear) {
+          return { ...r, schedules: [] };
+        } else {
+          return {
+            ...r,
+            schedules: r.schedules.map((s, idx) => 
+              idx === scheduleIdx ? { ...s, ...patch } : s
+            )
+          };
+        }
       }
       return r;
     }));
@@ -260,13 +277,18 @@ function WorkingHoursEditor({ instructorId }) {
           byDay[h.weekday].push(h);
         });
 
-        // Verificar solapamientos por día
+        // Verificar solapamientos por día (solo dentro de la misma sucursal)
         const overlaps = [];
         Object.entries(byDay).forEach(([weekday, dayHours]) => {
           for (let i = 0; i < dayHours.length; i++) {
             for (let j = i + 1; j < dayHours.length; j++) {
               const h1 = dayHours[i];
               const h2 = dayHours[j];
+              
+              // Comparar solo si pertenecen a la misma sucursal (incluye null==null)
+              const b1 = h1.branch_id == null ? null : Number(h1.branch_id);
+              const b2 = h2.branch_id == null ? null : Number(h2.branch_id);
+              if (b1 !== b2) continue;
               
               const start1 = timeToMinutes(h1.start_time);
               const end1 = timeToMinutes(h1.end_time);
@@ -446,9 +468,18 @@ function WorkingHoursEditor({ instructorId }) {
                       <button
                         onClick={() => addSchedule(dayIdx)}
                         className="text-xs rounded-lg px-2 py-1 border border-primary/30 bg-primary/10 text-primary font-medium hover:bg-primary/20"
-                        title="Agregar otra sucursal"
+                        title={singleBranchId != null ? "Agregar horario" : "Agregar otra sucursal"}
                       >
-                        + Sucursal
+                        {singleBranchId != null ? "+ Horario" : "+ Sucursal"}
+                      </button>
+                    )}
+                    {hasSchedules && (
+                      <button
+                        onClick={() => updateSchedule(dayIdx, -1, { clear: true })}
+                        className="text-xs rounded-lg px-2 py-1 border border-red-400/30 bg-red-500/10 text-red-400 font-medium hover:bg-red-500/20"
+                        title="Marcar día como franco"
+                      >
+                        Franco
                       </button>
                     )}
                     {!hasSchedules && (
@@ -482,19 +513,30 @@ function WorkingHoursEditor({ instructorId }) {
                         </div>
                         <div>
                           <label className="text-xs text-foreground-muted mb-1 block">Sucursal</label>
-                          <select
-                            value={schedule.branch_id || ""}
-                            onChange={(e) => updateSchedule(dayIdx, scheduleIdx, { branch_id: e.target.value ? Number(e.target.value) : null })}
-                            className="input w-full text-sm"
-                            disabled={branchesLoading || !Array.isArray(branches) || branches.length === 0}
-                          >
-                            <option value="">Seleccionar sucursal</option>
-                            {Array.isArray(branches) && branches.map((branch) => (
-                              <option key={branch.id} value={branch.id}>
-                                {branch.name}
-                              </option>
-                            ))}
-                          </select>
+                          {singleBranchId != null ? (
+                            <div className="input w-full text-sm bg-background-secondary border border-border">
+                              {branches.find(b => Number(b.id) === Number(singleBranchId))?.name || `Sucursal #${singleBranchId}`}
+                            </div>
+                          ) : (
+                            <select
+                              value={schedule.branch_id != null ? String(schedule.branch_id) : ""}
+                              onChange={(e) => updateSchedule(dayIdx, scheduleIdx, { branch_id: e.target.value ? Number(e.target.value) : null })}
+                              className="input w-full text-sm"
+                              disabled={branchesLoading || !Array.isArray(branches) || branches.length === 0}
+                            >
+                              <option value="">Seleccionar sucursal</option>
+                              {Array.isArray(branches) && branches.map((branch) => (
+                                <option key={branch.id} value={String(branch.id)}>
+                                  {branch.name}
+                                </option>
+                              ))}
+                              {schedule.branch_id != null && Array.isArray(branches) && !branches.some(b => String(b.id) === String(schedule.branch_id)) && (
+                                <option value={String(schedule.branch_id)}>
+                                  Sucursal #{schedule.branch_id}
+                                </option>
+                              )}
+                            </select>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1">
@@ -522,7 +564,7 @@ function WorkingHoursEditor({ instructorId }) {
                       onClick={() => addSchedule(dayIdx)}
                       className="w-full text-xs text-center py-2 rounded-lg border border-dashed border-border text-foreground-secondary hover:text-foreground hover:border-primary/50 transition-colors"
                     >
-                      + Agregar otra sucursal
+                      {singleBranchId != null ? "+ Agregar horario" : "+ Agregar otra sucursal"}
                     </button>
                   </div>
                 ) : (
@@ -555,6 +597,8 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
     startTime: "",
     endTime: "",
     reason: "",
+    repeatDaily: false,
+    repeatUntil: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -573,18 +617,30 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
 
     setSaving(true);
     try {
-      const starts_at = `${formData.date}T${formData.startTime}:00`;
-      const ends_at = `${formData.date}T${formData.endTime}:00`;
-
-      await apiClient.addDayOff({
-        instructorId,
-        starts_at,
-        ends_at,
-        reason: formData.reason || "Bloqueo de tiempo",
-      });
+      if (formData.repeatDaily && formData.repeatUntil) {
+        const from = formData.date;
+        const to = formData.repeatUntil;
+        await apiClient.createRecurringDaysOff({
+          instructorId,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          from,
+          to,
+          reason: formData.reason || "Bloqueo de tiempo",
+        });
+      } else {
+        const starts_at = `${formData.date}T${formData.startTime}:00`;
+        const ends_at = `${formData.date}T${formData.endTime}:00`;
+        await apiClient.createDayOff({
+          instructorId,
+          starts_at,
+          ends_at,
+          reason: formData.reason || "Bloqueo de tiempo",
+        });
+      }
 
       toast.success("Bloqueo creado correctamente");
-      setFormData({ date: "", startTime: "", endTime: "", reason: "" });
+      setFormData({ date: "", startTime: "", endTime: "", reason: "", repeatDaily: false, repeatUntil: "" });
       setShowForm(false);
       onRefresh();
     } catch (e) {
@@ -671,6 +727,34 @@ function TimeBlocksSection({ instructorId, blocks, onRefresh, onDelete }) {
                 placeholder="Ej: Trámite en el banco, Almuerzo"
                 className="input w-full text-sm"
               />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Repetir
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={formData.repeatDaily}
+                    onChange={(e) => setFormData({ ...formData, repeatDaily: e.target.checked })}
+                  />
+                  Todos los días
+                </label>
+                {formData.repeatDaily && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-foreground-muted">hasta</span>
+                    <input
+                      type="date"
+                      value={formData.repeatUntil}
+                      onChange={(e) => setFormData({ ...formData, repeatUntil: e.target.value })}
+                      min={formData.date || new Date().toISOString().split('T')[0]}
+                      className="input text-sm"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
