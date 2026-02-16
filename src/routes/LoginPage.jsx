@@ -118,6 +118,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      if (authApi.isAuthenticated()) {
+        const me = await authApi.me();
+        if (me?.ok && me?.user) {
+          goAfterLogin(me);
+          return;
+        }
+      }
       const resp = await authApi.login(email, password, twoFactorCode || null, rememberDevice);
 
       if (resp?.requiresTwoFactor) {
@@ -554,6 +561,13 @@ export default function LoginPage() {
               type="button"
               onClick={async () => {
                 try {
+                  if (authApi.isAuthenticated()) {
+                    const me = await authApi.me();
+                    if (me?.ok && me?.user) {
+                      goAfterLogin(me);
+                      return;
+                    }
+                  }
                   const next = safeNextParam(location.search) || "/";
                   const authUrl = await authApi.getGoogleAuthUrl(next);
                   if (authUrl) {

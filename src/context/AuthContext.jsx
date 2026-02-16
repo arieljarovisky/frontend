@@ -107,6 +107,28 @@ export function AuthProvider({ children }) {
     };
   }, [user]);
 
+  useEffect(() => {
+    const onStorage = async (e) => {
+      if (e.key !== "token") return;
+      const token = getAccessToken();
+      if (!token) {
+        setUser(null);
+        setTenant(null);
+        setAccessToken(null);
+        return;
+      }
+      try {
+        const { ok, user: userData, tenant: tenantData } = await authApi.me();
+        if (ok && userData) {
+          setUser(userData);
+          setTenant(tenantData || null);
+        }
+      } catch {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   // ==== Métodos de login ====
   const login = async (email, password) => {
     const data = await authApi.login(email, password);
