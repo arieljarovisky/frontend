@@ -25,7 +25,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { user, authLoaded } = useAuth();
+  const { user, authLoaded, logout } = useAuth();
   useTheme();
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -57,6 +57,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoaded || !user) return;
+    if (location.pathname === "/login") return;
 
     const isSuperAdmin = user?.isSuperAdmin || user?.is_super_admin;
     if (isSuperAdmin) {
@@ -394,6 +395,48 @@ export default function LoginPage() {
               </motion.div>
             )}
 
+            {/* Aviso de sesión activa */}
+            {authLoaded && (user || authApi.isAuthenticated()) && (
+              <div className="p-4 rounded-lg border bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+                <div className="space-y-3">
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Hay una sesión activa, cerrá sesión para cambiar de cuenta.
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (user) {
+                          goAfterLogin({ user, tenant: user.tenant });
+                          return;
+                        }
+                        try {
+                          const me = await authApi.me();
+                          if (me?.ok) {
+                            goAfterLogin(me);
+                          } else {
+                            toast.error("No se pudo obtener la sesión actual");
+                          }
+                        } catch {
+                          toast.error("No se pudo obtener la sesión actual");
+                        }
+                      }}
+                      className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-hover transition"
+                    >
+                      Ir al panel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="px-4 py-2 rounded-md border border-border hover:bg-border transition"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-6">
               {!requiresTwoFactor ? (
@@ -414,6 +457,7 @@ export default function LoginPage() {
                         placeholder="tu@email.com"
                         required
                         autoFocus
+                        disabled={authLoaded && (user || authApi.isAuthenticated())}
                       />
                     </div>
                   </div>
@@ -433,11 +477,13 @@ export default function LoginPage() {
                         className="input input--with-icon input--with-icon-right"
                         placeholder="••••••••"
                         required
+                        disabled={authLoaded && (user || authApi.isAuthenticated())}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="input-group__action"
+                        disabled={authLoaded && (user || authApi.isAuthenticated())}
                       >
                         {showPassword ? (
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,6 +505,7 @@ export default function LoginPage() {
                       checked={rememberDevice}
                       onChange={(e) => setRememberDevice(e.target.checked)}
                       className="w-4 h-4 rounded border-border"
+                      disabled={authLoaded && (user || authApi.isAuthenticated())}
                     />
                     <label htmlFor="rememberDevice-main" className="text-sm text-foreground-muted cursor-pointer">
                       Recordar este dispositivo durante 30 días
@@ -526,7 +573,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading || (requiresTwoFactor && twoFactorCode.length !== 6)}
+                disabled={loading || (requiresTwoFactor && twoFactorCode.length !== 6) || (authLoaded && (user || authApi.isAuthenticated()))}
                 className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -580,7 +627,7 @@ export default function LoginPage() {
                   toast.error("Error al iniciar sesión con Google. Intentá nuevamente.");
                 }
               }}
-              disabled={loading}
+              disabled={loading || (authLoaded && (user || authApi.isAuthenticated()))}
               className="w-full py-3 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
