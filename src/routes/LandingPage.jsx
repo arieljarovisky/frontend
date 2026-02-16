@@ -19,6 +19,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n/useTranslation.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { authApi, getAccessToken } from "../api/client";
+import { logger } from "../utils/logger.js";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageSelector from "../components/LanguageSelector";
 import Logo from "../components/Logo";
@@ -28,11 +31,52 @@ export default function LandingPage() {
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, authLoaded } = useAuth();
 
   // Cambiar el título de la página
   useEffect(() => {
     document.title = t("landing.title");
   }, [t]);
+
+  useEffect(() => {
+    if (authLoaded && user) {
+      const isSuperAdmin = user?.isSuperAdmin || user?.is_super_admin;
+      const slug = user?.tenant?.slug || null;
+      const dest = isSuperAdmin ? "/super-admin/tenants" : slug ? `/${slug}/dashboard` : "/dashboard";
+      navigate(dest, { replace: true });
+      return;
+    }
+    const run = async () => {
+      try {
+        const token = getAccessToken();
+        if (token) {
+          const me = await authApi.me();
+          if (me?.ok && me?.user) {
+            const isSuperAdmin = me.user.isSuperAdmin || me.user.is_super_admin;
+            const slug = me.tenant?.slug || null;
+            const dest = isSuperAdmin ? "/super-admin/tenants" : slug ? `/${slug}/dashboard` : "/dashboard";
+            navigate(dest, { replace: true });
+            return;
+          }
+        } else {
+          const refreshed = await authApi.refresh();
+          if (refreshed) {
+            const me2 = await authApi.me();
+            if (me2?.ok && me2?.user) {
+              const isSuperAdmin = me2.user.isSuperAdmin || me2.user.is_super_admin;
+              const slug = me2.tenant?.slug || null;
+              const dest = isSuperAdmin ? "/super-admin/tenants" : slug ? `/${slug}/dashboard` : "/dashboard";
+              navigate(dest, { replace: true });
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        logger.warn("[Landing] auto-redirect error:", e);
+      }
+    };
+    run();
+  }, [authLoaded, user, navigate]);
 
   const features = [
     {
@@ -710,4 +754,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
