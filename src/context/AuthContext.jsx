@@ -16,9 +16,17 @@ export function AuthProvider({ children }) {
         const token = getAccessToken();
 
         if (!token) {
-          // No hay token, usuario no autenticado
-          setAuthLoaded(true);
-          return;
+          // Intentar recuperar sesión con cookie de refresh (si existe)
+          try {
+            const refreshed = await authApi.refresh();
+            if (!refreshed) {
+              setAuthLoaded(true);
+              return;
+            }
+          } catch (e) {
+            setAuthLoaded(true);
+            return;
+          }
         }
 
         // Validar token con el backend
