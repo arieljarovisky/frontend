@@ -4,9 +4,11 @@ import react from "@vitejs/plugin-react";
 
 const API_BASE = process.env.VITE_API_BASE_URL || "";
 const PROXY_TARGET = process.env.VITE_PROXY_TARGET || "";
+const BASE_PATH = process.env.VITE_BASE_PATH || "/";
 
 export default defineConfig({
   plugins: [react()],
+  base: BASE_PATH,
   server: {
     host: true,
     port: 5173,

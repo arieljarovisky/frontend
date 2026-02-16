@@ -424,7 +424,7 @@ const router = createBrowserRouter([
 
   // Fallback: fuera de un tenant → a la landing page
   { path: "*", element: <Navigate to="/" replace /> },
-]);
+], { basename: import.meta.env.BASE_URL });
 
 // Exponer función de diagnóstico en la consola para debugging
 if (typeof window !== 'undefined') {

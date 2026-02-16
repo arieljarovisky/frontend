@@ -445,6 +445,18 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="rememberDevice-main"
+                      checked={rememberDevice}
+                      onChange={(e) => setRememberDevice(e.target.checked)}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <label htmlFor="rememberDevice-main" className="text-sm text-foreground-muted cursor-pointer">
+                      Recordar este dispositivo durante 30 días
+                    </label>
+                  </div>
                 </>
               ) : (
                 <>

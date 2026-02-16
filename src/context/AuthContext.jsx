@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { authApi, getAccessToken, setAccessToken } from "../api/client";
 import { logger } from "../utils/logger.js";
 
@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+  const refreshTimerRef = useRef(null);
 
   // Inicializa la sesión si hay token
   useEffect(() => {
@@ -30,20 +31,36 @@ export function AuthProvider({ children }) {
         }
 
         // Validar token con el backend
-        const { ok, user: userData, tenant: tenantData } = await authApi.me();
+        let { ok, user: userData, tenant: tenantData } = await authApi.me();
 
         if (ok && userData) {
           setUser(userData);
           setTenant(tenantData || null);
         } else {
-          // Token inválido, limpiar
-          setAccessToken(null);
-          setTenant(null);
+          // Intentar refresh si el token actual no valida
+          try {
+            const refreshed = await authApi.refresh();
+            if (refreshed) {
+              const resp = await authApi.me();
+              if (resp?.ok && resp?.user) {
+                setUser(resp.user);
+                setTenant(resp.tenant || null);
+              } else {
+                setUser(null);
+                setTenant(null);
+              }
+            } else {
+              setUser(null);
+              setTenant(null);
+            }
+          } catch {
+            setUser(null);
+            setTenant(null);
+          }
         }
       } catch (err) {
         logger.error("[AuthContext] Error inicializando sesión:", err);
-        setAccessToken(null);
-        setTenant(null);
+        // No limpiar token ante errores transitorios
       } finally {
         setAuthLoaded(true);
       }
@@ -51,6 +68,44 @@ export function AuthProvider({ children }) {
 
     init();
   }, []);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const expMs = (payload.exp || 0) * 1000;
+      const now = Date.now();
+      let delay = expMs - now - 60000;
+      if (delay < 30000) delay = 30000;
+      refreshTimerRef.current = setTimeout(async () => {
+        try {
+          const ok = await authApi.refresh();
+          if (ok) {
+            await authApi.me().then((r) => {
+              if (r?.ok && r?.user) {
+                setUser(r.user);
+                setTenant(r.tenant || null);
+              }
+            });
+          }
+        } catch (e) {
+          logger.warn("[AuthContext] silent refresh error:", e);
+        }
+      }, delay);
+    } catch {
+    }
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [user]);
 
   // ==== Métodos de login ====
   const login = async (email, password) => {
