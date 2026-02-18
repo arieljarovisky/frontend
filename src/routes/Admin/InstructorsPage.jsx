@@ -23,6 +23,7 @@ const DEFAULT_INSTRUCTOR_FORM = {
   serviceIds: [],
   branchIds: [],
   photoUrl: "",
+  phoneE164: "",
 };
 
 const DEFAULT_SERVICE_FORM = {
@@ -238,6 +239,7 @@ export default function InstructorsPage() {
         serviceIds: instructorForm.serviceIds,
         branchIds: instructorForm.branchIds || [],
         photoUrl: instructorForm.photoUrl || null,
+        phoneE164: instructorForm.phoneE164 || null,
       };
 
       if (editingInstructorId) {
@@ -509,6 +511,7 @@ export default function InstructorsPage() {
                                   serviceIds: instructor.serviceIds || [],
                                   branchIds: instructor.branchIds || (instructor.branchId ? [instructor.branchId] : (defaultBranchId ? [defaultBranchId] : [])),
                                   photoUrl: instructor.photoUrl || "",
+                                  phoneE164: instructor.phoneE164 || "",
                                 });
                               }}
                               aria-label="Editar instructor"
@@ -573,6 +576,18 @@ export default function InstructorsPage() {
                     />
                   </div>
                 )}
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
+                <span className="font-medium text-foreground">Teléfono WhatsApp</span>
+                <input
+                  className="input"
+                  placeholder="+54911..."
+                  value={instructorForm.phoneE164}
+                  onChange={(event) =>
+                    setInstructorForm((prev) => ({ ...prev, phoneE164: event.target.value }))
+                  }
+                />
               </label>
 
               <label className="flex flex-col gap-2 text-sm text-foreground-secondary">
