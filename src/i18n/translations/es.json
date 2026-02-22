@@ -92,6 +92,48 @@
     "instructorSelectionBody": "Cuerpo - Selección de profesional",
     "instructorSelectionBodyHint": "Texto al mostrar la lista de profesionales/instructores",
     "saveChangesNote": "Los cambios se guardarán junto con el resto de la configuración usando el botón \"Guardar Cambios\" arriba"
+    ,"refreshPhoneId": "Refrescar Phone ID"
+    ,"refreshingPhoneId": "Refrescando…"
+    ,"oauthConnectedMessage": "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo. Luego podés activar el asistente cuando lo necesites."
+    ,"connectOneClick": "Conectá tu cuenta de WhatsApp Business con un solo clic."
+    ,"connectedSuccessTitle": "¡WhatsApp Business conectado exitosamente!"
+    ,"connectedSuccessDescription": "Ahora ingresá tu número de WhatsApp y hacé clic en 'Guardar número' para activar el asistente."
+    ,"oauthConnectedButNoBusinessTitle": "OAuth conectado, pero falta configurar WhatsApp Business"
+    ,"oauthConnectedButNoBusinessDescription": "El token OAuth se guardó correctamente, pero tu Empresa aún no tiene una cuenta de WhatsApp Business. Podés configurarla en Meta Business Manager. El sistema intentará obtener el Phone Number ID automáticamente cuando guardes el número de WhatsApp."
+    ,"cantStartConnection": "No se pudo iniciar la conexión con WhatsApp Business"
+    ,"cantGenerateAuthUrl": "No se pudo generar la URL de autorización"
+    ,"disconnectConfirm": "¿Estás seguro de desconectar WhatsApp Business? Se eliminarán todas las credenciales y no podrás enviar mensajes hasta que vuelvas a conectar."
+    ,"disconnectedSuccess": "WhatsApp Business desconectado correctamente"
+    ,"disconnectError": "Error al desconectar WhatsApp"
+    ,"assistantActivated": "Asistente de WhatsApp activado."
+    ,"assistantDeactivated": "Asistente de WhatsApp desactivado."
+    ,"invalidPhoneToast": "Ingresá el número de WhatsApp con código de país (ej: +54911...)"
+    ,"cantSavePhoneToast": "No se pudo guardar el número de WhatsApp"
+    ,"cantUpdateAssistantStatus": "No se pudo actualizar el estado del asistente"
+    ,"phoneIdUpdated": "Phone Number ID actualizado"
+    ,"cantRefreshPhoneId": "No se pudo refrescar el Phone Number ID"
+    ,"tutorialShow": "Ver tutorial"
+    ,"tutorialHide": "Ocultar tutorial"
+    ,"statusPanel": {
+      "readyLabel": "Integrado",
+      "readyDesc": "El asistente responde automáticamente usando la integración centralizada.",
+      "disabledLabel": "Pausado",
+      "disabledDesc": "El asistente está pausado. Podés volver a activarlo cuando quieras.",
+      "oauthLabel": "OAuth conectado",
+      "oauthDesc": "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente.",
+      "pendingLabel": "Pendiente",
+      "pendingDesc": "Guardá tu número de WhatsApp para completar la configuración."
+    }
+    ,"statusTips": {
+      "ready1": "El asistente responde automáticamente con la información de tu negocio.",
+      "ready2": "Podés enviar mensajes de prueba o activar campañas desde el panel de soporte.",
+      "disabled1": "Activá el asistente para volver a enviar recordatorios y confirmaciones.",
+      "disabled2": "Mientras esté pausado, las automatizaciones quedan suspendidas.",
+      "oauth1": "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo.",
+      "oauth2": "Una vez guardado el número, podés activar el asistente manualmente.",
+      "pending1": "Guardá el número y contactanos para finalizar la vinculación en Meta Business.",
+      "pending2": "Cuando la conexión esté lista vas a poder activar el asistente y enviar pruebas."
+    }
   },
   "config": {
     "title": "Configuración",

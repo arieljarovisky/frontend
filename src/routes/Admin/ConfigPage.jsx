@@ -462,8 +462,8 @@ export default function ConfigPage() {
             (hubConfigured
               ? null
               : hasOAuthToken
-              ? "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo. Luego podés activar el asistente cuando lo necesites."
-              : "Conectá tu cuenta de WhatsApp Business con un solo clic. Solo necesitás autorizar los permisos en Meta."),
+              ? t("whatsapp.oauthConnectedMessage")
+              : t("whatsapp.connectOneClick")),
           useOAuth: w.useOAuth ?? false,
           oauthAvailable: w.oauthAvailable ?? false,
           hasOAuthToken: hasOAuthToken,
@@ -805,7 +805,7 @@ export default function ConfigPage() {
     }
     const phoneDisplay = String(whatsappConfig.phoneDisplay || "").trim();
     if (!phoneDisplay) {
-      toast.error("Ingresá el número de WhatsApp con código de país (ej: +54911...)");
+      toast.error(t("whatsapp.invalidPhoneToast"));
       return;
     }
 
@@ -877,7 +877,7 @@ export default function ConfigPage() {
           data.supportMessage ??
           (data.hubConfigured
             ? null
-            : "Conectá tu cuenta de WhatsApp Business con un solo clic."),
+            : t("whatsapp.connectOneClick")),
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? false,
@@ -903,8 +903,8 @@ export default function ConfigPage() {
       if (showToast) {
         toast.success(
           normalized.hubConfigured && normalized.hubActive
-            ? "Número guardado. El asistente está activo y listo para usar."
-            : "Número guardado correctamente."
+            ? t("whatsapp.statusTips.ready2")
+            : t("common.saveChanges")
         );
       }
     } catch (error) {
@@ -934,7 +934,7 @@ export default function ConfigPage() {
           data.supportMessage ??
           (data.hubConfigured
             ? null
-            : "Conectá tu cuenta de WhatsApp Business con un solo clic."),
+            : t("whatsapp.connectOneClick")),
         useOAuth: data.useOAuth ?? whatsappConfig.useOAuth ?? false,
         oauthAvailable: data.oauthAvailable ?? whatsappConfig.oauthAvailable ?? false,
         hasOAuthToken: data.hasOAuthToken ?? whatsappConfig.hasOAuthToken ?? false,
@@ -946,10 +946,10 @@ export default function ConfigPage() {
         supportAgentPhone: data.supportAgentPhone ?? whatsappConfig.supportAgentPhone ?? "",
       };
       setWhatsappConfig(normalized);
-      toast.success(nextActive ? "Asistente de WhatsApp activado." : "Asistente de WhatsApp desactivado.");
+      toast.success(nextActive ? t("whatsapp.assistantActivated") : t("whatsapp.assistantDeactivated"));
     } catch (error) {
       const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
-      toast.error("No se pudo actualizar el estado del asistente", {
+      toast.error(t("whatsapp.cantUpdateAssistantStatus"), {
         description: errorMessage,
       });
     } finally {
@@ -963,8 +963,8 @@ export default function ConfigPage() {
     const error = searchParams.get("error");
     
     if (success === "connected") {
-      toast.success("¡WhatsApp Business conectado exitosamente!", {
-        description: "Ahora ingresá tu número de WhatsApp y hacé clic en 'Guardar número' para activar el asistente.",
+      toast.success(t("whatsapp.connectedSuccessTitle"), {
+        description: t("whatsapp.connectedSuccessDescription"),
       });
       // Recargar configuración
       loadData();
@@ -982,13 +982,13 @@ export default function ConfigPage() {
       
       // Si es business_error, mostrar un mensaje más útil
       if (error === "business_error") {
-        toast.warning("OAuth conectado, pero falta configurar WhatsApp Business", {
-          description: "El token OAuth se guardó correctamente, pero tu Empresa aún no tiene una cuenta de WhatsApp Business. Podés configurarla en Meta Business Manager. El sistema intentará obtener el Phone Number ID automáticamente cuando guardes el número de WhatsApp.",
+        toast.warning(t("whatsapp.oauthConnectedButNoBusinessTitle"), {
+          description: t("whatsapp.oauthConnectedButNoBusinessDescription"),
           duration: 10000,
         });
       } else {
-        toast.error(errorMessages[error] || "Error al conectar WhatsApp Business", {
-          description: "Intentá nuevamente o contactá a soporte si el problema persiste.",
+        toast.error(errorMessages[error] || t("whatsapp.cantStartConnection"), {
+          description: "Please try again or contact support if the problem persists.",
         });
       }
       
@@ -1005,15 +1005,15 @@ export default function ConfigPage() {
       const { authUrl } = await apiClient.getWhatsAppAuthUrl();
       
       if (!authUrl) {
-        toast.error("No se pudo generar la URL de autorización");
+        toast.error(t("whatsapp.cantGenerateAuthUrl"));
         return;
       }
       
       // Redirigir a Meta OAuth
       window.location.href = authUrl;
     } catch (error) {
-      const errorMessage = error?.response?.data?.error || error?.message || "Error desconocido";
-      toast.error("No se pudo iniciar la conexión con WhatsApp Business", {
+      const errorMessage = error?.response?.data?.error || error?.message || "Unknown error";
+      toast.error(t("whatsapp.cantStartConnection"), {
         description: errorMessage,
       });
       setConnectingWhatsApp(false);
@@ -1021,7 +1021,7 @@ export default function ConfigPage() {
   };
 
   const handleDisconnectWhatsApp = async () => {
-    if (!confirm("¿Estás seguro de desconectar WhatsApp Business? Se eliminarán todas las credenciales y no podrás enviar mensajes hasta que vuelvas a conectar.")) {
+    if (!confirm(t("whatsapp.disconnectConfirm"))) {
       return;
     }
 
@@ -1032,15 +1032,15 @@ export default function ConfigPage() {
       if (data.ok) {
         // Recargar la configuración
         await loadData();
-        toast.success("WhatsApp Business desconectado correctamente");
+        toast.success(t("whatsapp.disconnectedSuccess"));
       } else {
-        toast.error("Error al desconectar", {
+        toast.error(t("whatsapp.disconnectError"), {
           description: data.error || "Error desconocido",
         });
       }
     } catch (error) {
       console.error("Error desconectando WhatsApp:", error);
-      toast.error("Error al desconectar WhatsApp", {
+      toast.error(t("whatsapp.disconnectError"), {
         description: error?.response?.data?.error || error?.message || "Error desconocido",
       });
     } finally {
@@ -1431,54 +1431,42 @@ export default function ConfigPage() {
     switch (whatsappConfig.status) {
       case "ready":
         return {
-          label: "Integrado",
+          label: t("whatsapp.statusPanel.readyLabel"),
           className: "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300",
           bulletClass: "bg-emerald-400",
-          description: "El asistente responde automáticamente usando la integración centralizada.",
+          description: t("whatsapp.statusPanel.readyDesc"),
         };
       case "disabled":
         return {
-          label: "Pausado",
+          label: t("whatsapp.statusPanel.disabledLabel"),
           className: "bg-amber-500/10 border border-amber-500/30 text-amber-200",
           bulletClass: "bg-amber-300",
-          description: "El asistente está pausado. Podés volver a activarlo cuando quieras.",
+          description: t("whatsapp.statusPanel.disabledDesc"),
         };
       case "oauth_pending":
         return {
-          label: "OAuth conectado",
+          label: t("whatsapp.statusPanel.oauthLabel"),
           className: "bg-blue-500/10 border border-blue-500/30 text-blue-300",
           bulletClass: "bg-blue-400",
-          description: "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente.",
+          description: t("whatsapp.statusPanel.oauthDesc"),
         };
       default:
         return {
-          label: "Pendiente",
+          label: t("whatsapp.statusPanel.pendingLabel"),
           className: "bg-slate-500/10 border border-slate-500/30 text-slate-200",
           bulletClass: "bg-slate-300",
           description:
             whatsappConfig.supportMessage ||
-            "Guardá tu número de WhatsApp para completar la configuración.",
+            t("whatsapp.statusPanel.pendingDesc"),
         };
     }
   })();
 
   const whatsappStatusTips = {
-    ready: [
-      "El asistente responde automáticamente con la información de tu negocio.",
-      "Podés enviar mensajes de prueba o activar campañas desde el panel de soporte.",
-    ],
-    disabled: [
-      "Activá el asistente para volver a enviar recordatorios y confirmaciones.",
-      "Mientras esté pausado, las automatizaciones quedan suspendidas.",
-    ],
-    oauth_pending: [
-      "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo.",
-      "Una vez guardado el número, podés activar el asistente manualmente.",
-    ],
-    pending: [
-      "Guardá el número y contactanos para finalizar la vinculación en Meta Business.",
-      "Cuando la conexión esté lista vas a poder activar el asistente y enviar pruebas.",
-    ],
+    ready: [t("whatsapp.statusTips.ready1"), t("whatsapp.statusTips.ready2")],
+    disabled: [t("whatsapp.statusTips.disabled1"), t("whatsapp.statusTips.disabled2")],
+    oauth_pending: [t("whatsapp.statusTips.oauth1"), t("whatsapp.statusTips.oauth2")],
+    pending: [t("whatsapp.statusTips.pending1"), t("whatsapp.statusTips.pending2")],
   };
 
   const highlightedTips =
@@ -1498,7 +1486,7 @@ export default function ConfigPage() {
       }));
       toast.success("Phone Number ID actualizado");
     } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || "No se pudo refrescar el Phone Number ID";
+      const msg = e?.response?.data?.error || e?.message || t("whatsapp.cantRefreshPhoneId");
       toast.error(msg);
     } finally {
       setRefreshingPhoneId(false);
@@ -2189,7 +2177,7 @@ export default function ConfigPage() {
                   onClick={() => setShowWhatsAppTutorial((v) => !v)}
                   className="text-xs"
                 >
-                  {showWhatsAppTutorial ? "Ocultar tutorial" : "Ver tutorial"}
+                  {showWhatsAppTutorial ? t("whatsapp.tutorialHide") : t("whatsapp.tutorialShow")}
                 </Button>
               </div>
               {showWhatsAppTutorial && (
@@ -2284,7 +2272,7 @@ export default function ConfigPage() {
                   <div className="lg:col-span-1">
                     <div className="sticky top-6 rounded-2xl border-2 border-border/60 bg-gradient-to-br from-background-secondary/90 to-background-secondary/50 backdrop-blur-sm p-6 shadow-lg">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base font-bold text-foreground">Estado</h3>
+                        <h3 className="text-base font-bold text-foreground">{t("whatsapp.status")}</h3>
                         <span
                           className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full ${whatsappStatusMeta.className} shadow-md`}
                         >
@@ -2308,7 +2296,7 @@ export default function ConfigPage() {
                         {whatsappConfig.updatedAt && (
                           <p className="text-xs text-foreground-muted/70 pt-2 border-t border-border/30">
                             {t("whatsapp.lastUpdate")}<br />
-                            <span className="font-medium">{new Date(whatsappConfig.updatedAt).toLocaleString("es-AR")}</span>
+                            <span className="font-medium">{new Date(whatsappConfig.updatedAt).toLocaleString(language === "en" ? "en-US" : "es-AR")}</span>
                           </p>
                         )}
                       </div>
@@ -2351,7 +2339,7 @@ export default function ConfigPage() {
                             variant="secondary"
                             className="mr-3"
                           >
-                            {refreshingPhoneId ? "Refrescando…" : "Refrescar Phone ID"}
+                            {refreshingPhoneId ? t("whatsapp.refreshingPhoneId") : t("whatsapp.refreshPhoneId")}
                           </Button>
                         )}
                         <Button 
@@ -2363,12 +2351,12 @@ export default function ConfigPage() {
                           {connectingWhatsApp ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Desconectando…
+                              {t("whatsapp.disconnect")}
                             </>
                           ) : (
                             <>
                               <LogOut className="w-4 h-4" />
-                              Desconectar WhatsApp
+                              {t("whatsapp.disconnect")}
                             </>
                           )}
                         </Button>
@@ -2382,9 +2370,9 @@ export default function ConfigPage() {
                           <MessageCircle className="w-5 h-5 text-primary-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-foreground mb-1">Botón de Ayuda</h3>
+                          <h3 className="text-lg font-bold text-foreground mb-1">{t("whatsapp.supportAgent")}</h3>
                           <p className="text-sm text-foreground-secondary">
-                            Permití que tus clientes se conecten con un agente humano cuando presionen "Ayuda"
+                            {t("whatsapp.supportAgentDescription")}
                           </p>
                         </div>
                       </div>
@@ -2410,7 +2398,7 @@ export default function ConfigPage() {
                         {whatsappConfig.supportAgentEnabled && (
                           <FieldGroup
                             label="Número del agente de soporte"
-                            hint="Número de WhatsApp del agente que recibirá las solicitudes (formato E.164, ej: 5491170590570)"
+                            hint={t("whatsapp.supportAgentPhoneHint")}
                           >
                             <input
                               type="text"
