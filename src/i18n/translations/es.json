@@ -19,7 +19,8 @@
     "actions": "Acciones",
     "saveChanges": "Guardar Cambios",
     "saving": "Guardando...",
-    "unsavedChanges": "Tienes cambios sin guardar"
+    "unsavedChanges": "Tienes cambios sin guardar",
+    "optional": "Opcional"
   },
   "language": {
     "spanish": "Español",
@@ -113,8 +114,18 @@
     ,"phoneIdUpdated": "Phone Number ID actualizado"
     ,"cantRefreshPhoneId": "No se pudo refrescar el Phone Number ID"
     ,"tutorialShow": "Ver tutorial"
-    ,"tutorialHide": "Ocultar tutorial"
-    ,"statusPanel": {
+    ,"tutorialHide": "Ocultar tutorial",
+    "tutorialTitle": "Tutorial de conexión",
+    "tutorial": {
+      "step1": "Crear o acceder a tu Meta Business Manager y asegurarte de tener una Cuenta de WhatsApp Business.",
+      "openMetaLink": "Abrir Meta Business Manager",
+      "step2": "Verificar el número que vas a usar en WhatsApp Business.",
+      "step3": "Hacer clic en “Conectar” para autorizar con Meta y guardar el token.",
+      "step4": "Ingresar el número en formato internacional (+54911...) y guardar.",
+      "step5": "Activar el asistente y probar un envío desde un turno confirmado.",
+      "step6": "Si falta el Phone Number ID después de OAuth, usar “Refrescar Phone ID”."
+    },
+    "statusPanel": {
       "readyLabel": "Integrado",
       "readyDesc": "El asistente responde automáticamente usando la integración centralizada.",
       "disabledLabel": "Pausado",
@@ -123,8 +134,8 @@
       "oauthDesc": "OAuth conectado exitosamente. Ingresá tu número de WhatsApp y guardalo para activar el asistente.",
       "pendingLabel": "Pendiente",
       "pendingDesc": "Guardá tu número de WhatsApp para completar la configuración."
-    }
-    ,"statusTips": {
+    },
+    "statusTips": {
       "ready1": "El asistente responde automáticamente con la información de tu negocio.",
       "ready2": "Podés enviar mensajes de prueba o activar campañas desde el panel de soporte.",
       "disabled1": "Activá el asistente para volver a enviar recordatorios y confirmaciones.",
@@ -164,7 +175,287 @@
     "arcaConnectionError": "Error de conexión",
     "mpTitle": "Mercado Pago",
     "commissionsTitle": "Comisiones",
-    "securityTitle": "Seguridad"
+    "securityTitle": "Seguridad",
+    "changesApplyImmediately": "Los cambios se aplicarán inmediatamente después de guardar",
+    "noAccessTitle": "No tenés permiso para ver Configuración",
+    "noAccessDescription": "Pedí a un administrador que te otorgue acceso a este módulo."
+  },
+  "security": {
+    "description": "Configuración de seguridad de tu cuenta",
+    "twoFactorTitle": "Autenticación de doble factor (2FA)",
+    "twoFactorDescription": "Agregá una capa adicional de seguridad a tu cuenta con códigos de autenticación",
+    "setup2fa": "Configurar 2FA"
+  },
+  "membership": {
+    "emptyMessage": "No cargaste planes de membresía todavía. Creá al menos uno para hacer cumplir la cuota mensual.",
+    "name": "Nombre",
+    "price": "Precio",
+    "duration": "Duración",
+    "status": "Estado",
+    "actions": "Acciones",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
+    "activeAppointments": "Turnos activos",
+    "billingDay": "Vence día",
+    "billingByPaymentDate": "Vence según fecha de pago",
+    "graceDays": "Gracia",
+    "interest": "Interés",
+    "noInterest": "Sin interés",
+    "blocks": "Bloquea",
+    "oneMonth": "1 mes",
+    "months": "meses",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "edit": "Editar",
+    "deactivate": "Desactivar",
+    "activate": "Activar"
+  },
+  "workingHours": {
+    "overtimeTitle": "Cálculo de horas extras",
+    "overtimeDescription": "Las horas trabajadas fuera del horario laboral configurado se calcularán automáticamente como horas extras. Este cálculo se aplicará a los registros de asistencia y turnos de los empleados.",
+    "sectionDescription": "Configurá los horarios de trabajo del negocio por sucursal para calcular horas extras de empleados",
+    "infoTitle": "¿Para qué sirve esta configuración?",
+    "infoTextWorkHours": "Los horarios laborales definen el horario normal de trabajo por sucursal. Cualquier hora trabajada fuera de estos horarios se considerará como horas extras y se calculará automáticamente para los empleados.",
+    "loadingBranches": "Cargando sucursales...",
+    "noBranches": "No hay sucursales configuradas. Configurá al menos una sucursal para poder establecer horarios laborales.",
+    "branchLabel": "Sucursal",
+    "expandAll": "Expandir todos",
+    "collapseAll": "Colapsar todos",
+    "bulkEnabledLabel": "Aplicar a todos: habilitado",
+    "activeDays": "Días activos",
+    "startLabel": "Inicio",
+    "endLabel": "Fin",
+    "applyAll": "Aplicar a todos",
+    "collapse": "Colapsar",
+    "expand": "Expandir",
+    "dayNames": {
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado",
+      "sunday": "Domingo"
+    },
+    "startTimeLabel": "Hora de inicio",
+    "endTimeLabel": "Hora de fin"
+  },
+  "businessType": {
+    "description": "Configurá el tipo de negocio y las funcionalidades habilitadas",
+    "planFeaturesTitle": "Funcionalidades de tu Plan",
+    "planFeaturesDescription": "Acá podés ver las funcionalidades disponibles en tu plan actual y las opciones de upgrade si necesitás más características.",
+    "currentPlanHint": "Tu plan actual",
+    "available": "Disponible",
+    "notIncluded": "No incluido",
+    "upgradePlansTitle": "Planes Disponibles para Upgrade",
+    "additionalFeaturesTitle": "Funcionalidades adicionales:",
+    "contactSales": "Contactar a Ventas",
+    "requestUpgrade": "Solicitar Upgrade",
+    "maxPlanMessage": "Ya tenés el plan más completo disponible. Si necesitás funcionalidades personalizadas, contactá a nuestro equipo.",
+    "features": {
+      "appointments": "Turnos individuales",
+      "classes": "Turnos de clases",
+      "stock": "Gestión de stock",
+      "invoicing": "Facturación"
+    },
+    "featureDescriptions": {
+      "appointments": "Gestión de turnos y citas individuales",
+      "classes": "Gestión de clases grupales y turnos de clases",
+      "stock": "Control de inventario y productos",
+      "invoicing": "Facturación electrónica con ARCA"
+    },
+    "customized": "Personalizado",
+    "notIncludedInPlan": "No incluido en tu plan",
+    "confirmTitle": "Confirmar cambios",
+    "confirmChangeType": "Estás por cambiar el tipo de negocio de \"{from}\" a \"{to}\".",
+    "confirmUpdateFeatures": "Estás por actualizar las funcionalidades habilitadas.",
+    "impactTitle": "Impacto en módulos",
+    "notAvailableInPlan": "No disponible en tu plan",
+    "willEnable": "Se habilitará",
+    "willDisable": "Se desactivará",
+    "unchanged": "Se mantiene",
+    "changeTypeWarning": "Cambiar el tipo de negocio reemplazará tus servicios actuales por los predeterminados del nuevo tipo. Guardá o exportá tus servicios si necesitás conservarlos.",
+    "reviewAgain": "Revisar de nuevo",
+    "confirmAndSave": "Confirmar y guardar",
+    "toasts": {
+      "contactOwnerManage": "Contactá al dueño del sistema para gestionar estos cambios.",
+      "selectType": "Seleccioná un tipo de negocio",
+      "noChanges": "No hay cambios para guardar.",
+      "restoredDefaults": "Se restauraron las funcionalidades por defecto del tipo seleccionado.",
+      "needHigherPlan": "Necesitás un plan superior para habilitar esta funcionalidad.",
+      "contactOwnerChangeType": "Contactá al dueño del sistema para cambiar el tipo de negocio y actualizar tu plan.",
+      "saveSuccessType": "Tipo de negocio actualizado a {type}.",
+      "saveSuccessFeatures": "Funcionalidades actualizadas correctamente.",
+      "saveErrorGeneric": "No se pudieron guardar los cambios."
+    }
+  },
+  "calendar": {
+    "description": "Configurá el rango de horarios que se mostrará en el calendario",
+    "infoTitle": "¿Para qué sirve esta configuración?",
+    "infoText": "Definí el rango de horarios que se mostrará en el calendario. Esto te permite personalizar qué horas del día son visibles en las vistas de Día, Semana y Agenda.",
+    "startHourLabel": "Hora de inicio",
+    "startHourHint": "Hora mínima que se mostrará en el calendario",
+    "endHourLabel": "Hora de fin",
+    "endHourHint": "Hora máxima que se mostrará en el calendario"
+  },
+  "arca": {
+    "sectionTitle": "Facturación Electrónica ARCA",
+    "centralizedLabel": "✓ Sistema Centralizado",
+    "centralizedDescription": "Solo necesitás tu CUIT. El sistema factura en tu nombre usando certificados centralizados. No necesitás configurar certificados propios ni hacer trámites en AFIP.",
+    "cuitLabel": "Tu CUIT",
+    "cuitHint": "Tu CUIT de 11 dígitos (sin guiones). El sistema facturará en tu nombre usando este CUIT.",
+    "puntoVentaLabel": "Punto de Venta (Opcional)",
+    "puntoVentaHint": "Si tenés un punto de venta específico, ingresalo aquí. Si no, el sistema usará el predeterminado.",
+    "checkingNote": "Esto puede tardar unos segundos si el servidor consulta AFIP.",
+    "verifyConnection": "Verificar conexión",
+    "howTitle": "¿Cómo funciona la facturación centralizada con ARCA?",
+    "howDescription": "Nuestro equipo mantiene los certificados y credenciales. Solo necesitamos tu CUIT para emitir comprobantes a tu nombre.",
+    "tutorialShow": "Ver tutorial paso a paso (AFIP + ARCA)",
+    "tutorialHide": "Ocultar tutorial AFIP y ARCA",
+    "tutorialQuickTitle": "Tutorial rápido",
+    "steps": {
+      "saveCuitTitle": "1. Guardá tu CUIT",
+      "saveCuitText": "Ingresá el CUIT y guardá la configuración. El sistema lo usa para generar tus facturas.",
+      "verifyTitle": "2. Verificá la conexión",
+      "verifyText": "Usá el botón Verificar conexión para confirmar que el servidor tiene todo listo.",
+      "emitTestTitle": "3. Emití una prueba",
+      "emitTestText": "Cuando el estado sea OK, generá una factura de prueba para confirmar que AFIP responde correctamente."
+    },
+    "ownCertsTitle": "¿Querés usar tus propios certificados?",
+    "ownCertsDescription": "Escribinos por soporte y te ayudamos a habilitar el modo avanzado. Vas a necesitar cargar tu certificado .p12 o los archivos .crt y .key, junto con la contraseña.",
+    "testTitle": "Generar Factura de Prueba",
+    "testDescription": "Generá una factura de prueba por $121 para verificar que todo funcione correctamente",
+    "testGenerating": "Generando...",
+    "testCTA": "Testear",
+    "testLabels": {
+      "number": "Número",
+      "pointOfSale": "Punto de Venta",
+      "date": "Fecha",
+      "downloadPdf": "Descargar PDF"
+    },
+    "connectionOk": "Conexión con ARCA OK",
+    "connectionError": "Error de conexión",
+    "cuitConfigured": "CUIT configurado",
+    "credentialsMissing": "Faltan credenciales del sistema en el servidor.",
+    "serverConfigNeeded": "Configuración necesaria en el servidor:",
+    "envSetupIntro": "El administrador del sistema debe configurar en el archivo",
+    "onServer": "del servidor:",
+    "optionA": "Opción A: Servicio Intermediario (API Key)",
+    "apiKey": "API Key del servicio intermediario",
+    "cuit": "CUIT del sistema",
+    "puntoVenta": "Punto de venta",
+    "apiUrl": "URL del servicio intermediario",
+    "optionB": "Opción B: Certificados del Sistema (P12)",
+    "configureInFile": "Configurar en el archivo",
+    "onServerFolder": "del servidor (en la carpeta",
+    "cuitRequired": "CUIT del sistema (requerido)",
+    "puntoVentaRequired": "Punto de venta (requerido)",
+    "p12PathRequired": "Ruta al archivo certificado P12 (requerido)",
+    "p12PassRequired": "Contraseña del certificado P12 (requerido)",
+    "wsaaService": "Servicio para WSAA (por defecto: \"wsfe\")",
+    "wsaaUrl": "URL del Web Service de Autenticación (WSAA). Si no se especifica, usa las URLs predeterminadas según el ambiente.",
+    "wsfeUrl": "URL del Web Service de Facturación (WSFE). Si no se especifica, usa las URLs predeterminadas según el ambiente.",
+    "alternative": "Alternativa:",
+    "alternativeText": "También podés usar certificados separados (.crt y .key) colocándolos en",
+    "andConfigure": "y configurando",
+    "and": "y"
+  },
+  "booking": {
+    "title": "Reservas y membresías",
+    "description": "Configurá si el sistema requiere cuota al día antes de permitir inscribirse a una clase",
+    "requireLabel": "Requerir cuota al día para inscribirse a clases",
+    "requireDescription": "Bloqueá la inscripción a clases si el cliente no tiene una suscripción activa. Ideal para gimnasios o clubes. Los turnos individuales no requieren membresía.",
+    "noteDisabled": "Cuando está desactivado, cualquier cliente puede inscribirse a clases aunque no tenga una membresía vigente. Los turnos individuales siempre están disponibles sin membresía (recomendado para peluquerías y estudios sin mensualidad).",
+    "membershipPlansTitle": "Planes de membresía",
+    "membershipPlansDescription": "Definí los precios y duración de las cuotas que vas a controlar.",
+    "newPlanButton": "Nuevo plan",
+    "loadingPlans": "Cargando planes..."
+  },
+  "mp": {
+    "checkCanReceive": "• Verifica que la cuenta esté habilitada para recibir pagos online",
+    "inTestingMode": "• Tu cuenta está en modo PRUEBAS. Para recibir pagos reales, necesitas estar en modo PRODUCCIÓN",
+    "viewAccount": "Ver cuenta en Mercado Pago",
+    "tokenExpiredTitle": "Token expirado",
+    "tokenExpiredDesc": "El token de acceso ha expirado. Desconectá y volvé a conectar para renovarlo.",
+    "connectedTitle": "Cuenta conectada",
+    "userIdLabel": "ID Usuario MP",
+    "countryLabel": "País",
+    "noAccountInfo": "No se pudo obtener información detallada de la cuenta",
+    "noUserIdentified": "No se pudo identificar el usuario",
+    "connecting": "Conectando...",
+    "connectCTA": "Conectar con Mercado Pago",
+    "authPrompt": "Al conectar, Mercado Pago te pedirá autorización para:",
+    "authItems": {
+      "createPreferences": "Crear preferencias de pago",
+      "receiveNotifications": "Recibir notificaciones de pagos",
+      "accessTransactions": "Acceder a información de transacciones"
+    },
+    "sectionDescription": "Configurá los pagos de señas",
+    "tokenExpires": "Token expira",
+    "modeLabel": "Modo",
+    "modeProduction": "🟢 Producción",
+    "modeTesting": "🟡 Pruebas",
+    "depositFixedInfo": "Todos los servicios requerirán ${amount} de seña",
+    "infoImportantTitle": "Información importante",
+    "deposit": {
+      "requireTitle": "Requerir pago de seña",
+      "requireDesc": "Los clientes deberán pagar antes de confirmar",
+      "percentageTitle": "Porcentaje",
+      "percentageDesc": "Calcula la seña como % del servicio",
+      "fixedTitle": "Monto fijo",
+      "fixedDesc": "Misma seña para todos los servicios",
+      "percentageLabel": "Porcentaje de seña",
+      "percentageExample": "Ejemplo: Servicio $5000 → Seña",
+      "fixedAmountLabel": "Monto fijo de seña"
+    }
+  },
+  "commissionsConfig": {
+    "title": "Configuración de Comisiones",
+    "description": "Parámetros para el cálculo de comisiones",
+    "defaultPercentageLabel": "Comisión por defecto (%)",
+    "defaultPercentageHint": "Porcentaje que se aplica a nuevos instructores",
+    "calculateOnDepositLabel": "Calcular sobre seña",
+    "calculateOnDepositDesc": "Calcular comisiones sobre el monto de la seña en lugar del precio total",
+    "showInDashboardLabel": "Mostrar en dashboard",
+    "showInDashboardDesc": "Mostrar métricas de comisiones en el dashboard principal",
+    "configureIndividualsPrefix": "Para configurar comisiones individuales por instructor,",
+    "clickHere": "hacé clic aquí"
+  },
+  "reminders": {
+    "title": "Recordatorios de Turnos",
+    "description": "Configurá recordatorios automáticos por WhatsApp para tus clientes",
+    "whatAreTitle": "¿Qué son los recordatorios automáticos?",
+    "whatAreDescription": "Los recordatorios se envían automáticamente por WhatsApp a tus clientes antes de sus turnos. Esto ayuda a reducir las faltas y mejorar la asistencia.",
+    "enableLabel": "Activar recordatorios automáticos",
+    "enableDesc": "Activa o desactiva el envío automático de recordatorios. Cuando está activado, el sistema enviará mensajes automáticamente según la configuración de horas.",
+    "whenLabel": "¿Cuánto tiempo antes del turno enviar el recordatorio?",
+    "whenHint": "Configurá cuántas horas antes del turno querés que se envíe el recordatorio. Máximo 7 días (168 horas).",
+    "examplesTitle": "Ejemplos prácticos:",
+    "examples": {
+      "oneDay": "• 24 horas = Se envía 1 día antes del turno",
+      "twoDays": "• 48 horas = Se envía 2 días antes del turno",
+      "twoHours": "• 2 horas = Se envía 2 horas antes del turno",
+      "twelveHours": "• 12 horas = Se envía 12 horas antes (medio día antes)"
+    },
+    "importantTitle": "Información importante",
+    "importantItems": {
+      "auto": "Los recordatorios se envían automáticamente por WhatsApp a tus clientes",
+      "statuses": "Solo se envían para turnos con estado confirmado o programado",
+      "once": "Cada turno recibe un solo recordatorio (no se repiten)",
+      "interval": "El sistema verifica cada 15 minutos y envía recordatorios para turnos que están dentro de la ventana configurada",
+      "requirement": "Requisito: WhatsApp debe estar configurado y activo en la sección de configuración"
+    },
+    "immediate": "horas antes (inmediato)",
+    "oneHour": "hora antes",
+    "oneDay": "día antes (24 horas)",
+    "daysBefore": "días antes ({hours} horas)",
+    "hoursBefore": "horas antes"
+  },
+  "configGeneralInfo": {
+    "title": "Información importante:",
+    "whatsappNumberHint": "El número de WhatsApp debe incluir el código de país (ej: +54 para Argentina)",
+    "cuitRequiredHint": "El CUIT es necesario para emitir facturas electrónicas",
+    "dataUseHint": "Estos datos pueden ser utilizados en facturas y comunicaciones"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -416,6 +707,38 @@
       "terms": "Términos",
       "privacy": "Privacidad",
       "copyright": "Todos los derechos reservados."
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "skipToMain": "Saltar al contenido principal",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "tenant": {
+    "business": "Negocio",
+    "globalPanel": "Panel Global"
+  },
+  "footer": {
+    "product": "Sistema de Gestión"
+  },
+  "login": {
+    "welcome": "Bienvenido",
+    "signInToContinue": "Iniciá sesión para continuar",
+    "selectTenant": "Seleccioná tu negocio",
+    "goToPanel": "Ir al panel",
+    "rememberDevice": "Recordar este dispositivo durante 30 días",
+    "email": "Email",
+    "password": "Contraseña",
+    "placeholderEmail": "you@example.com",
+    "activeSessionWarning": "Hay una sesión activa, cerrá sesión para cambiar de cuenta.",
+    "benefits": {
+      "freeTrial": "Prueba gratuita de 14 días",
+      "noCard": "Sin tarjeta de crédito",
+      "cancelAnytime": "Cancela cuando quieras"
+    },
+    "twoFactor": {
+      "title": "Código de autenticación"
     }
   },
   "routines": {

@@ -130,7 +130,7 @@ export default function AppLayout() {
   const base = `/${tenantSlug || ""}`;
   const authContext = useAuth();
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -186,7 +186,7 @@ export default function AppLayout() {
   const authLoaded = authContext?.authLoaded || false;
 
   const businessTypeCode = businessTypeData?.code || "salon";
-  const navLabels = getNavigationLabels(businessTypeCode);
+  const navLabels = language === "en" ? {} : getNavigationLabels(businessTypeCode);
 
   const rawFeatures = businessTypeData?.features_config ?? businessTypeData?.featuresConfig;
   const tenantFeatures = useMemo(() => {
@@ -359,7 +359,7 @@ export default function AppLayout() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-foreground-muted">Cargando...</p>
+          <p className="text-foreground-muted">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -370,7 +370,7 @@ export default function AppLayout() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-foreground-muted">Cargando...</p>
+          <p className="text-foreground-muted">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -382,7 +382,7 @@ export default function AppLayout() {
         href="#main-content"
         className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 px-3 py-2 rounded-lg bg-background border border-border shadow text-foreground"
       >
-        Saltar al contenido principal
+        {t("common.skipToMain")}
       </a>
       {/* Overlay para mobile */}
       {sidebarOpen && (
@@ -395,6 +395,7 @@ export default function AppLayout() {
       {/* Sidebar */}
       <aside
         className={`arja-sidebar arja-sidebar--contrast ${sidebarOpen ? "is-open" : ""} shadow-2xl`}
+        style={{ maxHeight: '100vh', overflowY: 'auto' }}
       >
         {/* Logo Header */}
         <div className="arja-sidebar__section arja-sidebar__header">
@@ -403,7 +404,7 @@ export default function AppLayout() {
             onClick={() => setSidebarOpen(false)}
             type="button"
             className="arja-sidebar__close"
-            aria-label="Cerrar menú"
+            aria-label={t("common.closeMenu")}
           >
             <X />
           </button>
@@ -417,9 +418,9 @@ export default function AppLayout() {
                 <Building2 />
               </span>
               <div className="arja-tenant-card__body">
-                <p className="arja-tenant-card__title">Negocio</p>
+                <p className="arja-tenant-card__title">{t("tenant.business")}</p>
                 <p className="arja-tenant-card__value">
-                  {tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain || `#${tenant.id}`}
+                  {tenant.is_system ? t("tenant.globalPanel") : tenant.name || tenant.subdomain || `#${tenant.id}`}
                 </p>
               </div>
             </div>
@@ -555,7 +556,7 @@ export default function AppLayout() {
               onClick={() => setSidebarOpen(true)}
               type="button"
               className="arja-main__menu"
-              aria-label="Abrir menú"
+              aria-label={t("common.openMenu")}
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -586,8 +587,8 @@ export default function AppLayout() {
         <footer className="arja-main__footer">
           © {new Date().getFullYear()} — ARJA ERP
           <small>
-            Sistema de Gestión v2.0{" "}
-            {tenant ? `• ${tenant.is_system ? "Panel Global" : tenant.name || tenant.subdomain}` : ""}
+            {t("footer.product")} v2.0{" "}
+            {tenant ? `• ${tenant.is_system ? t("tenant.globalPanel") : (tenant.name || tenant.subdomain)}` : ""}
           </small>
         </footer>
       </div>

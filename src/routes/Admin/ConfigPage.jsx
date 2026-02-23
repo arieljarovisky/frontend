@@ -125,10 +125,10 @@ export default function ConfigPage() {
       <div className="p-6">
         <div className="card card--space-lg text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            No tenés permiso para ver Configuración
+            {t("config.noAccessTitle")}
           </h2>
           <p className="text-foreground-secondary text-sm">
-            Pedí a un administrador que te otorgue acceso a este módulo.
+            {t("config.noAccessDescription")}
           </p>
         </div>
       </div>
@@ -1671,30 +1671,29 @@ export default function ConfigPage() {
       {/* BOOKING */}
       <div id="booking">
         <ConfigSection
-          title="Reservas y membresías"
-          description="Configurá si el sistema requiere cuota al día antes de permitir inscribirse a una clase"
+          title={t("booking.title")}
+          description={t("booking.description")}
           icon={Shield}
         >
           <div className="space-y-4">
             <SwitchField
-              label="Requerir cuota al día para inscribirse a clases"
-              description="Bloqueá la inscripción a clases si el cliente no tiene una suscripción activa. Ideal para gimnasios o clubes. Los turnos individuales no requieren membresía."
+              label={t("booking.requireLabel")}
+              description={t("booking.requireDescription")}
               checked={bookingConfig.require_membership}
               onChange={(e) =>
                 setBookingConfig((prev) => ({ ...prev, require_membership: e.target.checked }))
               }
             />
             <p className="text-xs text-foreground-muted">
-              Cuando está desactivado, cualquier cliente puede inscribirse a clases aunque no tenga una
-              membresía vigente. Los turnos individuales siempre están disponibles sin membresía (recomendado para peluquerías y estudios sin mensualidad).
+              {t("booking.noteDisabled")}
             </p>
             {bookingConfig.require_membership && (
               <div className="rounded-2xl border border-border/60 bg-background-secondary/50 p-4 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Planes de membresía</p>
+                    <p className="text-sm font-semibold text-foreground">{t("booking.membershipPlansTitle")}</p>
                     <p className="text-xs text-foreground-muted">
-                      Definí los precios y duración de las cuotas que vas a controlar.
+                      {t("booking.membershipPlansDescription")}
                     </p>
                   </div>
                   <Button
@@ -1702,7 +1701,7 @@ export default function ConfigPage() {
                     className="flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
                     <Plus className="w-4 h-4" />
-                    Nuevo plan
+                    {t("booking.newPlanButton")}
                   </Button>
                 </div>
 
@@ -1713,22 +1712,22 @@ export default function ConfigPage() {
                 ) : loadingMembershipPlans ? (
                   <div className="py-10 flex flex-col items-center gap-2 text-foreground-muted">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Cargando planes...
+                    {t("booking.loadingPlans")}
                   </div>
                 ) : membershipPlans.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-foreground-muted">
-                    No cargaste planes de membresía todavía. Creá al menos uno para hacer cumplir la cuota mensual.
+                    {t("membership.emptyMessage")}
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-2xl border border-border/70">
                     <table className="w-full min-w-[520px] text-sm">
                       <thead className="bg-background-secondary/70 text-foreground-muted text-xs uppercase tracking-wide">
                         <tr>
-                          <th className="text-left px-4 py-3">Nombre</th>
-                          <th className="text-left px-4 py-3">Precio</th>
-                          <th className="text-left px-4 py-3">Duración</th>
-                          <th className="text-left px-4 py-3">Estado</th>
-                          <th className="text-right px-4 py-3">Acciones</th>
+                          <th className="text-left px-4 py-3">{t("membership.name")}</th>
+                          <th className="text-left px-4 py-3">{t("membership.price")}</th>
+                          <th className="text-left px-4 py-3">{t("membership.duration")}</th>
+                          <th className="text-left px-4 py-3">{t("membership.status")}</th>
+                          <th className="text-right px-4 py-3">{t("membership.actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1742,33 +1741,33 @@ export default function ConfigPage() {
                               {(plan.max_classes_per_week || plan.max_classes_per_month || plan.max_active_appointments) ? (
                                 <p className="text-xs text-foreground-muted mt-1 space-x-2">
                                   {plan.max_classes_per_week ? (
-                                    <span>Semanal: {plan.max_classes_per_week}</span>
+                                    <span>{t("membership.weekly")}: {plan.max_classes_per_week}</span>
                                   ) : null}
                                   {plan.max_classes_per_month ? (
-                                    <span>Mensual: {plan.max_classes_per_month}</span>
+                                    <span>{t("membership.monthly")}: {plan.max_classes_per_month}</span>
                                   ) : null}
                                   {plan.max_active_appointments ? (
-                                    <span>Turnos activos: {plan.max_active_appointments}</span>
+                                    <span>{t("membership.activeAppointments")}: {plan.max_active_appointments}</span>
                                   ) : null}
                                 </p>
                               ) : null}
                               <p className="text-xs text-foreground-muted mt-1 space-x-2">
                                 {plan.billing_day ? (
-                                  <span>Vence día {plan.billing_day}</span>
+                                  <span>{t("membership.billingDay")} {plan.billing_day}</span>
                                 ) : (
-                                  <span>Vence según fecha de pago</span>
+                                  <span>{t("membership.billingByPaymentDate")}</span>
                                 )}
-                                <span>Gracia: {plan.grace_days ?? 0} días</span>
+                                <span>{t("membership.graceDays")}: {plan.grace_days ?? 0}</span>
                                 <span>
-                                  Interés:{" "}
+                                  {t("membership.interest")}:{" "}
                                   {plan.interest_type === "none"
-                                    ? "Sin interés"
+                                    ? t("membership.noInterest")
                                     : plan.interest_type === "percent"
                                     ? `${plan.interest_value ?? 0}%`
                                     : `$${plan.interest_value ?? 0}`}
                                 </span>
                                 <span>
-                                  Bloquea: {plan.auto_block ? "Sí" : "No"}
+                                  {t("membership.blocks")}: {plan.auto_block ? t("common.yes") : t("common.no")}
                                 </span>
                               </p>
                             </td>
@@ -1777,8 +1776,8 @@ export default function ConfigPage() {
                             </td>
                             <td className="px-4 py-3 text-foreground-secondary">
                               {plan.duration_months <= 1
-                                ? "1 mes"
-                                : `${plan.duration_months} meses`}
+                                ? t("membership.oneMonth")
+                                : `${plan.duration_months} ${t("membership.months")}`}
                             </td>
                             <td className="px-4 py-3">
                               <span
@@ -1793,7 +1792,7 @@ export default function ConfigPage() {
                                     plan.is_active ? "bg-emerald-300" : "bg-slate-300"
                                   }`}
                                 />
-                                {plan.is_active ? "Activo" : "Inactivo"}
+                                {plan.is_active ? t("membership.active") : t("membership.inactive")}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -1804,14 +1803,14 @@ export default function ConfigPage() {
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-foreground-secondary hover:text-primary hover:bg-primary/10 transition-colors"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
-                                  Editar
+                                  {t("membership.edit")}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handlePlanToggle(plan)}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-foreground-secondary hover:text-foreground hover:bg-border transition-colors"
                                 >
-                                  {plan.is_active ? "Desactivar" : "Activar"}
+                                  {plan.is_active ? t("membership.deactivate") : t("membership.activate")}
                                 </button>
                               </div>
                             </td>
@@ -1831,7 +1830,7 @@ export default function ConfigPage() {
       <div id="business-type">
         <ConfigSection
           title={t("config.businessTypeTitle")}
-          description="Configurá el tipo de negocio y las funcionalidades habilitadas"
+          description={t("businessType.description")}
           icon={Building2}
         >
           <BusinessTypeConfig />
@@ -1842,7 +1841,7 @@ export default function ConfigPage() {
       <div id="working-hours">
         <ConfigSection
           title={t("config.workingHoursTitle")}
-          description="Configurá los horarios de trabajo del negocio por sucursal para calcular horas extras de empleados"
+          description={t("workingHours.sectionDescription")}
           icon={Clock}
         >
           <div className="space-y-6">
@@ -1850,9 +1849,9 @@ export default function ConfigPage() {
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Para qué sirve esta configuración?</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">{t("workingHours.infoTitle")}</h4>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    Los horarios laborales definen el horario normal de trabajo por sucursal. Cualquier hora trabajada fuera de estos horarios se considerará como horas extras y se calculará automáticamente para los empleados.
+                    {t("workingHours.infoTextWorkHours")}
                   </p>
                 </div>
               </div>
@@ -1862,17 +1861,17 @@ export default function ConfigPage() {
             {branchesLoading ? (
               <div className="p-4 rounded-lg border border-border bg-background-secondary text-center">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto text-foreground-muted" />
-                <p className="text-sm text-foreground-muted mt-2">Cargando sucursales...</p>
+                <p className="text-sm text-foreground-muted mt-2">{t("workingHours.loadingBranches")}</p>
               </div>
             ) : branches.length === 0 ? (
               <div className="p-4 rounded-lg border border-amber-500/20 bg-amber-500/10">
                 <p className="text-sm text-amber-300">
-                  No hay sucursales configuradas. Configurá al menos una sucursal para poder establecer horarios laborales.
+                  {t("workingHours.noBranches")}
                 </p>
               </div>
             ) : (
               <>
-                <FieldGroup label="Sucursal">
+                <FieldGroup label={t("workingHours.branchLabel")}>
                   <select
                     value={selectedBranchId || ""}
                     onChange={(e) => {
@@ -1911,19 +1910,19 @@ export default function ConfigPage() {
                         {allDaysExpanded ? (
                           <>
                             <ChevronsDownUp className="w-4 h-4" />
-                            Colapsar todos
+                            {t("workingHours.collapseAll")}
                           </>
                         ) : (
                           <>
                             <ChevronsDownUp className="w-4 h-4" />
-                            Expandir todos
+                            {t("workingHours.expandAll")}
                           </>
                         )}
                       </Button>
                     </div>
 
                     <div className="grid md:grid-cols-4 gap-3 items-end">
-                      <FieldGroup label="Aplicar a todos: habilitado">
+                      <FieldGroup label={t("workingHours.bulkEnabledLabel")}>
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -1931,10 +1930,10 @@ export default function ConfigPage() {
                             onChange={(e) => setBulkHours((prev) => ({ ...prev, enabled: e.target.checked }))}
                             className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
                           />
-                          <span className="text-xs text-foreground-secondary">Días activos</span>
+                          <span className="text-xs text-foreground-secondary">{t("workingHours.activeDays")}</span>
                         </label>
                       </FieldGroup>
-                      <FieldGroup label="Inicio">
+                      <FieldGroup label={t("workingHours.startLabel")}>
                         <input
                           type="time"
                           value={bulkHours.start || "09:00"}
@@ -1942,7 +1941,7 @@ export default function ConfigPage() {
                           className="input w-full"
                         />
                       </FieldGroup>
-                      <FieldGroup label="Fin">
+                      <FieldGroup label={t("workingHours.endLabel")}>
                         <input
                           type="time"
                           value={bulkHours.end || "18:00"}
@@ -1973,19 +1972,19 @@ export default function ConfigPage() {
                           }}
                           className="w-full"
                         >
-                          Aplicar a todos
+                          {t("workingHours.applyAll")}
                         </Button>
                       </div>
                     </div>
 
                     {[
-                      { key: "monday", label: "Lunes" },
-                      { key: "tuesday", label: "Martes" },
-                      { key: "wednesday", label: "Miércoles" },
-                      { key: "thursday", label: "Jueves" },
-                      { key: "friday", label: "Viernes" },
-                      { key: "saturday", label: "Sábado" },
-                      { key: "sunday", label: "Domingo" },
+                      { key: "monday", label: t("workingHours.dayNames.monday") },
+                      { key: "tuesday", label: t("workingHours.dayNames.tuesday") },
+                      { key: "wednesday", label: t("workingHours.dayNames.wednesday") },
+                      { key: "thursday", label: t("workingHours.dayNames.thursday") },
+                      { key: "friday", label: t("workingHours.dayNames.friday") },
+                      { key: "saturday", label: t("workingHours.dayNames.saturday") },
+                      { key: "sunday", label: t("workingHours.dayNames.sunday") },
                     ].map((day) => {
                       const branchKey = `branch_${selectedBranchId}`;
                       const branchHours = workingHours[branchKey] || {};
@@ -2029,7 +2028,7 @@ export default function ConfigPage() {
                                 setAllDaysExpanded(false);
                               }}
                               className="p-1 rounded hover:bg-background transition-colors"
-                              aria-label={isExpanded ? "Colapsar" : "Expandir"}
+                              aria-label={isExpanded ? t("workingHours.collapse") : t("workingHours.expand")}
                             >
                               {isExpanded ? (
                                 <ChevronUp className="w-5 h-5 text-foreground-secondary" />
@@ -2041,7 +2040,7 @@ export default function ConfigPage() {
 
                           {dayConfig.enabled && isExpanded && (
                             <div className="px-4 pb-4 grid grid-cols-2 gap-4">
-                              <FieldGroup label="Hora de inicio">
+                              <FieldGroup label={t("workingHours.startTimeLabel")}>
                                 <input
                                   type="time"
                                   value={dayConfig.start || "09:00"}
@@ -2061,7 +2060,7 @@ export default function ConfigPage() {
                                   className="input w-full"
                                 />
                               </FieldGroup>
-                              <FieldGroup label="Hora de fin">
+                              <FieldGroup label={t("workingHours.endTimeLabel")}>
                                 <input
                                   type="time"
                                   value={dayConfig.end || "18:00"}
@@ -2095,10 +2094,9 @@ export default function ConfigPage() {
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-300 mb-1">Cálculo de horas extras</p>
+                  <p className="text-sm font-semibold text-amber-300 mb-1">{t("workingHours.overtimeTitle")}</p>
                   <p className="text-xs text-amber-200/90 leading-relaxed">
-                    Las horas trabajadas fuera del horario laboral configurado se calcularán automáticamente como horas extras. 
-                    Este cálculo se aplicará a los registros de asistencia y turnos de los empleados.
+                    {t("workingHours.overtimeDescription")}
                   </p>
                 </div>
               </div>
@@ -2111,7 +2109,7 @@ export default function ConfigPage() {
       <div id="calendar">
         <ConfigSection
           title={t("config.calendarHoursTitle")}
-          description="Configurá el rango de horarios que se mostrará en el calendario"
+          description={t("calendar.description")}
           icon={Clock}
         >
           <div className="space-y-6">
@@ -2119,16 +2117,16 @@ export default function ConfigPage() {
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Para qué sirve esta configuración?</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">{t("calendar.infoTitle")}</h4>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    Define el rango de horarios que se mostrará en el calendario. Esto te permite personalizar qué horas del día son visibles en las vistas de Día, Semana y Agenda.
+                    {t("calendar.infoText")}
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <FieldGroup label="Hora de inicio">
+              <FieldGroup label={t("calendar.startHourLabel")}>
                 <input
                   type="time"
                   value={calendarConfig.minTime?.substring(0, 5) || "06:00"}
@@ -2136,11 +2134,11 @@ export default function ConfigPage() {
                   className="input w-full"
                 />
                 <p className="text-xs text-foreground-muted mt-1">
-                  Hora mínima que se mostrará en el calendario
+                  {t("calendar.startHourHint")}
                 </p>
               </FieldGroup>
 
-              <FieldGroup label="Hora de fin">
+              <FieldGroup label={t("calendar.endHourLabel")}>
                 <input
                   type="time"
                   value={calendarConfig.maxTime?.substring(0, 5) || "23:00"}
@@ -2148,7 +2146,7 @@ export default function ConfigPage() {
                   className="input w-full"
                 />
                 <p className="text-xs text-foreground-muted mt-1">
-                  Hora máxima que se mostrará en el calendario
+                  {t("calendar.endHourHint")}
                 </p>
               </FieldGroup>
             </div>
@@ -2170,7 +2168,7 @@ export default function ConfigPage() {
                   <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                     <MessageCircle className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground">Tutorial de conexión</h3>
+                  <h3 className="text-lg font-bold text-foreground">{t("whatsapp.tutorialTitle")}</h3>
                 </div>
                 <Button
                   variant="secondary"
@@ -2185,7 +2183,7 @@ export default function ConfigPage() {
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">1</span>
                     <span>
-                      Crear o acceder a tu Meta Business Manager y asegurarte de tener una Cuenta de WhatsApp Business.
+                      {t("whatsapp.tutorial.step1")}
                       {" "}
                       <a
                         href="https://business.facebook.com/"
@@ -2193,29 +2191,29 @@ export default function ConfigPage() {
                         rel="noopener noreferrer"
                         className="text-primary underline"
                       >
-                        Abrir Meta Business Manager
+                        {t("whatsapp.tutorial.openMetaLink")}
                       </a>
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">2</span>
-                    <span>Verificar el número que vas a usar en WhatsApp Business.</span>
+                    <span>{t("whatsapp.tutorial.step2")}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">3</span>
-                    <span>Hacer clic en “Conectar” para autorizar con Meta y guardar el token.</span>
+                    <span>{t("whatsapp.tutorial.step3")}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">4</span>
-                    <span>Ingresar el número en formato internacional (+54911...) y guardar.</span>
+                    <span>{t("whatsapp.tutorial.step4")}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">5</span>
-                    <span>Activar el asistente y probar un envío desde un turno confirmado.</span>
+                    <span>{t("whatsapp.tutorial.step5")}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">6</span>
-                    <span>Si falta el Phone Number ID después de OAuth, usar “Refrescar Phone ID”.</span>
+                    <span>{t("whatsapp.tutorial.step6")}</span>
                   </div>
                 </div>
               )}
@@ -2270,7 +2268,7 @@ export default function ConfigPage() {
                 <div className="grid gap-6 lg:grid-cols-3">
                   {/* Estado del Asistente - Sidebar */}
                   <div className="lg:col-span-1">
-                    <div className="sticky top-6 rounded-2xl border-2 border-border/60 bg-gradient-to-br from-background-secondary/90 to-background-secondary/50 backdrop-blur-sm p-6 shadow-lg">
+                    <div className="lg:sticky lg:top-6 rounded-2xl border-2 border-border/60 bg-gradient-to-br from-background-secondary/90 to-background-secondary/50 backdrop-blur-sm p-6 shadow-lg lg:max-h-[calc(100vh-96px)] lg:overflow-y-auto">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-base font-bold text-foreground">{t("whatsapp.status")}</h3>
                         <span
@@ -2560,22 +2558,21 @@ export default function ConfigPage() {
         >
           <div className="space-y-6">
             <div className="border-t border-border pt-6">
-              <h4 className="text-sm font-semibold text-foreground mb-4">Facturación Electrónica ARCA</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-4">{t("arca.sectionTitle")}</h4>
 
               <div className="mb-4 p-4 rounded-xl bg-green-500/10 border border-green-500/30">
                 <p className="text-sm text-foreground mb-2">
-                  <strong className="text-green-400">✓ Sistema Centralizado</strong>
+                  <strong className="text-green-400">{t("arca.centralizedLabel")}</strong>
                 </p>
                 <p className="text-xs text-foreground-secondary">
-                  Solo necesitás tu CUIT. El sistema factura en tu nombre usando certificados centralizados.
-                  No necesitás configurar certificados propios ni hacer trámites en AFIP.
+                  {t("arca.centralizedDescription")}
                 </p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <FieldGroup
-                  label="Tu CUIT"
-                  hint="Tu CUIT de 11 dígitos (sin guiones). El sistema facturará en tu nombre usando este CUIT."
+                  label={t("arca.cuitLabel")}
+                  hint={t("arca.cuitHint")}
                 >
                   <input
                     type="text"
@@ -2588,8 +2585,8 @@ export default function ConfigPage() {
                 </FieldGroup>
 
                 <FieldGroup
-                  label="Punto de Venta (Opcional)"
-                  hint="Si tenés un punto de venta específico, ingresalo aquí. Si no, el sistema usará el predeterminado."
+                  label={t("arca.puntoVentaLabel")}
+                  hint={t("arca.puntoVentaHint")}
                 >
                   <input
                     type="text"
@@ -2609,10 +2606,10 @@ export default function ConfigPage() {
                     <Loader2 className="w-4 h-4 animate-spin text-primary-300" />
                     <div>
                       <p className="text-sm font-medium text-foreground">
-                        Verificando credenciales de ARCA...
+                        {t("config.arcaChecking")}
                       </p>
                       <p className="text-xs text-foreground-muted">
-                        Esto puede tardar unos segundos si el servidor consulta AFIP.
+                        {t("arca.checkingNote")}
                       </p>
                     </div>
                   </div>
@@ -2632,16 +2629,16 @@ export default function ConfigPage() {
                       <div className="flex-1">
                         <p className={`text-sm font-medium ${arcaConnectionStatus.ok ? "text-green-400" : "text-red-400"
                           }`}>
-                          {arcaConnectionStatus.ok ? "Conexión con ARCA OK" : "Error de conexión"}
+                          {arcaConnectionStatus.ok ? t("arca.connectionOk") : t("arca.connectionError")}
                         </p>
                         <p className="text-xs text-foreground-secondary mt-1">
                           {arcaConnectionStatus.message || arcaConnectionStatus.error}
                         </p>
                         {!arcaConnectionStatus.ok && arcaConnectionStatus.tenantCUIT && (
                           <p className="text-xs text-amber-400 mt-2">
-                            CUIT configurado: <strong>{arcaConnectionStatus.tenantCUIT}</strong>
+                            {t("arca.cuitConfigured")}: <strong>{arcaConnectionStatus.tenantCUIT}</strong>
                             <span className="block mt-1 text-red-400">
-                              ⚠️ Falta configurar las credenciales del sistema en el servidor.
+                              {t("arca.credentialsMissing")}
                             </span>
                           </p>
                         )}
@@ -2653,37 +2650,37 @@ export default function ConfigPage() {
                         {!arcaConnectionStatus.ok && (
                           <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                             <p className="text-xs font-medium text-amber-400 mb-2">
-                              ⚙️ Configuración necesaria en el servidor:
+                              {t("arca.serverConfigNeeded")}
                             </p>
                             <p className="text-xs text-foreground-secondary mb-2">
-                              El administrador del sistema debe configurar en el archivo <code className="bg-background-secondary px-1 rounded">.env</code> del servidor:
+                              {t("arca.envSetupIntro")} <code className="bg-background-secondary px-1 rounded">.env</code> {t("arca.onServer")}
                             </p>
                             <div className="space-y-2">
                               <div className="p-2 rounded bg-background-secondary">
-                                <p className="text-xs font-medium text-foreground mb-1">Opción A: Servicio Intermediario (API Key)</p>
+                                <p className="text-xs font-medium text-foreground mb-1">{t("arca.optionA")}</p>
                                 <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2">
-                                  <li><code>ARCA_API_KEY</code> - API Key del servicio intermediario</li>
-                                  <li><code>ARCA_CUIT</code> - CUIT del sistema</li>
-                                  <li><code>ARCA_PUNTO_VENTA</code> - Punto de venta</li>
-                                  <li><code>ARCA_API_URL</code> - URL del servicio intermediario</li>
+                                  <li><code>ARCA_API_KEY</code> - {t("arca.apiKey")}</li>
+                                  <li><code>ARCA_CUIT</code> - {t("arca.cuit")}</li>
+                                  <li><code>ARCA_PUNTO_VENTA</code> - {t("arca.puntoVenta")}</li>
+                                  <li><code>ARCA_API_URL</code> - {t("arca.apiUrl")}</li>
                                 </ul>
                               </div>
                               <div className="p-2 rounded bg-background-secondary">
-                                <p className="text-xs font-medium text-foreground mb-1">Opción B: Certificados del Sistema (P12)</p>
+                                <p className="text-xs font-medium text-foreground mb-1">{t("arca.optionB")}</p>
                                 <p className="text-xs text-foreground-secondary mb-2">
-                                  <strong>Configurar en el archivo</strong> <code className="bg-background px-1 rounded">.env</code> del servidor (en la carpeta <code className="bg-background px-1 rounded">backend/</code>):
+                                  <strong>{t("arca.configureInFile")}</strong> <code className="bg-background px-1 rounded">.env</code> {t("arca.onServerFolder")} <code className="bg-background px-1 rounded">backend/</code>:
                                 </p>
                                 <ul className="text-xs text-foreground-secondary space-y-1 list-disc list-inside ml-2">
-                                  <li><code>ARCA_CUIT</code> - CUIT del sistema (requerido)</li>
-                                  <li><code>ARCA_PUNTO_VENTA</code> - Punto de venta (requerido)</li>
-                                  <li><code>P12_PATH</code> - Ruta al archivo certificado P12 (requerido)</li>
-                                  <li><code>P12_PASS</code> - Contraseña del certificado P12 (requerido)</li>
-                                  <li><code>SERVICE</code> - <span className="text-foreground-muted">Opcional:</span> Servicio para WSAA (por defecto: "wsfe")</li>
-                                  <li><code>WSAA_URL</code> - <span className="text-foreground-muted">Opcional:</span> URL del Web Service de Autenticación (WSAA). Si no se especifica, usa las URLs predeterminadas según el environment.</li>
-                                  <li><code>WSFE_URL</code> - <span className="text-foreground-muted">Opcional:</span> URL del Web Service de Facturación (WSFE). Si no se especifica, usa las URLs predeterminadas según el environment.</li>
+                                  <li><code>ARCA_CUIT</code> - {t("arca.cuitRequired")}</li>
+                                  <li><code>ARCA_PUNTO_VENTA</code> - {t("arca.puntoVentaRequired")}</li>
+                                  <li><code>P12_PATH</code> - {t("arca.p12PathRequired")}</li>
+                                  <li><code>P12_PASS</code> - {t("arca.p12PassRequired")}</li>
+                                  <li><code>SERVICE</code> - <span className="text-foreground-muted">{t("common.optional")}</span> {t("arca.wsaaService")}</li>
+                                  <li><code>WSAA_URL</code> - <span className="text-foreground-muted">{t("common.optional")}</span> {t("arca.wsaaUrl")}</li>
+                                  <li><code>WSFE_URL</code> - <span className="text-foreground-muted">{t("common.optional")}</span> {t("arca.wsfeUrl")}</li>
                                 </ul>
                                 <p className="text-xs text-foreground-muted mt-2 italic">
-                                  <strong>Alternativa:</strong> También podés usar certificados separados (.crt y .key) colocándolos en <code className="bg-background px-1 rounded">backend/src/arca/</code> y configurando <code>ARCA_CERT_PATH</code> y <code>ARCA_KEY_PATH</code> (opcional si están en la carpeta predeterminada).
+                                  <strong>{t("arca.alternative")}</strong> {t("arca.alternativeText")} <code className="bg-background px-1 rounded">backend/src/arca/</code> {t("arca.andConfigure")} <code>ARCA_CERT_PATH</code> {t("arca.and")} <code>ARCA_KEY_PATH</code> ({t("common.optional")}).
                                 </p>
                               </div>
                             </div>
@@ -2696,7 +2693,7 @@ export default function ConfigPage() {
                       <button
                         onClick={checkArcaConnection}
                         className="p-2 rounded-lg bg-background-secondary hover:bg-border transition-colors"
-                        title="Verificar conexión"
+                        title={t("arca.verifyConnection")}
                       >
                         <RefreshCw className={`w-4 h-4 text-foreground-secondary`} />
                       </button>
@@ -2709,10 +2706,10 @@ export default function ConfigPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-foreground mb-1">
-                        Generar Factura de Prueba
+                        {t("arca.testTitle")}
                       </p>
                       <p className="text-xs text-foreground-secondary">
-                        Generá una factura de prueba por $121 para verificar que todo funcione correctamente
+                        {t("arca.testDescription")}
                       </p>
                     </div>
                     <button
@@ -2723,12 +2720,12 @@ export default function ConfigPage() {
                       {testingArca ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Generando...
+                          {t("arca.testGenerating")}
                         </>
                       ) : (
                         <>
                           <Play className="w-4 h-4" />
-                          Testear
+                          {t("arca.testCTA")}
                         </>
                       )}
                     </button>
@@ -2751,13 +2748,13 @@ export default function ConfigPage() {
                                 <p><strong>CAE:</strong> {arcaTestResult.data.cae}</p>
                               )}
                               {arcaTestResult.data.numero && (
-                                <p><strong>Número:</strong> {arcaTestResult.data.numero}</p>
+                                <p><strong>{t("arca.testLabels.number")}:</strong> {arcaTestResult.data.numero}</p>
                               )}
                               {arcaTestResult.data.punto_venta && (
-                                <p><strong>Punto de Venta:</strong> {arcaTestResult.data.punto_venta}</p>
+                                <p><strong>{t("arca.testLabels.pointOfSale")}:</strong> {arcaTestResult.data.punto_venta}</p>
                               )}
                               {arcaTestResult.data.fecha_emision && (
-                                <p><strong>Fecha:</strong> {new Date(arcaTestResult.data.fecha_emision).toLocaleString('es-AR')}</p>
+                                <p><strong>{t("arca.testLabels.date")}:</strong> {new Date(arcaTestResult.data.fecha_emision).toLocaleString(language === "en" ? "en-US" : "es-AR")}</p>
                               )}
                               {arcaTestResult.data.pdf_url && (
                                 <a
@@ -2766,7 +2763,7 @@ export default function ConfigPage() {
                                   rel="noopener noreferrer"
                                   className="text-primary hover:underline inline-flex items-center gap-1 mt-2"
                                 >
-                                  Descargar PDF
+                                  {t("arca.testLabels.downloadPdf")}
                                 </a>
                               )}
                             </div>
@@ -2787,10 +2784,10 @@ export default function ConfigPage() {
                   <Shield className="w-5 h-5 text-primary-400" />
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      ¿Cómo funciona la facturación centralizada con ARCA?
+                      {t("arca.howTitle")}
                     </p>
                     <p className="text-xs text-foreground-muted">
-                      Nuestro equipo mantiene los certificados y credenciales. Solo necesitamos tu CUIT para emitir comprobantes a tu nombre.
+                      {t("arca.howDescription")}
                     </p>
                   </div>
                 </div>
@@ -2801,12 +2798,12 @@ export default function ConfigPage() {
                   className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   <Info className="w-4 h-4" />
-                  {showArcaTutorial ? "Ocultar tutorial AFIP y ARCA" : "Ver tutorial paso a paso (AFIP + ARCA)"}
+                  {showArcaTutorial ? t("arca.tutorialHide") : t("arca.tutorialShow")}
                 </button>
 
                 {showArcaTutorial && (
                   <div className="p-3 rounded-lg bg-background/80 border border-border/40 text-xs text-foreground-secondary space-y-2">
-                    <p className="font-semibold text-foreground">Tutorial rápido</p>
+                    <p className="font-semibold text-foreground">{t("arca.tutorialQuickTitle")}</p>
                     <ol className="list-decimal list-inside space-y-1">
                       <li>
                         <strong>Ingresá a AFIP</strong> con clave fiscal y abrí el <em>Administrador de Relaciones</em>.
@@ -2832,26 +2829,28 @@ export default function ConfigPage() {
 
                 <div className="grid md:grid-cols-3 gap-3 text-xs text-foreground-secondary">
                   <div className="p-3 rounded-lg bg-background/80 border border-border/40">
-                    <p className="font-semibold text-foreground mb-1">1. Guardá tu CUIT</p>
-                    <p>Ingresá el CUIT y guardá la configuración. El sistema lo usa para generar tus facturas.</p>
+                    <p className="font-semibold text-foreground mb-1">{t("arca.steps.saveCuitTitle")}</p>
+                    <p>{t("arca.steps.saveCuitText")}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-background/80 border border-border/40">
-                    <p className="font-semibold text-foreground mb-1">2. Verificá la conexión</p>
-                    <p>Usá el botón <strong>Verificar conexión</strong> para confirmar que el servidor tiene todo listo.</p>
+                    <p className="font-semibold text-foreground mb-1">{t("arca.steps.verifyTitle")}</p>
+                    <p>{t("arca.steps.verifyText")}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-background/80 border border-border/40">
-                    <p className="font-semibold text-foreground mb-1">3. Emití una prueba</p>
-                    <p>Cuando el estado sea OK, generá una factura de prueba para confirmar que AFIP responde correctamente.</p>
+                    <p className="font-semibold text-foreground mb-1">{t("arca.steps.emitTestTitle")}</p>
+                    <p>{t("arca.steps.emitTestText")}</p>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-background/60 border border-border/30 text-xs text-foreground-muted">
-                  <p className="font-medium text-foreground mb-1">¿Querés usar tus propios certificados?</p>
+                  <p className="font-medium text-foreground mb-1">{t("arca.ownCertsTitle")}</p>
                   <p>
-                    Escribinos por soporte y te ayudamos a habilitar el modo avanzado. Vas a necesitar cargar tu certificado
-                    <code className="bg-background px-1 mx-1 rounded text-foreground">.p12</code> o los archivos
-                    <code className="bg-background px-1 mx-1 rounded text-foreground">.crt</code> y
-                    <code className="bg-background px-1 mx-1 rounded text-foreground">.key</code>, junto con la contraseña.
+                    {t("arca.ownCertsDescription")}{" "}
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.p12</code>{" "}
+                    <span className="mx-1" />
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.crt</code>{" "}
+                    {t("common.and")}{" "}
+                    <code className="bg-background px-1 mx-1 rounded text-foreground">.key</code>.
                   </p>
                 </div>
               </div>
@@ -2865,11 +2864,11 @@ export default function ConfigPage() {
                   </div>
                 </div>
                 <div className="text-sm text-foreground-secondary">
-                  <p className="font-semibold text-foreground mb-2">Información importante:</p>
+                  <p className="font-semibold text-foreground mb-2">{t("configGeneralInfo.title")}</p>
                   <ul className="space-y-1 list-disc list-inside ml-2">
-                    <li>El número de WhatsApp debe incluir el código de país (ej: +54 para Argentina)</li>
-                    <li>El CUIT es necesario para emitir facturas electrónicas</li>
-                    <li>Estos datos pueden ser utilizados en facturas y comunicaciones</li>
+                    <li>{t("configGeneralInfo.whatsappNumberHint")}</li>
+                    <li>{t("configGeneralInfo.cuitRequiredHint")}</li>
+                    <li>{t("configGeneralInfo.dataUseHint")}</li>
                   </ul>
                 </div>
               </div>
@@ -2882,7 +2881,7 @@ export default function ConfigPage() {
       <div id="mercadopago">
         <ConfigSection
           title="Mercado Pago"
-          description="Configurá los pagos de señas"
+          description={t("mp.sectionDescription")}
           icon={CreditCard}
         >
           {/* Estado de Conexión */}
@@ -2896,7 +2895,7 @@ export default function ConfigPage() {
               <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl mb-6">
                 <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-white font-medium">Cuenta conectada</p>
+                  <p className="text-white font-medium">{t("mp.connectedTitle")}</p>
                   
                   {/* Información de la cuenta */}
                   {mpStatus.accountInfo ? (
@@ -2918,24 +2917,24 @@ export default function ConfigPage() {
                       )}
                       {mpStatus.userId && (
                         <p className="text-xs text-gray-500 mt-1">
-                          ID Usuario MP: {mpStatus.userId}
+                          {t("mp.userIdLabel")}: {mpStatus.userId}
                         </p>
                       )}
                       {mpStatus.accountInfo.countryId && (
                         <p className="text-xs text-gray-500">
-                          🌍 País: {mpStatus.accountInfo.countryId === 'AR' ? 'Argentina' : mpStatus.accountInfo.countryId}
+                          🌍 {t("mp.countryLabel")}: {mpStatus.accountInfo.countryId === 'AR' ? 'Argentina' : mpStatus.accountInfo.countryId}
                         </p>
                       )}
                     </div>
                   ) : mpStatus.userId ? (
                     <div className="mt-2">
-                      <p className="text-sm text-gray-400">Usuario MP: {mpStatus.userId}</p>
+                      <p className="text-sm text-gray-400">MP User: {mpStatus.userId}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        ⚠️ No se pudo obtener información detallada de la cuenta
+                        ⚠️ {t("mp.noAccountInfo")}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400 mt-2">No se pudo identificar el usuario</p>
+                    <p className="text-sm text-gray-400 mt-2">{t("mp.noUserIdentified")}</p>
                   )}
 
                   {/* Estado y modo */}
@@ -2959,12 +2958,12 @@ export default function ConfigPage() {
                     <div className="mt-2 space-y-1">
                       {mpStatus.expiresAt && (
                         <p className="text-xs text-gray-500">
-                          Token expira: {new Date(mpStatus.expiresAt).toLocaleString('es-AR')}
+                          {t("mp.tokenExpires")}: {new Date(mpStatus.expiresAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US')}
                         </p>
                       )}
                       {mpStatus.liveMode !== undefined && (
                         <p className="text-xs text-gray-500">
-                          Modo: {mpStatus.liveMode ? '🟢 Producción' : '🟡 Pruebas'}
+                          {t("mp.modeLabel")}: {mpStatus.liveMode ? t("mp.modeProduction") : t("mp.modeTesting")}
                         </p>
                       )}
                     </div>
@@ -2981,7 +2980,7 @@ export default function ConfigPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Desconectar
+                  Disconnect
                 </button>
               </div>
 
@@ -2990,23 +2989,23 @@ export default function ConfigPage() {
                 <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6">
                   <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-amber-300 font-medium mb-1">Cuenta requiere atención</p>
+                    <p className="text-amber-300 font-medium mb-1">Account requires attention</p>
                     <p className="text-sm text-amber-200/80 mb-2">
                       {mpStatus.accountStatus.message}
                     </p>
                     {!mpStatus.accountStatus.verified && (
                       <p className="text-xs text-amber-200/70 mb-1">
-                        • Verifica que tu cuenta esté completamente verificada en Mercado Pago
+                        • {t("mp.checkCanReceive")}
                       </p>
                     )}
                     {!mpStatus.accountStatus.canReceivePayments && mpStatus.liveMode && (
                       <p className="text-xs text-amber-200/70 mb-1">
-                        • Verifica que la cuenta esté habilitada para recibir pagos online
+                        {t("mp.checkCanReceive")}
                       </p>
                     )}
                     {!mpStatus.liveMode && (
                       <p className="text-xs text-amber-200/70 mb-1">
-                        • Tu cuenta está en modo PRUEBAS. Para recibir pagos reales, necesitas estar en modo PRODUCCIÓN
+                        {t("mp.inTestingMode")}
                       </p>
                     )}
                     <a
@@ -3015,7 +3014,7 @@ export default function ConfigPage() {
                       rel="noopener noreferrer"
                       className="text-xs text-amber-300 hover:text-amber-200 underline inline-flex items-center gap-1 mt-2"
                     >
-                      Ver cuenta en Mercado Pago →
+                      {t("mp.viewAccount")} →
                     </a>
                   </div>
                 </div>
@@ -3025,9 +3024,9 @@ export default function ConfigPage() {
                 <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6">
                   <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-amber-300 font-medium mb-1">Token expirado</p>
+                    <p className="text-amber-300 font-medium mb-1">{t("mp.tokenExpiredTitle")}</p>
                     <p className="text-sm text-amber-200/80">
-                      El token de acceso ha expirado. Desconectá y volvé a conectar para renovarlo.
+                      {t("mp.tokenExpiredDesc")}
                     </p>
                   </div>
                 </div>
@@ -3044,8 +3043,8 @@ export default function ConfigPage() {
                           <DollarSign className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground">Requerir pago de seña</h3>
-                          <p className="text-sm text-foreground-muted">Los clientes deberán pagar antes de confirmar</p>
+                          <h3 className="text-lg font-semibold text-foreground">{t("mp.deposit.requireTitle")}</h3>
+                          <p className="text-sm text-foreground-muted">{t("mp.deposit.requireDesc")}</p>
                         </div>
                       </div>
                       <div className="relative">
@@ -3090,8 +3089,8 @@ export default function ConfigPage() {
                               )}
                             </div>
                           </div>
-                          <h4 className="font-semibold text-foreground mb-1">Porcentaje</h4>
-                          <p className="text-sm text-foreground-muted">Calcula la seña como % del servicio</p>
+                          <h4 className="font-semibold text-foreground mb-1">{t("mp.deposit.percentageTitle")}</h4>
+                          <p className="text-sm text-foreground-muted">{t("mp.deposit.percentageDesc")}</p>
                         </button>
 
                         {/* Monto Fijo */}
@@ -3119,8 +3118,8 @@ export default function ConfigPage() {
                               )}
                             </div>
                           </div>
-                          <h4 className="font-semibold text-foreground mb-1">Monto fijo</h4>
-                          <p className="text-sm text-foreground-muted">Misma seña para todos los servicios</p>
+                          <h4 className="font-semibold text-foreground mb-1">{t("mp.deposit.fixedTitle")}</h4>
+                          <p className="text-sm text-foreground-muted">{t("mp.deposit.fixedDesc")}</p>
                         </button>
                       </div>
 
@@ -3130,7 +3129,7 @@ export default function ConfigPage() {
                           <>
                             <label className="flex items-center gap-2 text-sm font-medium text-foreground-secondary">
                               <Percent className="w-4 h-4" />
-                              Porcentaje de seña
+                              {t("mp.deposit.percentageLabel")}
                             </label>
                             <div className="relative">
                               <input
@@ -3145,14 +3144,14 @@ export default function ConfigPage() {
                               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground-muted font-medium">%</span>
                             </div>
                             <p className="text-sm text-foreground-muted">
-                              Ejemplo: Servicio $5000 → Seña ${((5000 * (mpConfig.deposit_percentage || 20)) / 100).toFixed(0)}
+                              {t("mp.deposit.percentageExample")} ${((5000 * (mpConfig.deposit_percentage || 20)) / 100).toFixed(0)}
                             </p>
                           </>
                         ) : (
                           <>
                             <label className="flex items-center gap-2 text-sm font-medium text-foreground-secondary">
                               <DollarSign className="w-4 h-4" />
-                              Monto fijo de seña
+                              {t("mp.deposit.fixedAmountLabel")}
                             </label>
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted font-medium">$</span>
@@ -3167,7 +3166,7 @@ export default function ConfigPage() {
                               />
                             </div>
                             <p className="text-sm text-foreground-muted">
-                              Todos los servicios requerirán ${mpConfig.deposit_amount_fixed || 1000} de seña
+                              {t("mp.depositFixedInfo", { amount: mpConfig.deposit_amount_fixed || 1000 })}
                             </p>
                           </>
                         )}
@@ -3184,19 +3183,19 @@ export default function ConfigPage() {
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <h3 className="font-semibold text-primary-400">Información importante</h3>
+                        <h3 className="font-semibold text-primary-400">{t("mp.infoImportantTitle")}</h3>
                         <ul className="space-y-2 text-sm text-dark-300">
                           <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 flex-shrink-0"></div>
-                            <span>La conexión es segura y no compartimos tus credenciales</span>
+                            <span>The connection is secure and we do not share your credentials</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 flex-shrink-0"></div>
-                            <span>Podés desconectar tu cuenta en cualquier momento</span>
+                            <span>You can disconnect your account at any time</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 flex-shrink-0"></div>
-                            <span>MP cobra una comisión por transacción (~4-5%)</span>
+                            <span>MP charges a transaction fee (~4-5%)</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 flex-shrink-0"></div>
@@ -3204,7 +3203,7 @@ export default function ConfigPage() {
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 flex-shrink-0"></div>
-                            <span>Cobrás directamente en tu cuenta de MP</span>
+                            <span>You get paid directly into your MP account</span>
                           </li>
                         </ul>
                       </div>
@@ -3218,7 +3217,7 @@ export default function ConfigPage() {
             <div className="space-y-4">
               <div className="p-4 bg-primary-500/10 border border-primary-500/30 rounded-xl">
                 <p className="text-dark-300 mb-4">
-                  Conectá tu cuenta de Mercado Pago para empezar a recibir pagos de señas de forma segura.
+                  Connect your Mercado Pago account to start securely receiving deposit payments.
                 </p>
                 <button
                   onClick={handleConnectMP}
@@ -3228,14 +3227,14 @@ export default function ConfigPage() {
                   {connectingMP ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Conectando...
+                      {t("mp.connecting")}
                     </>
                   ) : (
                     <>
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                       </svg>
-                      Conectar con Mercado Pago
+                      {t("mp.connectCTA")}
                     </>
                   )}
                 </button>
@@ -3244,11 +3243,11 @@ export default function ConfigPage() {
               <div className="flex items-start gap-3 p-4 bg-background-secondary rounded-xl border border-border">
                 <AlertCircle className="w-5 h-5 text-foreground-muted mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-foreground-muted">
-                  <p className="mb-2">Al conectar, Mercado Pago te pedirá autorización para:</p>
+                  <p className="mb-2">{t("mp.authPrompt")}</p>
                   <ul className="space-y-1 list-disc list-inside ml-2 mb-3">
-                    <li>Crear preferencias de pago</li>
-                    <li>Recibir notificaciones de pagos</li>
-                    <li>Acceder a información de transacciones</li>
+                    <li>{t("mp.authItems.createPreferences")}</li>
+                    <li>{t("mp.authItems.receiveNotifications")}</li>
+                    <li>{t("mp.authItems.accessTransactions")}</li>
                   </ul>
                   <p className="text-xs text-foreground-muted/80 mt-2 pt-2 border-t border-border">
                     <strong>Nota:</strong> Si aparece un error de "aplicación no preparada", verifica que el redirect_uri esté configurado en tu aplicación de Mercado Pago. 
@@ -3264,12 +3263,12 @@ export default function ConfigPage() {
       {/* COMMISSIONS */}
       <div id="commissions">
         <ConfigSection
-          title="Configuración de Comisiones"
-          description="Parámetros para el cálculo de comisiones"
+          title={t("commissionsConfig.title")}
+          description={t("commissionsConfig.description")}
           icon={Percent}
         >
           <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <FieldGroup label="Comisión por defecto (%)" hint="Porcentaje que se aplica a nuevos instructores">
+            <FieldGroup label={t("commissionsConfig.defaultPercentageLabel")} hint={t("commissionsConfig.defaultPercentageHint")}>
               <input
                 type="number"
                 min="0"
@@ -3284,15 +3283,15 @@ export default function ConfigPage() {
 
           <div className="space-y-2">
             <SwitchField
-              label="Calcular sobre seña"
-              description="Calcular comisiones sobre el monto de la seña en lugar del precio total"
+              label={t("commissionsConfig.calculateOnDepositLabel")}
+              description={t("commissionsConfig.calculateOnDepositDesc")}
               checked={commissions.calculateOnDeposit}
               onChange={(e) => setCommissions({ ...commissions, calculateOnDeposit: e.target.checked })}
             />
 
             <SwitchField
-              label="Mostrar en dashboard"
-              description="Mostrar métricas de comisiones en el dashboard principal"
+              label={t("commissionsConfig.showInDashboardLabel")}
+              description={t("commissionsConfig.showInDashboardDesc")}
               checked={commissions.showInDashboard}
               onChange={(e) => setCommissions({ ...commissions, showInDashboard: e.target.checked })}
             />
@@ -3302,12 +3301,12 @@ export default function ConfigPage() {
             <p className="text-sm text-primary-300 flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
               <span>
-                Para configurar comisiones individuales por instructor,{" "}
+                {t("commissionsConfig.configureIndividualsPrefix")}{" "}
                 <button
                   onClick={() => navigate(`/${tenantSlug}/admin/comisiones`)}
                   className="underline font-medium hover:text-primary-200"
                 >
-                  hacé clic aquí
+                  {t("commissionsConfig.clickHere")}
                 </button>
               </span>
             </p>
@@ -3318,8 +3317,8 @@ export default function ConfigPage() {
       {/* RECORDATORIOS DE TURNOS */}
       <div id="reminders" className="mt-12">
         <ConfigSection
-          title="Recordatorios de Turnos"
-          description="Configurá recordatorios automáticos por WhatsApp para tus clientes"
+          title={t("reminders.title")}
+          description={t("reminders.description")}
           icon={Bell}
         >
           <div className="space-y-6">
@@ -3327,9 +3326,9 @@ export default function ConfigPage() {
               <div className="flex items-start gap-3">
                 <Bell className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-1">¿Qué son los recordatorios automáticos?</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">{t("reminders.whatAreTitle")}</h4>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    Los recordatorios se envían automáticamente por WhatsApp a tus clientes antes de sus turnos. Esto ayuda a reducir las faltas y mejorar la asistencia.
+                    {t("reminders.whatAreDescription")}
                   </p>
                 </div>
               </div>
@@ -3337,8 +3336,8 @@ export default function ConfigPage() {
 
             <div className="space-y-5">
               <SwitchField
-                label="Activar recordatorios automáticos"
-                description="Activa o desactiva el envío automático de recordatorios. Cuando está activado, el sistema enviará mensajes automáticamente según la configuración de horas."
+                label={t("reminders.enableLabel")}
+                description={t("reminders.enableDesc")}
                 checked={remindersConfig.enabled}
                 onChange={(checked) => setRemindersConfig(prev => ({ ...prev, enabled: checked }))}
               />
@@ -3346,8 +3345,8 @@ export default function ConfigPage() {
               {remindersConfig.enabled && (
                 <div className="space-y-3">
                   <FieldGroup
-                    label="¿Cuánto tiempo antes del turno enviar el recordatorio?"
-                    hint="Configurá cuántas horas antes del turno querés que se envíe el recordatorio. Máximo 7 días (168 horas)."
+                    label={t("reminders.whenLabel")}
+                    hint={t("reminders.whenHint")}
                   >
                     <div className="flex items-baseline gap-3">
                       <input
@@ -3363,23 +3362,23 @@ export default function ConfigPage() {
                       />
                       <span className="text-sm font-medium text-foreground">
                         {remindersConfig.advance_hours === 0
-                          ? "horas antes (inmediato)"
+                          ? t("reminders.immediate")
                           : remindersConfig.advance_hours === 1 
-                          ? "hora antes" 
+                          ? t("reminders.oneHour") 
                           : remindersConfig.advance_hours === 24
-                          ? "día antes (24 horas)"
+                          ? t("reminders.oneDay")
                           : remindersConfig.advance_hours > 24 && remindersConfig.advance_hours % 24 === 0
-                          ? `días antes (${remindersConfig.advance_hours} horas)`
-                          : "horas antes"}
+                          ? t("reminders.daysBefore", { hours: remindersConfig.advance_hours })
+                          : t("reminders.hoursBefore")}
                       </span>
                     </div>
                     <div className="mt-3 p-3 rounded-lg bg-background-secondary border border-border/50">
-                      <p className="text-xs font-medium text-foreground-secondary mb-2">Ejemplos prácticos:</p>
+                      <p className="text-xs font-medium text-foreground-secondary mb-2">{t("reminders.examplesTitle")}</p>
                       <ul className="text-xs text-foreground-muted space-y-1">
-                        <li>• <strong>24 horas</strong> = Se envía 1 día antes del turno</li>
-                        <li>• <strong>48 horas</strong> = Se envía 2 días antes del turno</li>
-                        <li>• <strong>2 horas</strong> = Se envía 2 horas antes del turno</li>
-                        <li>• <strong>12 horas</strong> = Se envía 12 horas antes (medio día antes)</li>
+                        <li>{t("reminders.examples.oneDay")}</li>
+                        <li>{t("reminders.examples.twoDays")}</li>
+                        <li>{t("reminders.examples.twoHours")}</li>
+                        <li>{t("reminders.examples.twelveHours")}</li>
                       </ul>
                     </div>
                   </FieldGroup>
@@ -3392,27 +3391,27 @@ export default function ConfigPage() {
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 space-y-2">
-                        <p className="text-sm font-semibold text-amber-300">Información importante</p>
+                        <p className="text-sm font-semibold text-amber-300">{t("reminders.importantTitle")}</p>
                         <div className="space-y-2 text-xs text-amber-200/90">
                           <div className="flex items-start gap-2">
                             <span className="text-amber-400 mt-0.5">•</span>
-                            <span>Los recordatorios se envían <strong>automáticamente</strong> por WhatsApp a tus clientes</span>
+                            <span>{t("reminders.importantItems.auto")}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="text-amber-400 mt-0.5">•</span>
-                            <span>Solo se envían para turnos con estado <strong>confirmado</strong> o <strong>programado</strong></span>
+                            <span>{t("reminders.importantItems.statuses")}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="text-amber-400 mt-0.5">•</span>
-                            <span>Cada turno recibe <strong>un solo recordatorio</strong> (no se repiten)</span>
+                            <span>{t("reminders.importantItems.once")}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="text-amber-400 mt-0.5">•</span>
-                            <span>El sistema verifica cada 15 minutos y envía recordatorios para turnos que están dentro de la ventana configurada</span>
+                            <span>{t("reminders.importantItems.interval")}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="text-amber-400 mt-0.5">•</span>
-                            <span><strong>Requisito:</strong> WhatsApp debe estar configurado y activo en la sección de configuración</span>
+                            <span>{t("reminders.importantItems.requirement")}</span>
                           </div>
                         </div>
                       </div>
@@ -3461,8 +3460,8 @@ export default function ConfigPage() {
       {/* SECURITY */}
       <div id="security">
         <ConfigSection
-          title="Seguridad"
-          description="Configuración de seguridad de tu cuenta"
+          title={t("config.securityTitle")}
+          description={t("security.description")}
           icon={Shield}
         >
           <div className="space-y-4">
@@ -3470,10 +3469,10 @@ export default function ConfigPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-foreground mb-1">
-                    Autenticación de doble factor (2FA)
+                    {t("security.twoFactorTitle")}
                   </h4>
                   <p className="text-xs text-foreground-muted">
-                    Agregá una capa adicional de seguridad a tu cuenta con códigos de autenticación
+                    {t("security.twoFactorDescription")}
                   </p>
                 </div>
                 <button
@@ -3481,7 +3480,7 @@ export default function ConfigPage() {
                   className="btn-primary flex items-center gap-2"
                 >
                   <Shield className="w-4 h-4" />
-                  Configurar 2FA
+                  {t("security.setup2fa")}
                 </button>
               </div>
             </div>
@@ -3493,7 +3492,7 @@ export default function ConfigPage() {
       <div className="card p-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-dark-600">
-            Los cambios se aplicarán inmediatamente después de guardar
+            {t("config.changesApplyImmediately")}
           </div>
           <button
             onClick={handleSaveAll}
@@ -3503,12 +3502,12 @@ export default function ConfigPage() {
             {saving ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Guardando...
+                {t("config.saving")}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Guardar Configuración
+                {t("config.saveChanges")}
               </>
             )}
           </button>

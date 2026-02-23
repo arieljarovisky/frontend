@@ -15,6 +15,7 @@ import { useTheme } from "../context/ThemeContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import { logger } from "../utils/logger.js";
+import { useTranslation } from "../i18n/useTranslation.js";
 
 function safeNextParam(search) {
   const next = new URLSearchParams(search).get("next");
@@ -23,6 +24,7 @@ function safeNextParam(search) {
 
 export default function LoginPage() {
   const location = useLocation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { user, authLoaded, logout } = useAuth();
@@ -240,7 +242,7 @@ export default function LoginPage() {
           <div className="card p-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-foreground">
-                Seleccioná tu negocio
+                {t("login.selectTenant")}
               </h2>
               <ThemeToggle />
             </div>
@@ -277,7 +279,7 @@ export default function LoginPage() {
               }}
               className="w-full text-sm text-foreground-secondary hover:text-foreground transition-colors"
             >
-              ← Volver
+              ← {t("common.back")}
             </button>
           </div>
         </motion.div>
@@ -286,10 +288,10 @@ export default function LoginPage() {
   }
 
   const features = [
-    { icon: Calendar, text: "Gestión de Turnos" },
-    { icon: Users, text: "Base de Clientes" },
-    { icon: DollarSign, text: "Pagos Online" },
-    { icon: Bell, text: "Notificaciones" }
+    { icon: Calendar, text: t("landing.features.appointments.title") },
+    { icon: Users, text: t("landing.features.customers.title") },
+    { icon: DollarSign, text: t("landing.features.payments.title") },
+    { icon: Bell, text: t("landing.features.notifications.title") }
   ];
 
   return (
@@ -311,11 +313,10 @@ export default function LoginPage() {
               <Logo size="default" showText />
             </div>
             <h2 className="text-4xl font-bold text-foreground">
-              Gestioná tu negocio de forma inteligente
+              {t("landing.hero.title")} {t("landing.hero.titleHighlight")}
             </h2>
             <p className="text-lg text-foreground-secondary">
-              Sistema ERP completo para gestionar turnos, stock, facturación y más. 
-              Con pagos online, notificaciones automáticas y bot de WhatsApp integrado.
+              {t("landing.hero.subtitle")}
             </p>
           </div>
 
@@ -341,18 +342,18 @@ export default function LoginPage() {
           </div>
 
           {/* Beneficios */}
-          <div className="space-y-3 pt-4">
+            <div className="space-y-3 pt-4">
             <div className="flex items-center gap-2 text-foreground-secondary">
               <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-              <span className="text-sm">Prueba gratuita de 14 días</span>
+                <span className="text-sm">{t("login.benefits.freeTrial")}</span>
             </div>
             <div className="flex items-center gap-2 text-foreground-secondary">
               <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-              <span className="text-sm">Sin tarjeta de crédito</span>
+                <span className="text-sm">{t("login.benefits.noCard")}</span>
             </div>
             <div className="flex items-center gap-2 text-foreground-secondary">
               <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-              <span className="text-sm">Cancela cuando quieras</span>
+                <span className="text-sm">{t("login.benefits.cancelAnytime")}</span>
             </div>
           </div>
         </motion.div>
@@ -372,10 +373,10 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">
-                  Bienvenido
+                  {t("login.welcome")}
                 </h1>
                 <p className="text-foreground-muted">
-                  Iniciá sesión para continuar
+                  {t("login.signInToContinue")}
                 </p>
               </div>
             </div>
@@ -400,7 +401,7 @@ export default function LoginPage() {
               <div className="p-4 rounded-lg border bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
                 <div className="space-y-3">
                   <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                    Hay una sesión activa, cerrá sesión para cambiar de cuenta.
+                    {t("login.activeSessionWarning")}
                   </div>
                   <div className="flex gap-3">
                     <button
@@ -415,22 +416,22 @@ export default function LoginPage() {
                           if (me?.ok) {
                             goAfterLogin(me);
                           } else {
-                            toast.error("No se pudo obtener la sesión actual");
+                            toast.error("Could not get current session");
                           }
                         } catch {
-                          toast.error("No se pudo obtener la sesión actual");
+                          toast.error("Could not get current session");
                         }
                       }}
                       className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-hover transition"
                     >
-                      Ir al panel
+                      {t("login.goToPanel")}
                     </button>
                     <button
                       type="button"
                       onClick={logout}
                       className="px-4 py-2 rounded-md border border-border hover:bg-border transition"
                     >
-                      Cerrar sesión
+                      {t("navigation.logout")}
                     </button>
                   </div>
                 </div>
@@ -443,7 +444,7 @@ export default function LoginPage() {
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-foreground">
-                      Email
+                      {t("login.email")}
                     </label>
                     <div className="input-group">
                       <span className="input-group__icon">
@@ -454,7 +455,7 @@ export default function LoginPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="input input--with-icon"
-                        placeholder="tu@email.com"
+                        placeholder={t("login.placeholderEmail")}
                         required
                         autoFocus
                         disabled={authLoaded && (user || authApi.isAuthenticated())}
@@ -464,7 +465,7 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-foreground">
-                      Contraseña
+                      {t("login.password")}
                     </label>
                     <div className="input-group">
                       <span className="input-group__icon">
@@ -508,7 +509,7 @@ export default function LoginPage() {
                       disabled={authLoaded && (user || authApi.isAuthenticated())}
                     />
                     <label htmlFor="rememberDevice-main" className="text-sm text-foreground-muted cursor-pointer">
-                      Recordar este dispositivo durante 30 días
+                      {t("login.rememberDevice")}
                     </label>
                   </div>
                 </>
@@ -517,7 +518,7 @@ export default function LoginPage() {
                   <div className="space-y-4">
                     <div className="text-center space-y-2">
                       <h3 className="text-lg font-semibold text-foreground">
-                        Código de autenticación
+                        {t("login.twoFactor.title")}
                       </h3>
                       <p className="text-sm text-foreground-muted">
                         Ingresá el código de 6 dígitos de tu aplicación de autenticación
@@ -677,4 +678,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

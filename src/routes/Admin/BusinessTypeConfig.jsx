@@ -6,6 +6,7 @@ import { Building2, CheckCircle, RotateCcw, ArrowUp, Sparkles } from "lucide-rea
 import { useQuery } from "../../shared/useQuery.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useApp } from "../../context/UseApp.js";
+import { useTranslation } from "../../i18n/useTranslation.js";
 
 const FEATURE_KEYS = ["appointments", "classes", "stock", "invoicing"];
 const FEATURE_LABELS = {
@@ -197,8 +198,8 @@ export default function BusinessTypeConfig() {
   const PLATFORM_PLANS = [
     {
       code: "starter",
-      label: "Plan Starter",
-      description: "Ideal para comenzar con hasta 2 profesionales",
+      label: "Starter Plan",
+      description: "Ideal to start with up to 2 professionals",
       features: {
         appointments: true,
         classes: true,
@@ -210,8 +211,8 @@ export default function BusinessTypeConfig() {
     },
     {
       code: "growth",
-      label: "Plan Growth",
-      description: "Negocios en expansión, hasta 8 profesionales",
+      label: "Growth Plan",
+      description: "Expanding businesses, up to 8 professionals",
       features: {
         appointments: true,
         classes: true,
@@ -223,8 +224,8 @@ export default function BusinessTypeConfig() {
     },
     {
       code: "scale",
-      label: "Plan Escala",
-      description: "Operaciones con varias sucursales (hasta 2 sedes)",
+      label: "Scale Plan",
+      description: "Operations with multiple branches (up to 2 locations)",
       features: {
         appointments: true,
         classes: true,
@@ -236,8 +237,8 @@ export default function BusinessTypeConfig() {
     },
     {
       code: "pro",
-      label: "Plan Pro a Medida",
-      description: "Empresas grandes con múltiples sucursales ilimitadas",
+      label: "Custom Pro Plan",
+      description: "Large companies with unlimited branches",
       features: {
         appointments: true,
         classes: true,
@@ -455,11 +456,13 @@ export default function BusinessTypeConfig() {
     });
   }, [currentPlan]);
 
+  const { t } = useTranslation();
+
   if (loadingTypes || loadingCurrent || loadingPlans) {
     return (
       <div className="card card--space-xl card--no-hover text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-        <p className="text-foreground-secondary mt-4">Cargando...</p>
+        <p className="text-foreground-secondary mt-4">Loading...</p>
       </div>
     );
   }
@@ -467,9 +470,9 @@ export default function BusinessTypeConfig() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Funcionalidades de tu Plan</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">{t("businessType.planFeaturesTitle")}</h3>
         <p className="text-sm text-foreground-secondary">
-          Acá podés ver las funcionalidades disponibles en tu plan actual y las opciones de upgrade si necesitás más características.
+          {t("businessType.planFeaturesDescription")}
         </p>
       </div>
 
@@ -482,9 +485,9 @@ export default function BusinessTypeConfig() {
             </div>
             <div>
               <h4 className="font-semibold text-foreground text-base sm:text-lg">
-                {currentPlan.label || "Plan Actual"}
+                {currentPlan.label || "Current Plan"}
               </h4>
-              <p className="text-xs text-foreground-muted mt-0.5">Tu plan actual</p>
+              <p className="text-xs text-foreground-muted mt-0.5">{t("businessType.currentPlanHint")}</p>
             </div>
           </div>
         </div>
@@ -507,10 +510,10 @@ export default function BusinessTypeConfig() {
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-foreground-muted flex-shrink-0" />
                   )}
-                  <div className="font-semibold text-sm text-foreground">{FEATURE_LABELS[key]}</div>
+                  <div className="font-semibold text-sm text-foreground">{t(`businessType.features.${key}`)}</div>
                 </div>
                 <div className="text-xs text-foreground-secondary mt-1">
-                  {isEnabled ? "Disponible" : "No incluido"}
+                  {isEnabled ? t("businessType.available") : t("businessType.notIncluded")}
                 </div>
               </div>
             );
@@ -523,7 +526,7 @@ export default function BusinessTypeConfig() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h4 className="text-base font-semibold text-foreground">Planes Disponibles para Upgrade</h4>
+            <h4 className="text-base font-semibold text-foreground">{t("businessType.upgradePlansTitle")}</h4>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {upgradePlans.map((plan) => {
@@ -554,13 +557,13 @@ export default function BusinessTypeConfig() {
                   {additionalFeatures.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border">
                       <p className="text-xs font-medium text-foreground-secondary mb-2">
-                        Funcionalidades adicionales:
+                        {t("businessType.additionalFeaturesTitle")}
                       </p>
                       <div className="text-xs text-foreground-muted space-y-1">
                         {additionalFeatures.map((key) => (
                           <div key={key} className="flex items-center gap-1.5">
                             <ArrowUp className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                            <span>{FEATURE_LABELS[key]}</span>
+                            <span>{t(`businessType.features.${key}`)}</span>
                           </div>
                         ))}
                       </div>
@@ -574,7 +577,7 @@ export default function BusinessTypeConfig() {
                         return isEnabled ? (
                           <div key={key} className="flex items-center gap-1.5">
                             <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                            <span>{FEATURE_LABELS[key]}</span>
+                            <span>{t(`businessType.features.${key}`)}</span>
                           </div>
                         ) : null;
                       })}
@@ -589,7 +592,7 @@ export default function BusinessTypeConfig() {
                       }}
                       className="mt-4 w-full btn-primary text-sm"
                     >
-                      Contactar a Ventas
+                      {t("businessType.contactSales")}
                     </button>
                   ) : (
                     <button
@@ -599,7 +602,7 @@ export default function BusinessTypeConfig() {
                       }}
                       className="mt-4 w-full btn-primary text-sm"
                     >
-                      Solicitar Upgrade
+                      {t("businessType.requestUpgrade")}
                     </button>
                   )}
                 </div>
@@ -612,7 +615,7 @@ export default function BusinessTypeConfig() {
       {upgradePlans.length === 0 && (
         <div className="card p-4 sm:p-6 text-center">
           <p className="text-sm text-foreground-secondary">
-            Ya tenés el plan más completo disponible. Si necesitás funcionalidades personalizadas, contactá a nuestro equipo.
+            {t("businessType.maxPlanMessage")}
           </p>
         </div>
       )}
@@ -621,4 +624,3 @@ export default function BusinessTypeConfig() {
     </div>
   );
 }
-

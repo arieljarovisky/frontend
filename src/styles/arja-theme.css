@@ -162,18 +162,18 @@
 .arja-nav {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 14px;
+  padding: 12px 10px;
   overflow-y: auto;
   overflow-x: hidden;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   color: rgb(var(--sidebar-text));
 }
 
 @media (min-width: 1024px) {
   .arja-nav {
-    padding: 24px 18px;
-    gap: 14px;
+    padding: 16px 12px;
+    gap: 10px;
   }
 }
 
@@ -190,24 +190,24 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: 0.87rem;
   font-weight: 550;
   color: rgba(var(--sidebar-muted), 0.95);
   text-decoration: none;
   transition: all 0.2s ease;
-  min-height: 48px;
+  min-height: 40px;
 }
 
 @media (min-width: 1024px) {
   .arja-nav-link {
-    gap: 16px;
-    padding: 16px 20px;
-    border-radius: 14px;
-    font-size: 0.95rem;
-    min-height: 52px;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    min-height: 44px;
   }
 }
 
@@ -216,16 +216,16 @@
 }
 
 .arja-nav-link svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   opacity: 0.8;
 }
 
 @media (min-width: 1024px) {
   .arja-nav-link svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 }
 
